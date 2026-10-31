@@ -99,4 +99,49 @@ Additional sources consulted:
 - [the-other-side-of-history: logistics in Napoleon's campaigns](https://the-other-side-of-history.blogspot.com/2024/07/logistics-in-napoleons-campaigns.html)
 - [historyrise.com: ammunition supply](https://historyrise.com/ammunition-supply-in-the-context-of-the-napoleonic-wars/)
 
+**Hunger, straggling and foraging (31 October 2026)**
+
+The question: how fast should hunger wear an army down, and how much can it gather on the march? The first balance batches showed every advancing army collapsing from hunger within the 20 days of the scenario. This pass looked for primary figures and for modern evidence on underfeeding.
+
+- **The advance cost a third of the army without a major battle (H-014).** Clausewitz, citing Chambray's figures:
+  - The central army crossed the Niemen on 24 June with 301,000 men and stood at 182,000 at Smolensk on 15 August, after detaching 13,500.
+  - At most 10,000 of the losses came in action. About 95,000 were lost to sickness and straggling in 52 days, roughly 1/150 of the original strength a day at first and 1/120 later.
+  - That army then fought at Smolensk, Valutino and Borodino. It was worn, not broken.
+- **The halts let stragglers return (H-017).** The army halted about 14 days at Vilna and about 11 at Vitebsk, "during which periods many stragglers had time to rejoin". The game does not model returning stragglers yet.
+- **Hunger was chronic, not total (H-015).** Russian interrogations of prisoners, reported by Clausewitz, found that around Vitebsk:
+  - the horses had only green forage;
+  - the men were issued flour instead of bread and cooked it into soup;
+  - the Guard was the exception.
+
+  Rose's medical history, drawn from memoirs, adds dysentery from the Niemen onwards and men going a day or more without food, then marauding. It also adds Westphalian battalions halved on the advance, horses dying by the hundred on green fodder, and executions of marauders.
+- **The Russians burned what they left and swept the fields; their own army ate well (H-016).** Clausewitz notes that the Russians "generally set fire" to their magazines and to the towns and villages they abandoned. He describes French foragers working far afield for scanty returns, because the population was thin and side roads few. The Russian army had biscuit, grits, meat, brandy and hay in plenty, and lost few men to sickness or straggling.
+- **Living off the land works only in populated country (L-007).** Clausewitz's rules of thumb in *On War*:
+  - A peasant household holds bread for 8–14 days.
+  - Quarters never occupied before can feed three or four times their inhabitants for several days.
+  - In moderately populated country (2,000–3,000 people per German square mile, about 36–54 per km²), an army of 150,000 can live on a continuous march without magazines.
+  - An army is seldom short in the first three or four weeks of a campaign.
+
+  The Vitebsk–Smolensk country fell well short of that, and the retreating Russians stripped it further.
+- **Underfeeding takes weeks to sap a soldier's strength (L-008).** The US Institute of Medicine's 1995 review found:
+  - Soldiers keep normal work capacity through short periods (under 10 days) of severely restricted food.
+  - Strength losses are probably not seen below about 5% loss of body weight, and aerobic capacity falls from about 10%.
+  - In the Ranger course, a deficit of 1,000–1,200 kcal a day cost 13–16% of body weight and about a fifth of maximal strength over eight weeks.
+
+  Applying modern soldiers to 1812 is an inference. But it points the same way as the history: in a campaign of weeks, hunger's quick effects are men leaving the ranks (sickness, straggling, marauding), not the units that stay together losing their will to fight.
+
+**What this means for the rules (G-017; the cohesion value was adopted in rules 0.7.0, D-030):**
+- **Cohesion loss from hunger is far too harsh at −100 a day at a full shortfall.** The model's straggling (2% a day at a full shortfall) plus sickness (0.2%) reproduce the historical loss rate at an average shortfall of about a quarter to a third. At that shortfall the present rule takes 24–32 cohesion a day, so an army at 800 would reach the collapse line in two and a half to three and a half weeks. The real army marched seven and a half weeks and still fought.
+  - Values of about **20–60 a day** fit both the advance and the retreat, where two to three weeks of hunger, cold and pursuit did break the army.
+  - **30** sits at the ceiling set by the strictest reading of the advance, which assumes hunger on every day, halts included.
+- **Straggling at 2% a day at a full shortfall fits** the historical loss rate. Keep it (range 1–3%).
+- **Foraging on the march, at 0.2 rations a man a day, sits at the low end of what is plausible** (range 0.1–0.5). That fits thin population, burned villages and an army massed on one road. Keep it, and show its sensitivity.
+- **Returning stragglers** are worth modelling later: they are why halts restored the army historically.
+
+Sources consulted:
+- Carl von Clausewitz, *On War* (tr. J. J. Graham, 1873), Book V, ch. XII "Marches (continued)" and ch. XIV "Subsistence"; Book VI, ch. XXV. [Project Gutenberg #1946](https://www.gutenberg.org/ebooks/1946). Public domain.
+- Carl von Clausewitz, *The Campaign of 1812 in Russia* (tr. Lord Ellesmere, 1843), pp. 110–111 and 176–178. [PDF at ClausewitzStudies.org](https://ClausewitzStudies.org/readings/1812/Clausewitz-CampaignOf1812inRussia-EllesmereTranslation.pdf). Public domain.
+- Achilles Rose, *Napoleon's Campaign in Russia Anno 1812: Medico-Historical* (1913), chapters "Crossing the Niemen" and "On to Moscow". [Project Gutenberg #7973](https://www.gutenberg.org/ebooks/7973). Public domain; draws on memoirs.
+- Institute of Medicine, *Not Eating Enough: Overcoming Underconsumption of Military Operational Rations* (National Academies Press, 1995), chapter on physical performance. [Read online](https://www.nationalacademies.org/read/5002/chapter/19).
+- Background only, not relied on: Wikipedia, [La Maraude](https://en.wikipedia.org/wiki/La_Maraude); reviews of van Creveld's *Supplying War* and Lynn's *Feeding Mars*. The books themselves remain to be read.
+
 **Next research steps:** confirm the chronology against Riehn, Zamoyski or Lieven; trace the roads on period maps from the Library of Congress, checking the rights statement of each item; find army strengths as ranges (H-009); and research logistics rates (march speeds, consumption, wagon loads) to replace the placeholders (G-006).

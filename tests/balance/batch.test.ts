@@ -1,10 +1,13 @@
 // The balance batch (GAMEPLAY_BALANCING.md §7). Skipped in normal runs; run with
 //   BALANCE=1 BALANCE_SEEDS=1000 npx vitest run tests/balance/batch.test.ts
 // It prints a markdown report between BALANCE-REPORT markers. The F-targets are diagnostics, not quotas.
+//
+// What-if runs: BALANCE_OVERRIDES='{"attrition":{"cohesionLossAtFullShortfall":30}}' replaces rule values
+// for this run only, to test a researched range before anything is adopted. The report names the overrides.
 
 import { it } from 'vitest';
-import { ENDING_NAMES, ENDING_RANK, RULES_VERSION, createContext, evaluate } from '../../src/engine';
-import type { EndingId } from '../../src/engine';
+import { ENDING_NAMES, ENDING_RANK, RULES, RULES_VERSION, createContext, evaluate } from '../../src/engine';
+import type { EndingId, Rules } from '../../src/engine';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
 import { play } from '../fixtures/driver';
 import { violations } from '../fixtures/invariants';
@@ -13,6 +16,19 @@ import { BOTS, FAMILIES } from './bots';
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const enabled = env.BALANCE === '1';
 const SEEDS = Number(env.BALANCE_SEEDS ?? 1000);
+const OVERRIDES = env.BALANCE_OVERRIDES ? (JSON.parse(env.BALANCE_OVERRIDES) as Record<string, unknown>) : null;
+
+/** Rule values with the overrides laid over them; an unknown key is an error, so a typo cannot pass silently. */
+function overridden(base: unknown, over: unknown, path: string): unknown {
+  if (over === null || typeof over !== 'object' || Array.isArray(over)) return over;
+  if (base === null || typeof base !== 'object') throw new Error(`no rule group at ${path}`);
+  const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
+  for (const [k, v] of Object.entries(over as Record<string, unknown>)) {
+    if (!(k in out)) throw new Error(`unknown rule ${path}.${k}`);
+    out[k] = overridden(out[k], v, `${path}.${k}`);
+  }
+  return out;
+}
 
 interface Result {
   ending: EndingId;
@@ -32,7 +48,8 @@ interface Result {
 }
 
 it.skipIf(!enabled)('balance batch', () => {
-  const ctx = createContext(vitebskDecision());
+  const rules = OVERRIDES ? (overridden(RULES, OVERRIDES, 'rules') as Rules) : RULES;
+  const ctx = createContext(vitebskDecision(), rules);
   const names = Object.keys(BOTS);
   const results: Record<string, Result[]> = {};
   const problems: string[] = [];
@@ -67,7 +84,8 @@ it.skipIf(!enabled)('balance batch', () => {
   const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
   const endings = Object.keys(ENDING_NAMES) as EndingId[];
   const lines: string[] = [];
-  lines.push(`# Balance report: rules ${RULES_VERSION}, The Vitebsk Decision, seeds 1–${SEEDS}`, '');
+  lines.push(`# Balance report: rules ${RULES_VERSION}${OVERRIDES ? ' (what-if)' : ''}, The Vitebsk Decision, seeds 1–${SEEDS}`, '');
+  if (OVERRIDES) lines.push(`**What-if run, not the adopted rules.** Overrides: \`${JSON.stringify(OVERRIDES)}\``, '');
   lines.push(`Bots: ${names.join(', ')}. Approach families: ${FAMILIES.join(', ')}. Battles are left to the marshal.`, '');
   lines.push(`**Invariant violations: ${problems.length}**${problems.length ? ` (first: ${problems.slice(0, 5).join('; ')})` : ''}`, '');
 

@@ -133,6 +133,43 @@ Full report: [balance/2026-10-31-rules-0.6.0.md](balance/2026-10-31-rules-0.6.0.
 2. **Check the 80 km haul and the 40 km spacing** (G-016) against the French line of magazines in 1812. Consider letting the player name a depot site that a group should halt at.
 3. **Your play session (M1).** The numbers say the dilemmas exist. Only playing tells us whether you feel them.
 
+## Hunger research and what-if runs (31 October 2026)
+
+The research is in HISTORICAL_RESEARCH.md ("Hunger, straggling and foraging") and the register (H-014 to H-017, L-007, L-008, G-017).
+- **The finding:** hunger wore the 1812 army down mainly through men leaving the ranks, by sickness and straggling. It cost a third of the central army in 52 days, yet the rest still fought.
+- **The proposal:** lower the cohesion loss at a full food shortfall from 100 to 30 a day, inside a plausible range of 20–60. Straggling and foraging on the march stay as they are.
+
+To see the effect before adopting anything, the batch now takes rule overrides for a single run. Four what-if runs of 1,000 seeds each covered the range: [balance/2026-10-31-whatif-hunger.md](balance/2026-10-31-whatif-hunger.md). The proposed value was set from the evidence before the runs.
+
+**What the runs show (at 30, against the adopted 100):**
+- **Collapse from hunger nearly disappears** for the approach families: 0.3–2.6%, down from 44–85%. The rush still collapses in 6% of games. Armies end worn but capable: cohesion 540–650, food in hand about a day. This matches the army that reached Smolensk.
+- **The approaches still differ.**
+  - Bait and converge: 62% Costly Victory.
+  - Concentrated push: 33% Costly Victory, 64% Limited Success.
+  - Southern envelopment: mostly Limited Success, Inconclusive or Repulse. It holds Smolensk in only 46% of games.
+- **Within the range, the result is insensitive at the low end and sensitive at the top.**
+  - 25 and 30 give nearly the same results.
+  - At 50, collapse returns in 9–14% of the families' games, and Costly Victory falls by half or more.
+- **Foraging on the march hardly matters.** Raising it to 0.5 rations a man a day, the top of its range, changes the endings by a few points. It stays at 0.2.
+- **Decisive Success is still rare:** 2% per family and 5% for the methodical bot (F1 5.5%, F2 about 2%). The Russian main armies lose 17–26% on average, short of the 30% the Decisive threshold asks for (G-004). F1 and F2 now hinge on that threshold and on how battles are fought, not on hunger.
+
+**What gets worse, and needs thought:**
+- **F4 fails.** The strategy explains only 10% of the variance in the ending, the seed 19%, and the interaction and noise 71%.
+- The reason: with hunger no longer forcing every advance into collapse, each strategy spreads over several endings depending on the seed (strengths, Russian temperament, weather).
+- A large interaction means *which* approach is best depends on the situation. That rewards reading the situation, if the player can see what matters.
+- But the bots never adapt to the seed, and with one game per strategy and seed, battle luck cannot be separated from the interaction.
+- **Before reading F4 as "luck beats skill",** the batch needs:
+  - a best-response measure: how well the best approach for each seed does, compared with a fixed approach;
+  - repeat runs with fresh battle dice.
+- **F3 is borderline.** Bait and converge does best on 53% of seeds, just over the 50% line.
+
+**Recommended (for your decision):**
+1. **Adopt 30 a day as rules 0.7.0** (G-017). It is evidence-based, and it removes a collapse the history does not support.
+2. **Then improve the F4 measurement** (best response per seed; battle-dice re-rolls) before drawing balance conclusions.
+3. **Later: returning stragglers during halts** (H-017), and a look at the Decisive Success threshold (G-004) against the historical Russian losses.
+
+**Decision:** 30 a day adopted as rules 0.7.0 (D-030). The batch on the adopted rules ([balance/2026-10-31-rules-0.7.0.md](balance/2026-10-31-rules-0.7.0.md)) is identical to the what-if run at 30. Steps 2 and 3 are still open.
+
 ## Acting on the results
 
 1. **First ask whether the model is plausible and the result understandable.** A low decisive-success rate that follows from historically plausible rules is a finding, not a bug.

@@ -27,6 +27,7 @@ const GOLDEN: Record<string, string> = {
   '0.4.0': '6b48ca020f71d0ab', // intelligence and the Russian command (run with Russians held still)
   '0.5.0': '2d02fdbd93033054', // halt for the season (state gains `halted`)
   '0.6.0': 'fb9cd183b39e6999', // captured stores, forward depots and line trains (convoys gain `feeds`, ledger gains `destroyed`)
+  '0.7.0': '618aa3acc8914520', // hunger costs 30 cohesion a day at a full shortfall, not 100 (G-017)
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */

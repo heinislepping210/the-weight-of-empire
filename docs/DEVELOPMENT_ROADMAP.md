@@ -41,8 +41,15 @@ The first release is **The Vitebsk Decision only**, made genuinely excellent bef
 - **Done:** determinism, resumption and conservation tests, under random play with the real Russian command.
 - **Done:** the 1,000-seed batch with seven bots: zero invariant violations in 7,000 games; strategy explains far more of the outcome than the seed.
 - **Done (rules 0.6.0):** captured stores and forward depots, with a supply stance in the directive.
-- **Met in form only:** "three approach families produce clearly different outcome distributions." In the second batch they do differ: Operational Collapse in 85%, 76% and 44% of games, with Repulse taking much of the rest. But all three still end mostly in failure from hunger. Only the methodical approach regularly wins (GAMEPLAY_BALANCING.md, second balance batch).
-- **Still to do:** research the hunger effects before changing them, and your play session.
+- **Done (rules 0.7.0):** hunger's effect on cohesion calibrated on the historical record (D-030).
+- **Met:** "three approach families produce clearly different outcome distributions." On rules 0.7.0:
+  - bait and converge: mostly Costly Victory (62%);
+  - concentrated push: mostly Limited Success (64%);
+  - southern envelopment: spread over Limited Success, Inconclusive and Repulse.
+
+  Collapse is rare (GAMEPLAY_BALANCING.md, hunger research).
+- **Open:** strategy now explains less of the outcome than the seed (F4). The measure needs a best-response view and battle-dice re-rolls before it can be read.
+- **Still to do:** your play session.
 
 **M2 — The Living Map (Day ~13) — an explicit gate before battles, events and the report are polished**
 

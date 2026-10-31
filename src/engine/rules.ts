@@ -1,5 +1,5 @@
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.6.0';
+export const RULES_VERSION = '0.7.0';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -60,7 +60,8 @@ export const RULES = {
     sicknessPermillePerDay: 2,
     stragglePermilleAtFullShortfall: 20,
     horseLossPermilleAtFullShortfall: 30,
-    cohesionLossAtFullShortfall: 100,
+    // G-017: hunger acts mainly through straggling; the units that stay together lose heart slowly (plausible 20–60).
+    cohesionLossAtFullShortfall: 30,
     cohesionRecoveryWhenFed: 10,
   },
   weather: { rainPermille: 250 },
