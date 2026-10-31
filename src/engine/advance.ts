@@ -6,7 +6,7 @@
 
 import { decideNightfall, decideRound, planRussianTurn } from './ai';
 import { resolveNightfall, resolveRound, retreatNodeFor } from './battle';
-import { edgeBetween, shortestPath, type EdgeDef } from './graph';
+import { edgeBetween, neighboursOf, shortestPath, type EdgeDef } from './graph';
 import { chance, drawBetween } from './rng';
 import type { Context } from './scenario';
 import { ROUNDS_PER_SLOT, dayIndex, isAfternoon, nextDaylight, slotIndex } from './time';
@@ -39,6 +39,7 @@ type RunStage = Exclude<Stage, 'orders'>;
 
 const PACES = ['rest', 'steady', 'forced'];
 const ENGAGEMENTS = ['seek', 'accept', 'avoid'];
+const POSTURES = ['dispersed', 'concentrated'];
 const ROUND_ACTIONS = ['press', 'hold', 'withdraw'];
 const NIGHT_CHOICES = ['stay', 'withdraw'];
 
@@ -113,6 +114,8 @@ function validate(s: GameState, input: Input, ctx: Context): string | null {
       seen.add(o.force);
       if (o.pace !== undefined && !PACES.includes(o.pace)) return `unknown pace ${o.pace}`;
       if (o.engagement !== undefined && !ENGAGEMENTS.includes(o.engagement)) return `unknown engagement stance ${o.engagement}`;
+      if (o.posture !== undefined && !POSTURES.includes(o.posture)) return `unknown posture ${o.posture}`;
+      if (o.posture === 'dispersed' && f.battle !== null) return `${f.name} is engaged in battle and cannot disperse`;
       if (o.route === undefined) continue;
       if (f.battle !== null) return `${f.name} is engaged in battle and cannot take movement orders`;
       if (f.transit && o.route[0] !== f.transit.to) return `${f.name} is on the road and must first reach ${f.transit.to}`;
@@ -141,6 +144,12 @@ function applyInput(s: GameState, input: Input, ctx: Context, log: LogEntry[]): 
       if (o.route !== undefined) f.route = [...o.route];
       if (o.pace !== undefined) f.pace = o.pace;
       if (o.engagement !== undefined) f.engagement = o.engagement;
+      if (o.posture === 'dispersed') {
+        f.posture = 'dispersed';
+        f.gathering = 0;
+      } else if (o.posture === 'concentrated' && f.posture === 'dispersed' && f.gathering === 0) {
+        f.gathering = ctx.rules.posture.gatherSlots;
+      }
     }
     // The Russians re-plan only at the start of a turn, as the player does (§3.4).
     planRussianTurn(s, ctx);
@@ -184,17 +193,26 @@ function stageActivity(s: GameState, ctx: Context, log: LogEntry[]): void {
   for (const b of sortedValues(s.battles)) b.roundsThisSlot = 0;
   for (const f of sortedValues(s.forces)) {
     f.movedThisSlot = false;
+    // A dispersed force must assemble before it can march (§2.4b).
+    if (f.posture === 'dispersed' && f.gathering === 0 && f.battle === null && f.pace !== 'rest' && nextEdgeOf(ctx, f)) {
+      f.gathering = ctx.rules.posture.gatherSlots;
+    }
     f.activity = activityFor(ctx, f);
   }
   res.stage = 'movement';
 }
 
+function nextEdgeOf(ctx: Context, f: Force): EdgeDef | undefined {
+  const next = f.route[0];
+  return f.transit ? ctx.graph.edges.get(f.transit.edge) : next !== undefined ? edgeBetween(ctx.graph, f.at, next) : undefined;
+}
+
 /** Exactly one activity per force per sub-step (§3.4a step 2). */
 function activityFor(ctx: Context, f: Force): Activity {
   if (f.battle !== null) return 'fight';
+  if (f.gathering > 0) return 'gather';
   if (f.men <= 0 || f.pace === 'rest') return 'halt';
-  const next = f.route[0];
-  const edge = f.transit ? ctx.graph.edges.get(f.transit.edge) : next !== undefined ? edgeBetween(ctx.graph, f.at, next) : undefined;
+  const edge = nextEdgeOf(ctx, f);
   if (!edge) return 'halt';
   return edge.crossing === 'ford' || edge.crossing === 'pontoon' ? 'cross' : 'march';
 }
@@ -228,27 +246,22 @@ function stageBattleRounds(s: GameState, _ctx: Context, _log: LogEntry[]): void 
 }
 
 function stageAccrual(s: GameState, ctx: Context, log: LogEntry[]): void {
-  const { forage, fatigue, convoy, gramsPerUnit } = ctx.rules;
+  const { fatigue, convoy, gramsPerUnit } = ctx.rules;
   for (const f of sortedValues(s.forces)) {
     const moving = f.activity === 'march' || f.activity === 'cross';
-    const rate = f.activity === 'halt' ? forage.haltPerThousand : moving ? forage.marchPerThousand : 0;
-    const district = s.districts[f.at];
-    if (rate > 0 && district && f.men > 0) {
-      const food = Math.min(Math.floor((f.men * rate) / 1000), district.food);
-      const fodder = Math.min(Math.floor((f.horses * rate) / 1000), district.fodder);
-      district.food -= food;
-      district.fodder -= fodder;
-      f.stock.food += food;
-      f.stock.fodder += fodder;
-      s.ledger.foraged.food += food;
-      s.ledger.foraged.fodder += fodder;
-    }
+    forage(s, ctx, f);
     // Deliveries made during this sub-step join the stock only now (§3.4a step 6).
     addInto(f.stock, f.incoming);
     f.incoming = emptySupplies();
-    const change = moving ? (f.pace === 'forced' ? fatigue.marchForced : fatigue.marchSteady) : f.activity === 'halt' ? fatigue.halt : 0;
+    issueFromDepot(s, ctx, f);
+    const resting = f.activity === 'halt' || f.activity === 'gather';
+    const change = moving ? (f.pace === 'forced' ? fatigue.marchForced : fatigue.marchSteady) : resting ? fatigue.halt : 0;
     f.fatigue = Math.max(0, Math.min(1000, f.fatigue + change));
     if (moving) f.marchedToday = true;
+    if (f.gathering > 0) {
+      f.gathering -= 1;
+      if (f.gathering === 0) f.posture = 'concentrated';
+    }
   }
   for (const d of sortedValues(s.depots)) {
     addInto(d.stock, d.incoming);
@@ -315,6 +328,64 @@ const STAGES: Record<RunStage, (s: GameState, ctx: Context, log: LogEntry[]) => 
   night: stageNight,
   endOfTurn: stageEndOfTurn,
 };
+
+// --------------------------------------------------------------------------------- supply
+
+function forageKind(a: Activity): 'halt' | 'gather' | 'march' | null {
+  if (a === 'halt' || a === 'gather') return a;
+  if (a === 'march' || a === 'cross') return 'march';
+  return null;
+}
+
+/**
+ * Gathering from the countryside (§2.6). A halted, dispersed force reaches its neighbouring
+ * districts too, except where the enemy stands, and gathers more; everyone else uses their own district.
+ */
+function forage(s: GameState, ctx: Context, f: Force): void {
+  const kind = forageKind(f.activity);
+  if (!kind || f.men <= 0) return;
+  const rules = ctx.rules.forage;
+  const wide = f.posture === 'dispersed' && kind === 'halt';
+  const nodes = wide ? [f.at, ...neighboursOf(ctx.graph, f.at).map((n) => n.node).filter((n) => !enemyPresent(s, f.side, n))] : [f.at];
+  const bonus = wide ? rules.dispersedPermille : 1000;
+  const want = {
+    food: Math.floor((Math.floor((f.men * rules.food[kind]) / 1000) * bonus) / 1000),
+    fodder: Math.floor((Math.floor((f.horses * rules.fodder[kind]) / 1000) * bonus) / 1000),
+  };
+  for (const supply of ['food', 'fodder'] as const) {
+    let left = want[supply];
+    // Spread evenly over every district in reach first, then make up any shortfall where stocks remain.
+    const share = Math.ceil(left / nodes.length);
+    for (const cap of [share, Infinity]) {
+      for (const node of nodes) {
+        const district = s.districts[node];
+        if (!district || left <= 0) continue;
+        const take = Math.min(left, cap, district[supply]);
+        district[supply] -= take;
+        f.stock[supply] += take;
+        s.ledger.foraged[supply] += take;
+        left -= take;
+      }
+    }
+  }
+}
+
+/** A force standing at its own side's depot draws rations directly, without wagons. */
+function issueFromDepot(s: GameState, ctx: Context, f: Force): void {
+  const depot = s.depots[f.at];
+  if (!depot || depot.side !== f.side || f.transit || f.men <= 0) return;
+  const { depotIssue, consumption } = ctx.rules;
+  const target = {
+    food: f.men * consumption.foodPerMan * depotIssue.foodDays,
+    fodder: f.horses * consumption.fodderPerHorse * depotIssue.fodderDays,
+    ammo: Math.floor((f.men * depotIssue.ammoPerThousandMen) / 1000),
+  };
+  for (const supply of ['food', 'fodder', 'ammo'] as const) {
+    const take = Math.min(Math.max(0, target[supply] - f.stock[supply]), depot.stock[supply]);
+    depot.stock[supply] -= take;
+    f.stock[supply] += take;
+  }
+}
 
 // ------------------------------------------------------------------------------- movement
 
@@ -478,6 +549,8 @@ function resolveEncounter(s: GameState, ctx: Context, enc: Encounter, log: LogEn
     const f = must(s.forces[fid], fid);
     f.battle = id;
     f.route = [];
+    // Caught dispersed: the force assembles while the fighting begins (§2.4b).
+    if (f.posture === 'dispersed' && f.gathering === 0) f.gathering = ctx.rules.posture.gatherSlots;
   }
   note(s, log, 'battleJoined', { battle: id, node: enc.node, attacker });
   return true;

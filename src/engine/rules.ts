@@ -1,5 +1,5 @@
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.2.0';
+export const RULES_VERSION = '0.3.0';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -34,9 +34,23 @@ export const RULES = {
     nightAfterRest: 160,
   },
   consumption: { foodPerMan: 1, fodderPerHorse: 1 },
-  forage: { haltPerThousand: 300, marchPerThousand: 100 },
+  /** Gathered per 1,000 men (food) or per 1,000 horses (fodder) per sub-step, by activity. */
+  forage: {
+    food: { halt: 300, gather: 200, march: 100 },
+    fodder: { halt: 450, gather: 300, march: 250 },
+    /** A halted, dispersed force spreads its foragers over neighbouring districts and gathers this much more. */
+    dispersedPermille: 1800,
+  },
+  posture: {
+    /** Sub-steps a dispersed force needs to assemble before it can march or fight at full strength. */
+    gatherSlots: 2,
+    /** Fighting strength lost per gathering sub-step still outstanding. */
+    readinessLossPerSlotPermille: 250,
+  },
+  /** A force at its own side's depot tops up to this much at the end of each sub-step. */
+  depotIssue: { foodDays: 4, fodderDays: 2, ammoPerThousandMen: 150 },
   attrition: {
-    sicknessPermillePerDay: 3,
+    sicknessPermillePerDay: 2,
     stragglePermilleAtFullShortfall: 20,
     horseLossPermilleAtFullShortfall: 30,
     cohesionLossAtFullShortfall: 100,

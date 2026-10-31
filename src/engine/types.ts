@@ -16,7 +16,9 @@ export interface Supplies {
 
 export type Pace = 'rest' | 'steady' | 'forced';
 export type Engagement = 'seek' | 'accept' | 'avoid';
-export type Activity = 'march' | 'halt' | 'cross' | 'withdraw' | 'fight';
+export type Activity = 'march' | 'halt' | 'gather' | 'cross' | 'withdraw' | 'fight';
+/** Dispersed forces forage widely but must gather before they can march or fight at full strength (§2.4b). */
+export type Posture = 'dispersed' | 'concentrated';
 export type RoadClass = 'post' | 'secondary' | 'track';
 export type RoadCondition = 'dry' | 'mud';
 export type Crossing = 'bridge' | 'ford' | 'pontoon';
@@ -47,6 +49,9 @@ export interface Force {
   pace: Pace;
   engagement: Engagement;
   activity: Activity;
+  posture: Posture;
+  /** Sub-steps still needed to finish gathering from dispersal; 0 when not gathering. */
+  gathering: number;
   battle: BattleId | null;
   men: number;
   horses: number;
@@ -177,6 +182,7 @@ export interface GroupOrder {
   route?: NodeId[];
   pace?: Pace;
   engagement?: Engagement;
+  posture?: Posture;
 }
 
 export type BattleDecision =

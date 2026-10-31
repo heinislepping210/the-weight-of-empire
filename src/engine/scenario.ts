@@ -1,7 +1,7 @@
 import { buildGraph, type EdgeDef, type Graph, type NodeDef } from './graph';
 import { drawBetween } from './rng';
 import { RULES, type Rules } from './rules';
-import type { Convoy, Depot, District, Engagement, Force, ForceId, GameState, NodeId, Pace, RoadCondition, Side, Supplies } from './types';
+import type { Convoy, Depot, District, Engagement, Force, ForceId, GameState, NodeId, Pace, Posture, RoadCondition, Side, Supplies } from './types';
 import { emptySupplies } from './util';
 
 /** A fixed number, or an inclusive range drawn once per game from the seed (scenario variation, §2.12). */
@@ -20,6 +20,7 @@ export interface ForceInit {
   cohesion?: number;
   pace?: Pace;
   engagement?: Engagement;
+  posture?: Posture;
 }
 
 export interface DepotInit {
@@ -82,6 +83,8 @@ export function newGame(ctx: Context, seed: number): GameState {
       pace: f.pace ?? 'steady',
       engagement: f.engagement ?? 'accept',
       activity: 'halt',
+      posture: f.posture ?? 'concentrated',
+      gathering: 0,
       battle: null,
       men: resolveStrength(seed, f.id, 'men', f.men),
       horses: resolveStrength(seed, f.id, 'horses', f.horses),

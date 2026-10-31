@@ -51,6 +51,19 @@ export function edgeBetween(g: Graph, a: NodeId, b: NodeId): EdgeDef | undefined
   return neighboursOf(g, a).find((n) => n.node === b)?.edge;
 }
 
+/** Road distance in metres along the shortest path, or Infinity when unreachable. */
+export function roadDistance(g: Graph, from: NodeId, to: NodeId): number {
+  const path = shortestPath(g, from, to);
+  if (path === null) return Infinity;
+  let metres = 0;
+  let at = from;
+  for (const next of path) {
+    metres += edgeBetween(g, at, next)?.metres ?? 0;
+    at = next;
+  }
+  return metres;
+}
+
 /** Shortest road path by length, as the nodes after `from`. Ties break on node ID, so the result is deterministic. */
 export function shortestPath(g: Graph, from: NodeId, to: NodeId): NodeId[] | null {
   if (from === to) return [];

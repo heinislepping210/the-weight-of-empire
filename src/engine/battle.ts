@@ -1,12 +1,12 @@
 // Battle resolution. The round model is a placeholder that already obeys the timeline rules
 // (time, ammunition, exclusivity); the sector system of §2.10 replaces its combat maths.
 
-import { neighboursOf } from './graph';
+import { neighboursOf, roadDistance } from './graph';
 import { drawBetween } from './rng';
 import type { Context } from './scenario';
 import { dayIndex } from './time';
 import type { BattleState, Force, GameState, LogEntry, NightChoice, NodeId, RoundAction, Side } from './types';
-import { enemyPresent, fatiguePermille, loseMen, must, note, otherSide, place } from './util';
+import { enemyPresent, fatiguePermille, loseMen, must, note, otherSide, place, sortedValues } from './util';
 
 export const SIDES: readonly Side[] = ['fr', 'ru'];
 
@@ -27,9 +27,24 @@ export function sideTotals(s: GameState, b: BattleState, side: Side): { men: num
   return { men, cohesion: Math.floor(cohesion / men), fatigue: Math.floor(fatigue / men) };
 }
 
-/** First neighbouring place free of the enemy, in node-ID order. */
+/** The neighbouring place, free of the enemy, that lies nearest to one of the side's own depots: beaten forces fall back towards home. */
 export function retreatNodeFor(s: GameState, ctx: Context, node: NodeId, side: Side): NodeId | null {
-  return neighboursOf(ctx.graph, node).find((n) => !enemyPresent(s, side, n.node))?.node ?? null;
+  const options = neighboursOf(ctx.graph, node)
+    .map((n) => n.node)
+    .filter((n) => !enemyPresent(s, side, n));
+  const homes = sortedValues(s.depots)
+    .filter((d) => d.side === side)
+    .map((d) => d.node);
+  let best: NodeId | null = null;
+  let bestDistance = Infinity;
+  for (const option of options) {
+    const distance = homes.length === 0 ? 0 : Math.min(...homes.map((h) => roadDistance(ctx.graph, option, h)));
+    if (best === null || distance < bestDistance) {
+      best = option;
+      bestDistance = distance;
+    }
+  }
+  return best;
 }
 
 function spendAmmo(forces: Force[], need: number): number {
@@ -101,10 +116,15 @@ export function resolveRound(s: GameState, ctx: Context, b: BattleState, acts: R
   const power: Record<Side, number> = { fr: 0, ru: 0 };
   for (const side of SIDES) {
     const t = sideTotals(s, b, side);
-    const need = Math.floor((t.men * r.ammoPerThousandMen[acts[side]]) / 1000);
+    // Men of a force still gathering from dispersal are not yet all on the field (§2.4b).
+    const ready = sideForces(s, b, side).reduce(
+      (n, f) => n + Math.floor((f.men * Math.max(0, 1000 - f.gathering * ctx.rules.posture.readinessLossPerSlotPermille)) / 1000),
+      0,
+    );
+    const need = Math.floor((ready * r.ammoPerThousandMen[acts[side]]) / 1000);
     const spent = spendAmmo(sideForces(s, b, side), need);
     s.ledger.ammoSpent[side] += spent;
-    const base = Math.floor((t.men * (500 + Math.floor(t.cohesion / 2))) / 1000);
+    const base = Math.floor((ready * (500 + Math.floor(t.cohesion / 2))) / 1000);
     const tired = Math.floor((base * fatiguePermille(t.fatigue, ctx.rules)) / 1000);
     power[side] = spent < need ? Math.floor((tired * r.noAmmoPowerPermille) / 1000) : tired;
   }

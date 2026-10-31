@@ -61,6 +61,7 @@ export function stepUntil(state: GameState, ctx: Context, until: (s: GameState) 
 
 const PACES = ['rest', 'steady', 'forced'] as const;
 const STANCES = ['seek', 'accept', 'avoid'] as const;
+const POSTURE_CHOICES = ['dispersed', 'concentrated', 'keep'] as const;
 const ROUND = ['press', 'hold', 'withdraw', 'delegate'] as const;
 const NIGHT = ['stay', 'withdraw', 'delegate'] as const;
 
@@ -87,7 +88,8 @@ export function randomPolicy(ctx: Context, choiceSeed: number): Policy {
           at = pick(neighboursOf(ctx.graph, at), [turn, id, 'step', k]).node;
           route.push(at);
         }
-        orders.push({ force: id, route, pace, engagement });
+        const posture = pick(POSTURE_CHOICES, [turn, id, 'posture']);
+        orders.push({ force: id, route, pace, engagement, ...(posture === 'keep' ? {} : { posture }) });
       }
       return orders;
     },

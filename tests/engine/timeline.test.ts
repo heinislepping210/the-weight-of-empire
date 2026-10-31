@@ -145,6 +145,26 @@ describe('turn timeline (§3.4a)', () => {
     expect(outcomes).toEqual(new Set([true, false]));
   });
 
+  it('a force that withdraws falls back towards its own depots, not just to the first free place', () => {
+    // With the French depot moved to C, the escape route is C, although A comes first alphabetically.
+    const ctx = createContext(
+      testGround((s) => {
+        forceInit(s, 'ru-main').at = 'B';
+        s.depots = [{ node: 'C', side: 'fr', stock: { food: 100_000, fodder: 50_000, ammo: 5_000 } }, ...s.depots.filter((d) => d.side === 'ru')];
+        s.convoys = [];
+      }),
+    );
+    for (let seed = 0; seed < 40; seed++) {
+      const s = ordersOnly(newGame(ctx, seed), ctx, [{ force: 'fr-main', engagement: 'avoid' }]);
+      const { state, log } = stepOnce(stepUntil(s, ctx, (x) => x.resolution.stage === 'contacts'), ctx);
+      if (log.find((e) => e.kind === 'withdrawal')?.detail.success === true) {
+        expect(state.forces['fr-main']!.at).toBe('C');
+        return;
+      }
+    }
+    throw new Error('no successful withdrawal in 40 seeds');
+  });
+
   it('T9: fatigue rises with the march during a sub-step and recovers at night', () => {
     const ctx = createContext(testGround());
     const start = newGame(ctx, 5);

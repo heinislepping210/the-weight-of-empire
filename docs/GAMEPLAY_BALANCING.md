@@ -51,6 +51,24 @@ There were 80 shortfall events and about 27,500 horses lost; 42,000 men straggle
 
 **Calibration target, before any tuning of fun:** a force halted and dispersed near its depot should be roughly sustainable and slowly recover. Sustainability should then fall off with distance from the depots, with the length and condition of the line, and with concentration. That is the core tension of the game (§2.1), and it has to come from the model, not from patched numbers.
 
+## Calibration with rules 0.3.0 (31 October 2026)
+
+Changes: dispersed and concentrated postures, depot issue, wider foraging when dispersed, retreat towards home, and recalibrated scenario stocks (D-024). The same scenario, as a mean over 20 seeds:
+
+| Approach | French men lost | French horses lost | Russian men lost |
+|---|---|---|---|
+| Stay dispersed (no orders) | 7.6% | 0.4% | 3.9% |
+| Concentrate in place | 11.6% | 9.5% | 3.9% |
+| Push on Smolensk on three axes (scripted, battles delegated) | 18.2% | 21.0% | 9.7% |
+
+**Reading it:**
+- **Near a depot, a halted, dispersed force is sustainable.** Guard, Davout and the southern group lose only sickness (3.9% in 20 days) and keep supplies in hand.
+- **Exposed forward groups are under pressure.** The vanguard at Liozno and Eugène at Surazh are 50+ km from Vitebsk, compete for the same countryside, and can't forage under the Cossacks at Rudnia. They run short, which gives the player a reason to act — by design, not a bug.
+- **Concentrating costs food and horses; pushing costs men and horses.** These are the intended trade-offs, and they come from the model.
+- **Pushing, against the historical hint:** H-014 (unverified) suggests roughly a third of the men and half the horses lost over about 50 days, around 15% of men and 25% of horses per 20 days. The push lands near the men figure and somewhat below on horses; to revisit once the Russian AI moves and a historical-approach bot exists.
+
+**Known limits:** stragglers don't yet rejoin; sickness doesn't yet vary with heat, crowding or water; the Russian AI only holds its ground, so these figures leave out Russian counter-moves.
+
 ## Acting on the results
 
 1. **First ask whether the model is plausible and the result understandable.** A low decisive-success rate that follows from historically plausible rules is a finding, not a bug.
