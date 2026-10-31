@@ -1,0 +1,28 @@
+# Decision Log
+
+Every significant decision, with its reason and origin. New decisions are appended; earlier ones are changed only by a later entry that supersedes them.
+
+| ID | Date | Decision | Why | Origin |
+|---|---|---|---|---|
+| D-001 | 2026-10-31 | The first release is **The Vitebsk Decision** (Vitebsk → Smolensk), serving as both the Command Challenge and the vertical slice | Most interesting decisions first; earliest shareable product | Interview Q1 |
+| D-002 | 2026-10-31 | Army-focused objective; history is par; outcome tiers plus headline figures, with no composite score | Historically grounded; avoids false precision | Q2, Q5 |
+| D-003 | 2026-10-31 | 4–5 force groups; logistics by policy, not individual wagons | Manoeuvre without micromanagement | Q3 |
+| D-004 | 2026-10-31 | The player holds Napoleon's position; Napoleon is never given invented dialogue | Tone and historical sensitivity | Q4 |
+| D-005 | 2026-10-31 | Open sandbox inside a historical frame, plus an optional historical ghost | Agency, with history kept visibly separate | Q6 |
+| D-006 | 2026-10-31 | Sector battles (3 sectors plus reserve) | Meaningful battles within scope | Q7 |
+| D-007 | 2026-10-31 | Watercolour terrain with engraved linework; restrained video; CC0 sound after the first release | Cohesive look; limited Canva video allowance | Q8–Q10 |
+| D-008 | 2026-10-31 | No personal information about the creator on the site | User requirement | Q12 |
+| D-009 | 2026-10-31 | Public GitHub repository on the user's account with GitHub Pages; code under MIT, artwork excluded | User allowed a public username; simplest legally clean option | v0.2 review |
+| D-010 | 2026-10-31 | Challenge mode: army directives, standing orders, decision points | Playable in 7–10 minutes without losing depth | v0.2 review, point 1 |
+| D-011 | 2026-10-31 | The Living Map is an explicit acceptance gate (M2) | The map is the heart of the game | v0.2 review, point 2 |
+| D-012 | 2026-10-31 | Resumable resolution: a state machine stored in the game state, driven by a pure `advance()` | Deterministic pause and resume for battles, saves and replays | v0.2 review, point 3 |
+| D-013 | 2026-10-31 | Fairness criteria F1–F6 | Success through skill, several viable approaches | v0.2 review, point 4 |
+| D-014 | 2026-10-31 | Canva: a dedicated folder; approval before every generation, credit use and export; a style reference first; provenance verified before any optimisation | User control; compliance with Canva's AI terms | v0.2 review, point 5 |
+| D-015 | 2026-10-31 | Fixed turn timeline: 4 daylight sub-steps and 2 nights per turn; supplies usable only after they arrive; one activity per force per sub-step; battles take simulated time (§3.4a) | Logical consistency of resources and actions | Final review, point 1 |
+| D-016 | 2026-10-31 | F1–F6 are diagnostic targets, revisable with documented justification; no quota-driven manipulation | Historical plausibility and agency come first | Final review, point 2 |
+| D-017 | 2026-10-31 | Outcome model: three evaluated dimensions and eight endings; the result of a halt depends on the state of the campaign (§2.13) | Internally consistent victory conditions | Final review, point 3 |
+| D-018 | 2026-10-31 | Inspectable planned orders with reasons, forecasts with drivers, edit-and-lock, and stops when events deviate from the plan (§2.4b) | The player keeps meaningful command | Final review, point 4 |
+| D-019 | 2026-10-31 | A verification status for every historical claim; Minard as a cited source, never daily data; ODbL data kept separate from MIT code, with public-domain and CC0 sources preferred | Historical accuracy and licence compliance | Final review, point 5 |
+| D-020 | 2026-10-31 | The schedule is aspirational: a fun prototype first, then the map to the agreed standard; at M1 the user compares two strategies | Gameplay quality over the target date | Final review, point 6 |
+| D-021 | 2026-10-31 | Plan approved; Phase 1 (foundations) started | — | User approval |
+| D-022 | 2026-10-31 | LOG-01 candidate 3 (`MAHZnSDGhgI`) is the **style anchor only**: a reference for later generations, never shipped. The in-game LOG-01 image is regenerated in batch 2 with corrected clothing. The fourth approved generation stays in reserve | Its style is right, but every candidate fails the 1812 clothing check | User choice |

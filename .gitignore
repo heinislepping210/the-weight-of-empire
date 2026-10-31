@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+test-results/
+playwright-report/
+# Canva exports and other files awaiting a rights check are never committed
+assets-incoming/
+*.log
+.DS_Store
