@@ -1,24 +1,30 @@
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.1.0';
+export const RULES_VERSION = '0.2.0';
 
 /**
- * Every value below is a provisional game assumption (HISTORICAL_ASSUMPTIONS.md G-006).
- * They will be replaced by researched ranges in Phase 2 and tuned during balancing.
+ * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
+ * a researched range; the rest are placeholders (G-006) still to be researched and tuned.
  */
 export const RULES = {
   version: RULES_VERSION,
   march: {
-    metresPerSlot: { rest: 0, steady: 11_000, forced: 16_000 },
+    // L-001: steady 22 km/day, forced 36 km/day
+    metresPerSlot: { rest: 0, steady: 11_000, forced: 18_000 },
     roadPermille: { post: 1000, secondary: 850, track: 700 },
     mudPermille: 650,
     crossingPermille: 600,
     fatigueSlowdownFrom: 500,
   },
   convoy: {
+    // L-002: 18 km/day
     metresPerSlot: 9_000,
-    wagonCapacity: 1_000,
-    loadPermille: { food: 600, fodder: 300, ammo: 100 },
+    // L-005: payload per wagon
+    payloadGrams: 800_000,
+    /** Share of each wagon's payload *by weight*. */
+    loadPermille: { food: 700, fodder: 200, ammo: 100 },
   },
+  /** Weight of one unit of supply: a man's daily ration (L-003), a horse's daily fodder (L-004), one ammunition unit. */
+  gramsPerUnit: { food: 750, fodder: 9_000, ammo: 1_000 },
   fatigue: {
     marchSteady: 70,
     marchForced: 140,

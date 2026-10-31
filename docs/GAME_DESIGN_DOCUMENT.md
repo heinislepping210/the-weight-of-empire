@@ -133,6 +133,8 @@ The simulation underneath is identical; only the way you give orders changes.
 | **Captured stores** | Reaching a Russian magazine before it is destroyed captures it. Retreating Russians may burn stores. This rewards speed and creates a real tension with sustainability. |
 | **Ammunition** | Battles consume artillery ammunition, which must be re-supplied by wagon. |
 
+**Weight decides what wagons can do (D-023).** A wagon's load is limited by weight, and a horse's daily fodder weighs about twelve times a soldier's daily ration. Convoys keep the men in bread and the guns in ammunition, but the horses largely live off the land. Where they march, rest and forage therefore decides whether cavalry, artillery and the wagons themselves keep moving.
+
 **The forecast.** Every group and the army as a whole show *days of supply* as a range, such as "6–9 days". The range comes from carried stock, expected deliveries and expected forage under current orders. The Logistics layer marks lines delivering less than demand as **bottlenecks**, with a pattern as well as a colour.
 
 **Civilian consequences don't disappear.** Districts show their state (Intact / Requisitioned / Stripped / Hostile). The after-action report records the human cost of foraging choices. It reports this soberly, without lecturing.

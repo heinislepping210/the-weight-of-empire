@@ -16,7 +16,14 @@ Every figure, date or rule the game relies on is listed here with its status (HI
 | H-012 | A false report of French troops at Porechye turns Barclay north-west and stalls the offensive; Porechye found empty | 8 Aug corroborated; 12 Aug unverified | 8–12 Aug | Wikipedia (Inkovo); historyofwar.org | Russian AI acting on imperfect intelligence |
 | H-013 | The Russian 1st Army reaches Smolensk by way of Porechye | Unverified | evening of 1 Aug | Wikipedia (Smolensk) | Porechye road |
 | H-008 | Kutuzov's appointment and arrival | Unverified | appointed in Aug; took command after Smolensk | — | full campaign only |
-| H-009 | Army strengths of both sides at each stage | Unverified | to be researched as ranges | — | starting forces |
+| H-009 | Army strengths around Smolensk in mid-August | **Disputed** / unverified | **French central group ~180,000** (most cited; some summaries lower). Ney's III Corps ~44,000 in June → ~22,000–30,000 by mid-August. **Russian combined 1st and 2nd Armies ~120,000–130,000**; June order-of-battle figures add up higher (1st Army ~104,000 + ~7,000 Cossacks; 2nd Army ~33,000–49,000 + ~4,000 Cossacks) and are not reconciled | Wikipedia (Smolensk; III Corps; Second Western Army; orders of battle); historyofwar.org | starting forces, as ranges, by force group |
+| H-014 | French attrition between the Niemen and Smolensk | Unverified (popular, uncited) | about a third of the men and about half the cavalry and draught horses, mostly to sickness, exhaustion and desertion | Real Time History blog | calibration hint for the history-as-par benchmark only |
+| L-001 | March rates | Unverified (secondary) | normal ~16–30 km/day; forced roughly 30–45 km/day; ~40 km/day reported in 1812, at heavy cost | Army Heritage bibliography on marching rates; napoleonguide.com; blogs | `march.metresPerSlot` |
+| L-002 | Supply-wagon speed | Unverified (secondary) | ~16–19 km/day; the transport service planned on ~16 km/day | blogs citing van Creveld | `convoy.metresPerSlot` |
+| L-003 | Food ration per man per day | Unverified; no French figure found | British benchmark 0.68 kg of bread or 0.45 kg of biscuit; a figure of 1.4 kg of grain is attributed to Engels | 95th Rifles reenactors (British); violentmetaphors.com | weight of a food ration |
+| L-004 | Fodder per horse per day | Unverified (secondary) | ~9 kg (20 lb), attributed to Engels | violentmetaphors.com | weight of a fodder ration |
+| L-005 | Wagon payload | Unverified; French data not found | ammunition wagons ~680 kg (1,500 lb); British general-service wagon ~1,090 kg (2,400 lb) including the team's forage | historyrise.com; Wikipedia (military train) | `convoy.wagonCapacity` |
+| L-006 | Transport service of 1812 | Unverified (blog citing van Creveld) | 26 transport battalions, ~9,200 tonnes, moving about 16 km a day | the-other-side-of-history blog | scale of the wagon parks |
 | H-010 | Minard's strength figures | Minard's claims only | — | Minard (1869) | cited source only, never daily data |
 | H-011 | Julian–Gregorian offset in 1812 | Well established (citation to add) | 12 days | standard chronology | date display |
 
@@ -31,6 +38,7 @@ Every figure, date or rule the game relies on is listed here with its status (HI
 | G-005 | Political pressure | 0–100 scale | §2.9 | |
 | G-007 | Road length = great-circle distance between places × 1.25 for winding | Provisional | until roads are traced on period maps | `src/data/vitebsk/roads.ts` |
 | G-008 | Smolensk as two places joined by bridges (Old Town on the south bank, St Petersburg suburb on the north) | Modelling choice | makes the river line and the Moscow road matter, as in H-006 | MAP_AND_GEOGRAPHY.md |
-| G-006 | All numeric rule values in `src/engine/rules.ts` (march speeds, consumption, foraging, attrition, battle rates) | **Placeholders**, chosen only to exercise the engine | Phase 2 research replaces them with sourced ranges; balancing tunes them within those ranges | Rules 0.1.0 |
+| G-006 | All numeric rule values in `src/engine/rules.ts` (march speeds, consumption, foraging, attrition, battle rates) | **Placeholders**, chosen only to exercise the engine | Phase 2 research replaces them with sourced ranges; balancing tunes them within those ranges | Rules 0.2.0 replaced march speeds, wagon payload and ration weights with values inside L-001 to L-005. Consumption, foraging, attrition and battle rates are still placeholders. |
+| G-009 | Convoy load shares by weight: food 70%, fodder 20%, ammunition 10% | Placeholder | until depot-level supply orders exist | `convoy.loadPermille` |
 
 

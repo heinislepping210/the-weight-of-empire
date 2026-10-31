@@ -83,4 +83,20 @@ The 31 October 2026 research pass used secondary and tertiary web sources only, 
 - [frenchempire.net: Smolensk](https://frenchempire.net/battles/smolensk)
 - [1812now: Napoleon's indecision, citing Ségur](https://1812now.blogspot.com/2012/07/july-31-1812-napoleons-indecision.html)
 
+**Strengths and logistics: first pass (31 October 2026)**
+
+- **Strengths (H-009, H-014):** the French central group around Smolensk in mid-August is most often put at about 180,000, and the combined Russian armies at about 120,000–130,000. Neither is well sourced online. Corps figures move fast: Ney's III Corps fell from about 44,000 in June to about 22,000–30,000 by mid-August. Starting strengths therefore enter the game as **ranges per force group**, labelled as such, until checked against Nafziger's or Riehn's tables.
+- **Logistics rates (L-001 to L-006):** usable *ranges*, but no reliable French ration regulation or wagon specification was found online. The working figures are in the register.
+- **The key finding for the design: fodder is heavy.** A horse's day of fodder (~9 kg) weighs about twelve times a man's daily ration (~0.55–0.75 kg). A wagon can carry well over a thousand man-days of food, but only about a hundred horse-days of fodder. The army's horses therefore had to live off the land: grazing, green crops, requisitioned hay. That is one historical root of the mass horse losses. **The rules currently treat a food unit and a fodder unit as the same weight; they should not** (see GAMEPLAY_BALANCING.md, rule values).
+
+Additional sources consulted:
+- Wikipedia: [III Corps (Grande Armée)](https://en.wikipedia.org/wiki/III_Corps_(Grande_Arm%C3%A9e)), [Order of battle of the French invasion of Russia](https://en.wikipedia.org/wiki/French_invasion_of_Russia_order_of_battle), [Second Western Army](https://en.wikipedia.org/wiki/Second_Western_Army), [French invasion of Russia](https://en.wikipedia.org/wiki/French_invasion_of_Russia), [Train (military)](https://en.wikipedia.org/wiki/Train_(military))
+- [Real Time History: Battle of Smolensk 1812](https://realtimehistory.net/blogs/news/new-on-real-time-history-battle-of-smolensk-1812)
+- [Army Heritage Center: marching rates bibliography](https://www.armyheritage.org/wp-content/uploads/ref-bibs/subjects/Marching/Marching%20Rates.pdf)
+- [napoleonguide.com: on the march with the French](https://www.napoleonguide.com/campaign_russ_1812inf.htm)
+- [violentmetaphors.com: what Napoleon's army ate](https://violentmetaphors.com/2017/04/19/what-napoleons-army-ate/)
+- [95th Rifles: British daily rations](https://2023.95th-rifles.co.uk/?p=122)
+- [the-other-side-of-history: logistics in Napoleon's campaigns](https://the-other-side-of-history.blogspot.com/2024/07/logistics-in-napoleons-campaigns.html)
+- [historyrise.com: ammunition supply](https://historyrise.com/ammunition-supply-in-the-context-of-the-napoleonic-wars/)
+
 **Next research steps:** confirm the chronology against Riehn, Zamoyski or Lieven; trace the roads on period maps from the Library of Congress, checking the rights statement of each item; find army strengths as ranges (H-009); and research logistics rates (march speeds, consumption, wagon loads) to replace the placeholders (G-006).

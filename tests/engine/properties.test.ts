@@ -20,6 +20,7 @@ const crowded = createContext(
  */
 const GOLDEN: Record<string, string> = {
   '0.1.0': '8c8ffd59ea26b2e7',
+  '0.2.0': 'c6a24c55ddaa0d93', // weight-based convoy loads; forced march 36 km/day
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved; nothing goes negative. */

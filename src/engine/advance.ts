@@ -228,7 +228,7 @@ function stageBattleRounds(s: GameState, _ctx: Context, _log: LogEntry[]): void 
 }
 
 function stageAccrual(s: GameState, ctx: Context, log: LogEntry[]): void {
-  const { forage, fatigue, convoy } = ctx.rules;
+  const { forage, fatigue, convoy, gramsPerUnit } = ctx.rules;
   for (const f of sortedValues(s.forces)) {
     const moving = f.activity === 'march' || f.activity === 'cross';
     const rate = f.activity === 'halt' ? forage.haltPerThousand : moving ? forage.marchPerThousand : 0;
@@ -257,9 +257,11 @@ function stageAccrual(s: GameState, ctx: Context, log: LogEntry[]): void {
   for (const c of sortedValues(s.convoys)) {
     const depot = s.depots[c.home];
     if (c.leg !== 'loading' || c.at !== c.home || !depot) continue;
-    const capacity = c.wagons * convoy.wagonCapacity;
+    // Loads are limited by weight: a wagon carries far fewer days of fodder than of bread (L-004).
+    const payload = c.wagons * convoy.payloadGrams;
     for (const kind of ['food', 'fodder', 'ammo'] as const) {
-      const amount = Math.min(Math.floor((capacity * convoy.loadPermille[kind]) / 1000), depot.stock[kind]);
+      const fits = Math.floor((payload * convoy.loadPermille[kind]) / 1000 / gramsPerUnit[kind]);
+      const amount = Math.min(fits, depot.stock[kind]);
       depot.stock[kind] -= amount;
       c.cargo[kind] += amount;
     }
