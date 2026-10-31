@@ -51,6 +51,16 @@ export function edgeBetween(g: Graph, a: NodeId, b: NodeId): EdgeDef | undefined
   return neighboursOf(g, a).find((n) => n.node === b)?.edge;
 }
 
+export function pathMetres(g: Graph, from: NodeId, path: readonly NodeId[]): number {
+  let metres = 0;
+  let at = from;
+  for (const next of path) {
+    metres += edgeBetween(g, at, next)?.metres ?? 0;
+    at = next;
+  }
+  return metres;
+}
+
 /** Road distance in metres along the shortest path, or Infinity when unreachable. */
 export function roadDistance(g: Graph, from: NodeId, to: NodeId): number {
   const path = shortestPath(g, from, to);
@@ -64,12 +74,15 @@ export function roadDistance(g: Graph, from: NodeId, to: NodeId): number {
   return metres;
 }
 
-/** Shortest road path by length, as the nodes after `from`. Ties break on node ID, so the result is deterministic. */
-export function shortestPath(g: Graph, from: NodeId, to: NodeId): NodeId[] | null {
+/**
+ * Shortest road path by length, as the nodes after `from`, never entering a node in `avoid`.
+ * Ties break on node ID, so the result is deterministic.
+ */
+export function shortestPath(g: Graph, from: NodeId, to: NodeId, avoid: ReadonlySet<NodeId> = new Set()): NodeId[] | null {
   if (from === to) return [];
   const dist = new Map<NodeId, number>([[from, 0]]);
   const prev = new Map<NodeId, NodeId>();
-  const done = new Set<NodeId>();
+  const done = new Set<NodeId>(avoid);
   for (;;) {
     let current: NodeId | null = null;
     let best = Infinity;
@@ -84,6 +97,7 @@ export function shortestPath(g: Graph, from: NodeId, to: NodeId): NodeId[] | nul
     if (current === to) break;
     done.add(current);
     for (const { node, edge } of neighboursOf(g, current)) {
+      if (avoid.has(node)) continue;
       const d = best + edge.metres;
       const old = dist.get(node);
       const oldPrev = prev.get(node);

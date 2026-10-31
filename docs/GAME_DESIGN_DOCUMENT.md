@@ -82,6 +82,8 @@ Plus independent assets: **wagon parks**, a **pontoon train**, and **garrison de
 Orders persist until you change them.
 
 ## 2.4b Challenge mode: directives, standing orders, decision points
+
+*Implementation status (D-026):* directives, axes, the staff planner with per-group orders, forecasts and reasons, and player overrides are built in the engine. Still to come: logistics stance, detached tasks, decision points (auto-advance and stop conditions), and wagon deliveries in the food forecast.
 The simulation underneath is identical; only the way you give orders changes.
 
 - **One army directive replaces per-group orders.** It has five parts, and each defaults to your previous choice:
