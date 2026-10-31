@@ -7,3 +7,5 @@ playwright-report/
 assets-incoming/
 *.log
 .DS_Store
+# Local editor and assistant settings
+.claude/

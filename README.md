@@ -4,7 +4,13 @@
 
 A browser-based historical strategy game about ambition, logistics and judgement. The first release is **The Vitebsk Decision**, a short command challenge set in August 1812: the Grande Armée stands at Vitebsk, and the united Russian armies hold Smolensk.
 
-**Status:** Phase 1, foundations. The project documents are in place and the resumable simulation core is built and tested on a synthetic test map. There is no historical data, map or game interface yet.
+**Status:** working towards milestone M1, the fun prototype. In place:
+- the simulation: rules 0.4.0, with supply by weight, dispersal, intelligence and the Russian command;
+- the Vitebsk–Smolensk scenario;
+- army directives with a staff planner;
+- a plain prototype screen.
+
+The living map (M2), sector battles, the outcome evaluation and the after-action report are still to come.
 
 ## Development
 
@@ -23,6 +29,8 @@ npm run dev
 ```
 
 `npm run typecheck` and `npm run build` are also available.
+
+**Playing the prototype:** run `npm run dev`, then open http://localhost:5173. Pick an objective (from the list or by clicking a place), a route, pace and posture, and read the staff's orders before committing. Use **Save run** and **Compare runs** to set two strategies on the same seed side by side, and **Undo last turn** to try a different choice.
 
 ## Documents
 

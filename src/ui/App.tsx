@@ -1,11 +1,209 @@
-import { RULES_VERSION } from '../engine';
+import { useMemo, useState } from 'react';
+import { advance, createContext, newGame, ordersFrom, planDirective, statusOf, when } from '../engine';
+import type { BattleDecision, Directive, GameState, GroupOrder, Input, LogEntry, Side } from '../engine';
+import { vitebskDecision } from '../data/vitebsk/scenario';
+import { BattlePanel } from './BattlePanel';
+import { Compare } from './Compare';
+import { MapView } from './MapView';
+import { OrdersPanel } from './OrdersPanel';
+import { dispatches } from './dispatches';
+import { thousands } from './names';
+import { loadRuns, storeRuns, summarize, type SavedRun } from './runs';
 
-// Placeholder shell; the debug map for the M1 prototype replaces it.
+const ctx = createContext(vitebskDecision());
+
+interface Run {
+  seed: number;
+  states: GameState[];
+  inputs: Input[];
+  logs: LogEntry[][];
+}
+
+const startRun = (seed: number): Run => ({ seed, states: [newGame(ctx, seed)], inputs: [], logs: [] });
+const HOLD: Directive = { objective: null, axis: null, tempo: 'steady', posture: 'dispersed', engagement: 'accept', holdBack: [] };
+
+const total = (s: GameState, side: Side, k: 'men' | 'horses') =>
+  Object.values(s.forces)
+    .filter((f) => f.side === side)
+    .reduce((n, f) => n + f[k], 0);
+
+/** Prototype (M1): the whole Vitebsk Decision on a plain map, with run comparison. */
 export function App() {
+  const [run, setRun] = useState<Run>(() => startRun(1812));
+  const [seedText, setSeedText] = useState('1812');
+  const [directive, setDirective] = useState<Directive>(HOLD);
+  const [overrides, setOverrides] = useState<Record<string, Partial<GroupOrder>>>({});
+  const [error, setError] = useState<string | null>(null);
+  const [runs, setRuns] = useState<SavedRun[]>(loadRuns);
+  const [runName, setRunName] = useState('');
+  const [view, setView] = useState<'play' | 'compare'>('play');
+
+  const s = run.states[run.states.length - 1] as GameState;
+  const status = statusOf(s);
+  const plan = useMemo(() => (status.kind === 'awaitingOrders' ? planDirective(s, ctx, directive) : []), [s, status.kind, directive]);
+  const news = useMemo(() => dispatches(run.logs.flat(), s, ctx, ctx.scenario.startDate).reverse(), [run.logs, s]);
+
+  function submit(input: Input) {
+    const result = advance(s, input, ctx);
+    if (!result.ok) {
+      setError(result.reason);
+      return;
+    }
+    setError(null);
+    setRun({ ...run, states: [...run.states, result.state], inputs: [...run.inputs, input], logs: [...run.logs, result.log] });
+  }
+
+  function commit() {
+    if (status.kind !== 'awaitingOrders') return;
+    const merged = Object.fromEntries(plan.map((p) => [p.force, overrides[p.force] ? { ...p.order, ...overrides[p.force] } : p.order]));
+    submit({ kind: 'orders', turn: status.turn, orders: ordersFrom(plan, Object.values(merged)) });
+    setOverrides({});
+  }
+
+  function decide(decision: BattleDecision) {
+    if (status.kind !== 'awaitingBattleInput') return;
+    submit({ kind: 'battle', battleId: status.battleId, round: status.round, decision });
+  }
+
+  /** Back to the orders of the previous turn: replaying is exact, so nothing else is needed. */
+  function undo() {
+    for (let i = run.states.length - 2; i >= 0; i--) {
+      if (statusOf(run.states[i] as GameState).kind === 'awaitingOrders') {
+        setRun({ ...run, states: run.states.slice(0, i + 1), inputs: run.inputs.slice(0, i), logs: run.logs.slice(0, i) });
+        return;
+      }
+    }
+  }
+
+  function restart() {
+    const seed = Number.parseInt(seedText, 10);
+    if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) {
+      setError('The seed must be a whole number between 0 and 4294967295.');
+      return;
+    }
+    setRun(startRun(seed));
+    setDirective(HOLD);
+    setOverrides({});
+    setError(null);
+  }
+
+  function save() {
+    const label = runName.trim() || `Run ${runs.length + 1}`;
+    const next = [...runs, summarize(run.states, run.logs, ctx, label, run.seed)];
+    setRuns(next);
+    storeRuns(next);
+    setRunName('');
+  }
+
+  function remove(id: string) {
+    const next = runs.filter((r) => r.id !== id);
+    setRuns(next);
+    storeRuns(next);
+  }
+
+  const frMen = total(s, 'fr', 'men');
+  const food = Object.values(s.forces)
+    .filter((f) => f.side === 'fr')
+    .reduce((n, f) => n + f.stock.food, 0);
+  const start = run.states[0] as GameState;
+
   return (
-    <main style={{ fontFamily: 'Georgia, serif', maxWidth: 640, margin: '15vh auto', padding: '0 16px', lineHeight: 1.5 }}>
-      <h1 style={{ fontWeight: 400 }}>The Weight of Empire</h1>
-      <p>Foundations in progress: simulation core, rules {RULES_VERSION}.</p>
-    </main>
+    <div className="app">
+      <header className="topbar">
+        <h1>
+          The Weight of Empire <span>The Vitebsk Decision · prototype</span>
+        </h1>
+        <p className="status" aria-live="polite">
+          {when(ctx, s.resolution)} · turn {s.resolution.turn} of {ctx.scenario.turns} · {s.rainToday ? 'rain' : 'dry'} · {thousands(frMen)} men · {thousands(total(s, 'fr', 'horses'))} horses · {(food / Math.max(1, frMen)).toFixed(1)} days' food in hand
+        </p>
+        <div className="controls">
+          <label>
+            Seed <input value={seedText} onChange={(e) => setSeedText(e.target.value)} inputMode="numeric" size={10} />
+          </label>
+          <button type="button" onClick={restart}>
+            New game
+          </button>
+          <button type="button" onClick={undo} disabled={run.inputs.length === 0}>
+            Undo last turn
+          </button>
+          <label>
+            Run name <input value={runName} onChange={(e) => setRunName(e.target.value)} placeholder={`Run ${runs.length + 1}`} size={14} />
+          </label>
+          <button type="button" onClick={save}>
+            Save run
+          </button>
+          <button type="button" onClick={() => setView(view === 'play' ? 'compare' : 'play')}>
+            {view === 'play' ? `Compare runs (${runs.length})` : 'Back to the campaign'}
+          </button>
+        </div>
+      </header>
+
+      {error && (
+        <p className="warning" role="alert">
+          {error}
+        </p>
+      )}
+
+      {view === 'compare' ? (
+        <Compare runs={runs} onDelete={remove} onClose={() => setView('play')} />
+      ) : (
+        <main className="layout">
+          <div className="map-wrap">
+            <MapView s={s} ctx={ctx} plan={plan} objective={directive.objective} onPick={(place) => status.kind === 'awaitingOrders' && setDirective({ ...directive, objective: place, axis: null })} />
+            <p className="legend">
+              Blue: our groups. Green: enemy sightings, fading as reports age (1t = a turn old). Dashed: the staff's planned routes. Squares: depots. Circles on roads: river crossings. Click a place to make it the objective.
+            </p>
+          </div>
+          <aside>
+            {status.kind === 'awaitingOrders' && (
+              <OrdersPanel
+                s={s}
+                ctx={ctx}
+                directive={directive}
+                onDirective={setDirective}
+                plan={plan}
+                overrides={overrides}
+                onOverride={(force, change) =>
+                  setOverrides((cur) => {
+                    const next = { ...cur };
+                    if (change) next[force] = change;
+                    else delete next[force];
+                    return next;
+                  })
+                }
+                onCommit={commit}
+              />
+            )}
+            {status.kind === 'awaitingBattleInput' && <BattlePanel s={s} ctx={ctx} status={status} onDecide={decide} />}
+            {status.kind === 'ended' && (
+              <section className="panel" aria-labelledby="end-title">
+                <h2 id="end-title">The campaign has ended</h2>
+                <p>
+                  French losses: {(((total(start, 'fr', 'men') - frMen) / total(start, 'fr', 'men')) * 100).toFixed(1)}% of the men and{' '}
+                  {(((total(start, 'fr', 'horses') - total(s, 'fr', 'horses')) / total(start, 'fr', 'horses')) * 100).toFixed(1)}% of the horses. Russian losses, now revealed:{' '}
+                  {(((total(start, 'ru', 'men') - total(s, 'ru', 'men')) / total(start, 'ru', 'men')) * 100).toFixed(1)}%.
+                </p>
+                <p className="muted">The outcome evaluation and the after-action report (§2.13, §2.14) come in a later milestone. Save this run to compare it with another strategy on the same seed.</p>
+              </section>
+            )}
+          </aside>
+        </main>
+      )}
+
+      <section className="dispatches" aria-labelledby="dispatch-title">
+        <h2 id="dispatch-title">Dispatches</h2>
+        {news.length === 0 ? (
+          <p className="muted">No reports yet.</p>
+        ) : (
+          <ol>
+            {news.slice(0, 40).map((d) => (
+              <li key={d.key}>
+                <span className="when">{d.when}</span> {d.text}
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+    </div>
   );
 }

@@ -36,6 +36,11 @@ The first release is **The Vitebsk Decision only**, made genuinely excellent bef
 - Before committing, you can see exactly what each directive will make every group do (§2.4b).
 - **You play it once.** *Pass:* you felt both dilemmas (spread out vs. concentrate; push vs. halt) and can name a trade-off you made. *Fail:* we fix the mechanics before any polish.
 
+*M1 status (31 October 2026):*
+- **Done:** the full Challenge plays end to end on the prototype screen. Every order is visible with its reasons before committing. Two strategies on the same seed can be compared side by side (checked in the browser with "southern swing" against "hold dispersed").
+- **Done:** determinism, resumption and conservation tests, under random play with the real Russian command.
+- **Still to do:** the 1,000-seed batch runs with bots for the three approach families, and your play session.
+
 **M2 — The Living Map (Day ~13) — an explicit gate before battles, events and the report are polished**
 
 *Gameplay criteria:*
