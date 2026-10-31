@@ -4,13 +4,20 @@
 
 A browser-based historical strategy game about ambition, logistics and judgement. The first release is **The Vitebsk Decision**, a short command challenge set in August 1812: the Grande Armée stands at Vitebsk, and the united Russian armies hold Smolensk.
 
-**Status:** working towards milestone M1, the fun prototype. In place:
-- the simulation: rules 0.4.0, with supply by weight, dispersal, intelligence and the Russian command;
-- the Vitebsk–Smolensk scenario;
-- army directives with a staff planner;
-- a plain prototype screen.
+**Status:** milestone M1, the fun prototype, is waiting for its play session. In place:
+- **The simulation** (rules 0.7.0):
+  - supply by weight, dispersal and gathering;
+  - intelligence and a Russian command that sees only what it has scouted;
+  - the halt for the season;
+  - captured stores and forward depots;
+  - hunger calibrated on the historical record.
+- **The Vitebsk–Smolensk scenario.**
+- **Army directives with a staff planner:** every order is shown with its reasons before you commit.
+- **A provisional outcome evaluator.**
+- **Strategy bots and a 1,000-seed balance batch.**
+- **A plain prototype screen** that compares runs side by side.
 
-The living map (M2), sector battles, the outcome evaluation and the after-action report are still to come.
+The living map (M2), sector battles, events and the after-action report are still to come. If you are reviewing the project, start with [REVIEW_BRIEF](docs/REVIEW_BRIEF.md).
 
 ## Development
 
@@ -51,6 +58,7 @@ Section numbers (§) are shared across all documents, so a reference like "§3.4
 | [GAMEPLAY_BALANCING](docs/GAMEPLAY_BALANCING.md) | fair bots, diagnostic targets F1–F6 | §7 |
 | [TESTING_AND_QA](docs/TESTING_AND_QA.md) | tests, timeline tests T1–T10, playtests | §7 |
 | [DECISIONS](docs/DECISIONS.md) | decision log | — |
+| [REVIEW_BRIEF](docs/REVIEW_BRIEF.md) | for outside reviewers: where to start, what feedback helps, known gaps | — |
 
 ## Licences
 
