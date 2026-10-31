@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { advance, createContext, newGame, ordersFrom, planDirective, statusOf, when } from '../engine';
+import { ENDING_NAMES, advance, createContext, evaluate, newGame, ordersFrom, planDirective, statusOf, when } from '../engine';
 import type { BattleDecision, Directive, GameState, GroupOrder, Input, LogEntry, Side } from '../engine';
 import { vitebskDecision } from '../data/vitebsk/scenario';
 import { BattlePanel } from './BattlePanel';
@@ -37,10 +37,14 @@ export function App() {
   const [runs, setRuns] = useState<SavedRun[]>(loadRuns);
   const [runName, setRunName] = useState('');
   const [view, setView] = useState<'play' | 'compare'>('play');
+  const [halt, setHalt] = useState(false);
 
   const s = run.states[run.states.length - 1] as GameState;
   const status = statusOf(s);
-  const plan = useMemo(() => (status.kind === 'awaitingOrders' ? planDirective(s, ctx, directive) : []), [s, status.kind, directive]);
+  // Once a halt is declared or about to be, the staff plans for holding where the army stands.
+  const effective = s.halted || halt ? { ...directive, objective: null } : directive;
+  const plan = useMemo(() => (status.kind === 'awaitingOrders' ? planDirective(s, ctx, effective) : []), [s, status.kind, effective.objective, directive]);
+  const outcome = useMemo(() => (status.kind === 'ended' ? evaluate(run.states[0] as GameState, s, ctx) : null), [status.kind, run.states, s]);
   const news = useMemo(() => dispatches(run.logs.flat(), s, ctx, ctx.scenario.startDate).reverse(), [run.logs, s]);
 
   function submit(input: Input) {
@@ -56,8 +60,9 @@ export function App() {
   function commit() {
     if (status.kind !== 'awaitingOrders') return;
     const merged = Object.fromEntries(plan.map((p) => [p.force, overrides[p.force] ? { ...p.order, ...overrides[p.force] } : p.order]));
-    submit({ kind: 'orders', turn: status.turn, orders: ordersFrom(plan, Object.values(merged)) });
+    submit({ kind: 'orders', turn: status.turn, orders: ordersFrom(plan, Object.values(merged)), ...(halt ? { halt: true } : {}) });
     setOverrides({});
+    setHalt(false);
   }
 
   function decide(decision: BattleDecision) {
@@ -84,6 +89,7 @@ export function App() {
     setRun(startRun(seed));
     setDirective(HOLD);
     setOverrides({});
+    setHalt(false);
     setError(null);
   }
 
@@ -171,19 +177,24 @@ export function App() {
                     return next;
                   })
                 }
+                halt={halt}
+                onHalt={setHalt}
                 onCommit={commit}
               />
             )}
             {status.kind === 'awaitingBattleInput' && <BattlePanel s={s} ctx={ctx} status={status} onDecide={decide} />}
-            {status.kind === 'ended' && (
+            {status.kind === 'ended' && outcome && (
               <section className="panel" aria-labelledby="end-title">
-                <h2 id="end-title">The campaign has ended</h2>
+                <h2 id="end-title">{ENDING_NAMES[outcome.ending]}</h2>
+                <ul className="reasons">
+                  {outcome.reasons.map((r) => (
+                    <li key={r}>{r}</li>
+                  ))}
+                </ul>
                 <p>
-                  French losses: {(((total(start, 'fr', 'men') - frMen) / total(start, 'fr', 'men')) * 100).toFixed(1)}% of the men and{' '}
-                  {(((total(start, 'fr', 'horses') - total(s, 'fr', 'horses')) / total(start, 'fr', 'horses')) * 100).toFixed(1)}% of the horses. Russian losses, now revealed:{' '}
-                  {(((total(start, 'ru', 'men') - total(s, 'ru', 'men')) / total(start, 'ru', 'men')) * 100).toFixed(1)}%.
+                  Russian losses overall, now revealed: {(((total(start, 'ru', 'men') - total(s, 'ru', 'men')) / total(start, 'ru', 'men')) * 100).toFixed(1)}%.
                 </p>
-                <p className="muted">The outcome evaluation and the after-action report (§2.13, §2.14) come in a later milestone. Save this run to compare it with another strategy on the same seed.</p>
+                <p className="muted">A provisional verdict: the thresholds (§2.13, G-004) are still being tested. The full after-action report comes later. Save this run to compare it with another strategy on the same seed.</p>
               </section>
             )}
           </aside>

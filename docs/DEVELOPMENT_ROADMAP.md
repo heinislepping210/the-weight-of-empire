@@ -39,7 +39,9 @@ The first release is **The Vitebsk Decision only**, made genuinely excellent bef
 *M1 status (31 October 2026):*
 - **Done:** the full Challenge plays end to end on the prototype screen. Every order is visible with its reasons before committing. Two strategies on the same seed can be compared side by side (checked in the browser with "southern swing" against "hold dispersed").
 - **Done:** determinism, resumption and conservation tests, under random play with the real Russian command.
-- **Still to do:** the 1,000-seed batch runs with bots for the three approach families, and your play session.
+- **Done:** the 1,000-seed batch with seven bots: zero invariant violations in 7,000 games; strategy explains far more of the outcome than the seed.
+- **Not met:** "three approach families produce clearly different outcome distributions." All three collapse from hunger, because captured stores and forward depots are not modelled yet (GAMEPLAY_BALANCING.md, first balance batch).
+- **Still to do:** those two mechanics, the batch again, and your play session.
 
 **M2 — The Living Map (Day ~13) — an explicit gate before battles, events and the report are polished**
 

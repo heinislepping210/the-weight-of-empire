@@ -119,6 +119,8 @@ function validate(s: GameState, input: Input, ctx: Context): string | null {
       if (o.posture !== undefined && !POSTURES.includes(o.posture)) return `unknown posture ${o.posture}`;
       if (o.posture === 'dispersed' && f.battle !== null) return `${f.name} is engaged in battle and cannot disperse`;
       if (o.route === undefined) continue;
+      const stopped = o.route.length === 0 || (f.transit !== null && o.route.length === 1 && o.route[0] === f.transit.to);
+      if ((s.halted || input.halt) && !stopped) return 'the army has halted for the season and cannot march on';
       if (f.battle !== null) return `${f.name} is engaged in battle and cannot take movement orders`;
       if (f.transit && o.route[0] !== f.transit.to) return `${f.name} is on the road and must first reach ${f.transit.to}`;
       let prev = f.transit ? f.transit.to : f.at;
@@ -147,6 +149,10 @@ function applyInput(s: GameState, input: Input, ctx: Context, log: LogEntry[]): 
       if (o.pace !== undefined) f.pace = o.pace;
       if (o.engagement !== undefined) f.engagement = o.engagement;
       if (o.posture !== undefined) setPosture(f, o.posture, ctx.rules);
+    }
+    if (input.halt && !s.halted) {
+      s.halted = true;
+      note(s, log, 'halt');
     }
     // The Russians re-plan only at the start of a turn, as the player does (§3.4).
     ctx.russianCommand(s, ctx, log);

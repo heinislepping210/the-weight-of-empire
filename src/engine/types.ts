@@ -188,6 +188,8 @@ export interface GameState {
   /** Each side's picture of the enemy. The Russian command decides from `intel.ru` only. */
   intel: Record<Side, Record<ForceId, Sighting>>;
   russianCommand: RussianCommand;
+  /** The French have declared a halt for the season: final, and no further advance (§2.13). */
+  halted: boolean;
   ledger: Ledger;
   ended: Ending | null;
 }
@@ -215,7 +217,7 @@ export type BattleDecision =
   | { kind: 'delegate' };
 
 export type Input =
-  | { kind: 'orders'; turn: number; orders: GroupOrder[] }
+  | { kind: 'orders'; turn: number; orders: GroupOrder[]; halt?: boolean }
   | { kind: 'battle'; battleId: BattleId; round: number; decision: BattleDecision };
 
 export interface LogEntry {

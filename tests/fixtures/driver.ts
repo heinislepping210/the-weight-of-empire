@@ -5,6 +5,8 @@ import { keyHash } from '../../src/engine/rng';
 
 export interface Policy {
   orders(s: GameState, turn: number): GroupOrder[];
+  /** Declare a halt for the season with these orders. */
+  halt?(s: GameState, turn: number): boolean;
   round?(s: GameState, battle: BattleState): RoundAction | 'delegate';
   nightfall?(s: GameState, battle: BattleState): NightChoice | 'delegate';
 }
@@ -18,7 +20,10 @@ export interface Run {
 }
 
 export function inputFor(s: GameState, status: Status, policy: Policy): Input {
-  if (status.kind === 'awaitingOrders') return { kind: 'orders', turn: status.turn, orders: policy.orders(s, status.turn) };
+  if (status.kind === 'awaitingOrders') {
+    const halt = !s.halted && (policy.halt?.(s, status.turn) ?? false);
+    return { kind: 'orders', turn: status.turn, orders: policy.orders(s, status.turn), ...(halt ? { halt: true } : {}) };
+  }
   if (status.kind !== 'awaitingBattleInput') throw new Error(`no input fits status ${status.kind}`);
   const b = s.battles[status.battleId];
   if (!b) throw new Error(`missing battle ${status.battleId}`);

@@ -273,7 +273,9 @@ The engine evaluates three things separately, then combines them. Every threshol
 | **Repulse** | Objective not achieved, and effectives below *E₁* or a major battle lost | |
 | **Operational Collapse** | Army cohesion below *C₃*, a starvation spiral, or a forced withdrawal under pressure | |
 
+- **Inconclusive** (added in D-028): the objective not achieved, the army not seriously harmed, and no halt declared — time simply ran out. It ranks with a Precarious Halt.
 - **Capturing territory alone is never more than a Limited Success.**
+- *Implementation:* `src/engine/outcome.ts` (provisional). "Cut off" is judged on the final positions until the engine tracks how long a road was held.
 - The report presents every ending with its trade-offs. Rank order is used only for testing statistics: Decisive Success first; Costly Victory and Operational Success second, as different kinds of success; Limited Success and Successful Consolidation third; then Precarious Halt, Repulse and Collapse.
 
 *Calibrating to history as par is a design choice. It is not a claim about what Napoleon "should" have done.*

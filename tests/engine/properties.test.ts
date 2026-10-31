@@ -25,6 +25,7 @@ const GOLDEN: Record<string, string> = {
   '0.2.0': 'c6a24c55ddaa0d93', // weight-based convoy loads; forced march 36 km/day
   '0.3.0': 'b835409fa27a2ceb', // posture and gathering, depot issue, wider foraging, retreat towards home
   '0.4.0': '6b48ca020f71d0ab', // intelligence and the Russian command (run with Russians held still)
+  '0.5.0': '2d02fdbd93033054', // halt for the season (state gains `halted`)
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved; nothing goes negative. */

@@ -1,0 +1,80 @@
+// Strategy bots for balancing (GAMEPLAY_BALANCING.md §7). Each plays like a player: through army
+// directives and the staff planner, seeing only French intelligence, with battles left to the marshal.
+// They are tuned once for all seeds, never per seed.
+
+import { axesTo, leadGroup, ordersFrom, planDirective } from '../../src/engine';
+import type { Context, Directive, GameState, GroupOrder, NodeId } from '../../src/engine';
+import { randomPolicy, type Policy } from '../fixtures/driver';
+
+const base: Directive = { objective: null, axis: null, tempo: 'steady', posture: 'concentrated', engagement: 'seek', holdBack: [] };
+
+function orders(s: GameState, ctx: Context, d: Partial<Directive>): GroupOrder[] {
+  return ordersFrom(planDirective(s, ctx, { ...base, ...d }));
+}
+
+function axisVia(s: GameState, ctx: Context, objective: NodeId, landmark: string): string | null {
+  const lead = leadGroup(s, ctx, objective);
+  if (!lead) return null;
+  return axesTo(ctx, lead.at, objective).find((a) => a.label.includes(landmark))?.id ?? null;
+}
+
+const frenchHold = (s: GameState, node: NodeId) =>
+  Object.values(s.forces).some((f) => f.side === 'fr' && f.men > 0 && f.transit === null && f.at === node && f.battle === null) &&
+  !Object.values(s.forces).some((f) => f.side === 'ru' && f.men > 0 && f.transit === null && f.at === node);
+
+const battleAt = (s: GameState, node: NodeId) => Object.values(s.battles).some((b) => b.node === node);
+
+/** A large enemy force seen within the last turn within `km` of a place: what the French know, nothing more. */
+const armySeenNear = (s: GameState, ctx: Context, node: NodeId, km: number, men: number) =>
+  Object.values(s.intel.fr).some(
+    (x) => s.resolution.turn - x.turn <= 1 && x.men >= men && (x.at === node || ctx.graph.neighbours.get(node)?.some((n) => n.node === x.at && n.edge.metres <= km * 1000)),
+  );
+
+const delegate = { round: () => 'delegate' as const, nightfall: () => 'delegate' as const };
+
+export const BOTS: Record<string, (ctx: Context) => Policy> = {
+  /** The whole army up the Rudnia road to Smolensk's north bank, concentrated, seeking battle. */
+  'concentrated-push': (ctx) => ({ orders: (s) => orders(s, ctx, { objective: 'smolensk-north' }), ...delegate }),
+
+  /** Across the Dnieper at Rasasna to the Old Town, then on to Valutino to cut the Moscow road. */
+  'southern-envelopment': (ctx) => ({
+    orders: (s) =>
+      frenchHold(s, 'smolensk') || frenchHold(s, 'smolensk-north')
+        ? orders(s, ctx, { objective: 'valutino' })
+        : orders(s, ctx, { objective: 'smolensk', axis: axisVia(s, ctx, 'smolensk', 'Rasasna') }),
+    ...delegate,
+  }),
+
+  /** Concentrate at Liozno where the vanguard stands as bait, receive the Russian strike, then push on. */
+  'bait-and-converge': (ctx) => {
+    let struck = false;
+    return {
+      orders: (s, turn) => {
+        // The Cossack screen at Rudnia is not the strike: wait for a Russian army or a battle at Liozno.
+        if (battleAt(s, 'liozno') || armySeenNear(s, ctx, 'liozno', 30, 30_000)) struck = true;
+        if (turn <= 4 && !struck) return orders(s, ctx, { objective: 'liozno', engagement: 'accept' });
+        return orders(s, ctx, { objective: 'smolensk-north' });
+      },
+      ...delegate,
+    };
+  },
+
+  /** Concentrate forward, rest dispersed to feed for two turns, then advance. */
+  methodical: (ctx) => ({
+    orders: (s, turn) =>
+      turn <= 2 ? orders(s, ctx, { objective: 'liozno', engagement: 'accept' }) : turn <= 4 ? orders(s, ctx, { posture: 'dispersed', engagement: 'accept' }) : orders(s, ctx, { objective: 'smolensk-north' }),
+    ...delegate,
+  }),
+
+  /** Declare a halt on the first turn and hold, dispersed to feed. */
+  'prudent-halt': (ctx) => ({ orders: (s) => orders(s, ctx, { posture: 'dispersed', engagement: 'accept' }), halt: () => true, ...delegate }),
+
+  /** Forced marches straight at Smolensk. */
+  rush: (ctx) => ({ orders: (s) => orders(s, ctx, { objective: 'smolensk-north', tempo: 'forced' }), ...delegate }),
+
+  /** Random valid orders: the control that should rarely do well. */
+  random: (ctx) => randomPolicy(ctx, 0x5eed),
+};
+
+/** The three approach families of §2.13; the others are controls. */
+export const FAMILIES = ['concentrated-push', 'southern-envelopment', 'bait-and-converge'];

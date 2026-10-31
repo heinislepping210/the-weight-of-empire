@@ -36,6 +36,8 @@ Run them with `npm test`. All of these currently pass.
 | `tests/engine/inputs.test.ts` | invalid inputs are rejected cleanly; `advance` never modifies its input |
 | `tests/engine/rng.test.ts` | counter-based randomness: purity, uniformity, ranges |
 | `tests/engine/zz-coverage-probe.test.ts` | guards that random play keeps reaching battles, nights, deliveries, shortfalls and withdrawals |
+| `tests/balance/bots.test.ts` | each strategy bot plays the scenario to an evaluated end without breaking any invariant; the halt is declared and holds |
+| `tests/balance/batch.test.ts` | the balance batch, skipped normally; run it with `BALANCE=1 BALANCE_SEEDS=1000 npx vitest run tests/balance/batch.test.ts` (about 40 s for 7,000 games). Reports are kept in `docs/balance/` |
 | `tests/engine/directive.test.ts` | axes (three distinct routes, shortest first, stable IDs); the staff planner (routes follow the chosen axis by sensible roads, orders the engine accepts, holding, held-back groups, forecasts including gathering, enemies from the French picture only, player overrides) |
 | `tests/engine/russian.test.ts` | intelligence (sees only what is in range, with estimate error); the Russian command never uses unseen information; strike, hold, isolation, staleness, withdraw-or-stand, screening; determinism; political pressure |
 | `tests/engine/posture.test.ts` | dispersed foraging (wider, even, never under the enemy); concentrated foraging; gathering before marching; reduced strength while gathering; no dispersing in battle; depot issue |

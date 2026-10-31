@@ -10,6 +10,8 @@ interface Props {
   plan: readonly PlannedOrder[];
   overrides: Readonly<Record<string, Partial<GroupOrder>>>;
   onOverride: (force: string, change: Partial<GroupOrder> | null) => void;
+  halt: boolean;
+  onHalt: (halt: boolean) => void;
   onCommit: () => void;
 }
 
@@ -24,7 +26,7 @@ const STANCES: Engagement[] = ['seek', 'accept', 'avoid'];
 const POSTURES: Posture[] = ['dispersed', 'concentrated'];
 const label = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-export function OrdersPanel({ s, ctx, directive, onDirective, plan, overrides, onOverride, onCommit }: Props) {
+export function OrdersPanel({ s, ctx, directive, onDirective, plan, overrides, onOverride, halt, onHalt, onCommit }: Props) {
   const places = [...ctx.graph.nodes.values()].sort((a, b) => a.name.localeCompare(b.name));
   const lead = directive.objective ? leadGroup(s, ctx, directive.objective) : null;
   const axes = directive.objective && lead ? axesTo(ctx, lead.at, directive.objective) : [];
@@ -33,10 +35,17 @@ export function OrdersPanel({ s, ctx, directive, onDirective, plan, overrides, o
   return (
     <section className="panel" aria-labelledby="orders-title">
       <h2 id="orders-title">Army directive</h2>
+      {s.halted ? (
+        <p className="warning">The army has halted for the season. Groups hold their ground; you can still change posture and battle stance.</p>
+      ) : (
+        <label className="choice halt">
+          <input type="checkbox" checked={halt} onChange={(e) => onHalt(e.target.checked)} /> Declare a halt for the season. This is final: the army will hold where it stands until the campaign ends.
+        </label>
+      )}
       <div className="form-grid">
         <label>
           Objective
-          <select value={directive.objective ?? ''} onChange={(e) => set({ objective: e.target.value || null, axis: null })}>
+          <select value={directive.objective ?? ''} disabled={s.halted || halt} onChange={(e) => set({ objective: e.target.value || null, axis: null })}>
             <option value="">Hold the current line</option>
             {places.map((p) => (
               <option key={p.id} value={p.id}>

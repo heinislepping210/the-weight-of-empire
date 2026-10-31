@@ -53,6 +53,10 @@ export interface ScenarioDef {
   districts: Record<NodeId, District>;
   /** Places whose occupation by the French adds to Russian political pressure (§2.9). */
   pressurePlaces?: NodeId[];
+  /** Places that count as "taking the objective ground" in the outcome (§2.13). */
+  keyPlaces?: NodeId[];
+  /** Ends of the Russian line of retreat: an army that cannot reach one is cut off (§2.13). */
+  exitPlaces?: NodeId[];
 }
 
 export type CommandFn = (s: GameState, ctx: Context, log: LogEntry[]) => void;
@@ -143,6 +147,7 @@ export function newGame(ctx: Context, seed: number): GameState {
       target: null,
       foughtThisTurn: false,
     },
+    halted: false,
     ledger: {
       foraged: { food: 0, fodder: 0 },
       consumed: { food: 0, fodder: 0 },

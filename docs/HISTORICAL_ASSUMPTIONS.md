@@ -34,7 +34,7 @@ Every figure, date or rule the game relies on is listed here with its status (HI
 | G-001 | Turn length | 2 days | ~10 turns fit the Challenge | may change (DEVELOPMENT_ROADMAP.md §1.2) |
 | G-002 | Daylight sub-steps | 4 × 6 h per turn, plus 2 nights | movement and fighting in daylight; consumption at night | §3.4a |
 | G-003 | Battle round | 2 h; at most 3 per sub-step | battles take real simulated time | §3.4a |
-| G-004 | Outcome thresholds *L₁, L₂, C₁–C₃, E₁, D₁, T₁, S₁* | set in testing | §2.13 | each value recorded here once chosen |
+| G-004 | Outcome thresholds (provisional, rules 0.5.0): decisive defeat when the Russian main armies lose ≥ 30% and lose a battle; escaped intact below 10%; a road block needs 30,000 men; capable means ≥ 75% of men and cohesion ≥ 500; sustainable means ≥ 2 days' food in hand; collapse below cohesion 250 or at ≥ 50% of men lost | set in testing | §2.13 | `rules.outcome`; the line-delivery test (*T₁*) is not used yet |
 | G-005 | Political pressure | 0–100 scale | §2.9 | |
 | G-007 | Road length = great-circle distance between places × 1.25 for winding | Provisional | until roads are traced on period maps | `src/data/vitebsk/roads.ts` |
 | G-008 | Smolensk as two places joined by bridges (Old Town on the south bank, St Petersburg suburb on the north) | Modelling choice | makes the river line and the Moscow road matter, as in H-006 | MAP_AND_GEOGRAPHY.md |

@@ -1,5 +1,5 @@
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.4.0';
+export const RULES_VERSION = '0.5.0';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -59,6 +59,20 @@ export const RULES = {
   weather: { rainPermille: 250 },
   /** What a force can observe: a base radius plus reach from its horses, capped (§2.8). */
   intel: { baseMetres: 15_000, metresPerThousandHorses: 4_000, maxMetres: 60_000, estimateErrorPermille: 200 },
+  /** Provisional outcome thresholds (§2.13, G-004): to be set by testing, never by history. */
+  outcome: {
+    /** Russian main armies decisively defeated: at least this share of their strength lost, and a battle won against them. */
+    decisiveLossPermille: 300,
+    /** Below this share lost, the Russian army escaped intact. */
+    damagedLossPermille: 100,
+    /** French force strong enough to block a road. */
+    blockMen: 30_000,
+    capableMenPermille: 750,
+    capableCohesion: 500,
+    sustainableFoodDays: 2,
+    collapseCohesion: 250,
+    collapseLossPermille: 500,
+  },
   /** The Russian command (§2.9). All values are game assumptions (G-014). */
   russian: {
     pressureStart: [55, 75],
