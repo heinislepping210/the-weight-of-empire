@@ -1,5 +1,5 @@
 import type { Rules } from './rules';
-import type { Force, GameState, LogEntry, LossCause, NodeId, Side, Supplies } from './types';
+import type { Force, GameState, LogEntry, LossCause, NodeId, Posture, Side, Supplies } from './types';
 
 /** Values in key order — every iteration over state goes through this, so results never depend on insertion order. */
 export function sortedValues<T>(record: Record<string, T>): T[] {
@@ -42,6 +42,16 @@ export function place(f: Force, node: NodeId): void {
   f.at = node;
   f.transit = null;
   f.route = [];
+}
+
+/** Posture changes follow the same rule for both sides: dispersing is immediate, concentrating takes gathering time (§2.4b). */
+export function setPosture(f: Force, posture: Posture, rules: Rules): void {
+  if (posture === 'dispersed') {
+    f.posture = 'dispersed';
+    f.gathering = 0;
+  } else if (f.posture === 'dispersed' && f.gathering === 0) {
+    f.gathering = rules.posture.gatherSlots;
+  }
 }
 
 export function loseMen(s: GameState, f: Force, n: number, cause: LossCause): number {

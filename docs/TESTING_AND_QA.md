@@ -36,8 +36,9 @@ Run them with `npm test`. All of these currently pass.
 | `tests/engine/inputs.test.ts` | invalid inputs are rejected cleanly; `advance` never modifies its input |
 | `tests/engine/rng.test.ts` | counter-based randomness: purity, uniformity, ranges |
 | `tests/engine/zz-coverage-probe.test.ts` | guards that random play keeps reaching battles, nights, deliveries, shortfalls and withdrawals |
+| `tests/engine/russian.test.ts` | intelligence (sees only what is in range, with estimate error); the Russian command never uses unseen information; strike, hold, isolation, staleness, withdraw-or-stand, screening; determinism; political pressure |
 | `tests/engine/posture.test.ts` | dispersed foraging (wider, even, never under the enemy); concentrated foraging; gathering before marching; reduced strength while gathering; no dispersing in battle; depot issue |
 | `tests/data/vitebsk-scenario.test.ts` | the Vitebsk Decision start: placements, totals inside the researched ranges for 200 seeds, seeded variation, full random games with conservation |
 | `tests/data/vitebsk-network.test.ts` | the Vitebsk–Smolensk network: sourced places, lengths consistent with coordinates, connected, three separate approaches, real river obstacles |
 
-All of these run on a synthetic test map (`tests/fixtures/testGround.ts`) that is not historical data. Not yet covered: cross-browser hash equality (needs Playwright), and events, which don't exist yet.
+All of these run on a synthetic test map (`tests/fixtures/testGround.ts`) that is not historical data. Mechanics tests use a stand-in Russian command that holds still (`passiveContext`), so they test timing and supply rather than AI choices. The random-play property tests, the scenario tests and the AI tests use the real command. Not yet covered: cross-browser hash equality (needs Playwright), and events, which don't exist yet.

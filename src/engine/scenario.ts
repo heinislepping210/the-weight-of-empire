@@ -1,7 +1,9 @@
 import { buildGraph, type EdgeDef, type Graph, type NodeDef } from './graph';
+import { updateIntel } from './intel';
+import { planRussianTurn } from './russian';
 import { drawBetween } from './rng';
 import { RULES, type Rules } from './rules';
-import type { Convoy, Depot, District, Engagement, Force, ForceId, GameState, NodeId, Pace, Posture, RoadCondition, Side, Supplies } from './types';
+import type { Convoy, Depot, District, Engagement, Force, ForceId, GameState, LogEntry, NodeId, Pace, Posture, RoadCondition, Side, Supplies } from './types';
 import { emptySupplies } from './util';
 
 /** A fixed number, or an inclusive range drawn once per game from the seed (scenario variation, §2.12). */
@@ -49,17 +51,23 @@ export interface ScenarioDef {
   depots: DepotInit[];
   convoys: ConvoyInit[];
   districts: Record<NodeId, District>;
+  /** Places whose occupation by the French adds to Russian political pressure (§2.9). */
+  pressurePlaces?: NodeId[];
 }
+
+export type CommandFn = (s: GameState, ctx: Context, log: LogEntry[]) => void;
 
 /** Everything resolution needs besides the state itself; never saved, rebuilt from the scenario. */
 export interface Context {
   rules: Rules;
   scenario: ScenarioDef;
   graph: Graph;
+  /** Decides the Russian moves at the start of each turn. Tests may substitute a fixed stand-in. */
+  russianCommand: CommandFn;
 }
 
-export function createContext(scenario: ScenarioDef, rules: Rules = RULES): Context {
-  return { rules, scenario, graph: buildGraph(scenario.nodes, scenario.edges) };
+export function createContext(scenario: ScenarioDef, rules: Rules = RULES, options: { russianCommand?: CommandFn } = {}): Context {
+  return { rules, scenario, graph: buildGraph(scenario.nodes, scenario.edges), russianCommand: options.russianCommand ?? planRussianTurn };
 }
 
 function resolveStrength(seed: number, forceId: ForceId, what: string, s: Strength): number {
@@ -112,7 +120,8 @@ export function newGame(ctx: Context, seed: number): GameState {
   const roads: Record<string, RoadCondition> = {};
   for (const id of graph.edges.keys()) roads[id] = 'dry';
 
-  return {
+  const command = rules.russian;
+  const state: GameState = {
     schema: 1,
     rulesVersion: rules.version,
     scenarioId: scenario.id,
@@ -125,6 +134,15 @@ export function newGame(ctx: Context, seed: number): GameState {
     roads,
     rainToday: false,
     battles: {},
+    intel: { fr: {}, ru: {} },
+    // Scenario variation (§2.12): how hard-pressed and how bold the Russian command starts.
+    russianCommand: {
+      pressure: drawBetween(seed, ['setup', 'pressure'], command.pressureStart[0], command.pressureStart[1]),
+      temperament: drawBetween(seed, ['setup', 'temperament'], command.temperament[0], command.temperament[1]),
+      plan: 'hold',
+      target: null,
+      foughtThisTurn: false,
+    },
     ledger: {
       foraged: { food: 0, fodder: 0 },
       consumed: { food: 0, fodder: 0 },
@@ -134,4 +152,6 @@ export function newGame(ctx: Context, seed: number): GameState {
     },
     ended: null,
   };
+  updateIntel(state, ctx);
+  return state;
 }

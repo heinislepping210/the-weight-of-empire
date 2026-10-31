@@ -149,6 +149,26 @@ export interface Ledger {
   horsesLost: number;
 }
 
+/** What one side last saw of an enemy force: where, an estimate of its strength, and when (§2.8). */
+export interface Sighting {
+  at: NodeId;
+  men: number;
+  turn: number;
+}
+
+/** The Russian command's plan for the turn (§2.9). */
+export type RussianPlan = 'hold' | 'stand' | 'strike' | 'withdraw';
+
+export interface RussianCommand {
+  /** Political pressure to stop retreating, 0–100. */
+  pressure: number;
+  /** Seeded disposition of the commanders: positive is bolder. */
+  temperament: number;
+  plan: RussianPlan;
+  target: NodeId | null;
+  foughtThisTurn: boolean;
+}
+
 /** Placeholder until the §2.13 outcome evaluator exists. */
 export type Ending = 'scenarioEnd';
 
@@ -165,6 +185,9 @@ export interface GameState {
   roads: Record<EdgeId, RoadCondition>;
   rainToday: boolean;
   battles: Record<BattleId, BattleState>;
+  /** Each side's picture of the enemy. The Russian command decides from `intel.ru` only. */
+  intel: Record<Side, Record<ForceId, Sighting>>;
+  russianCommand: RussianCommand;
   ledger: Ledger;
   ended: Ending | null;
 }

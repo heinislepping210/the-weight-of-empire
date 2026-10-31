@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { advance, createContext, newGame, stateHash, statusOf } from '../../src/engine';
+import { advance, newGame, stateHash, statusOf } from '../../src/engine';
 import type { Input } from '../../src/engine';
-import { forceInit, testGround } from '../fixtures/testGround';
+import { forceInit, testGround, passiveContext } from '../fixtures/testGround';
 
 describe('inputs are validated and rejected cleanly', () => {
-  const ctx = createContext(testGround());
+  const ctx = passiveContext(testGround());
   const start = newGame(ctx, 11);
 
   it('rejects orders for the wrong turn, unknown or Russian forces, duplicates and roads that do not exist', () => {
@@ -27,7 +27,7 @@ describe('inputs are validated and rejected cleanly', () => {
   });
 
   it('rejects a battle decision for the wrong step, round or battle', () => {
-    const battle = createContext(testGround((s) => (forceInit(s, 'ru-main').at = 'B')));
+    const battle = passiveContext(testGround((s) => (forceInit(s, 'ru-main').at = 'B')));
     const deployed = advance(newGame(battle, 7), { kind: 'orders', turn: 1, orders: [] }, battle);
     if (!deployed.ok) throw new Error(deployed.reason);
     const status = statusOf(deployed.state);

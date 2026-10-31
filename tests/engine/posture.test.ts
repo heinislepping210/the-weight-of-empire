@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { RULES, advance, createContext, newGame, statusOf, stepOnce, submit } from '../../src/engine';
+import { RULES, advance, newGame, statusOf, stepOnce, submit } from '../../src/engine';
 import type { Context, GameState, GroupOrder, Posture } from '../../src/engine';
 import { inputFor, stepUntil } from '../fixtures/driver';
-import { forceInit, testGround } from '../fixtures/testGround';
+import { forceInit, testGround, passiveContext } from '../fixtures/testGround';
 
 function ordered(s: GameState, ctx: Context, orders: GroupOrder[]): GameState {
   const result = submit(s, { kind: 'orders', turn: s.resolution.turn, orders }, ctx);
@@ -14,7 +14,7 @@ const afterAccrual = (slot: number) => (s: GameState) => s.resolution.slot === s
 
 describe('posture: dispersed or concentrated (§2.4b)', () => {
   function foragingGround(posture: Posture): Context {
-    return createContext(
+    return passiveContext(
       testGround((s) => {
         forceInit(s, 'fr-main').posture = posture;
         s.convoys = [];
@@ -45,7 +45,7 @@ describe('posture: dispersed or concentrated (§2.4b)', () => {
   });
 
   it('a dispersed force ordered to march first gathers for two sub-steps, then marches concentrated', () => {
-    const ctx = createContext(testGround((s) => (forceInit(s, 'fr-flank').posture = 'dispersed')));
+    const ctx = passiveContext(testGround((s) => (forceInit(s, 'fr-flank').posture = 'dispersed')));
     let s = ordered(newGame(ctx, 2), ctx, [{ force: 'fr-flank', route: ['B'], pace: 'steady' }]);
     for (const slot of [0, 1]) {
       s = stepUntil(s, ctx, (x) => x.resolution.slot === slot && x.resolution.stage === 'movement');
@@ -57,7 +57,7 @@ describe('posture: dispersed or concentrated (§2.4b)', () => {
 
   it('a force caught dispersed fights below full strength while it gathers', () => {
     const lossesInRoundOne = (posture: Posture) => {
-      const ctx = createContext(
+      const ctx = passiveContext(
         testGround((s) => {
           forceInit(s, 'ru-main').at = 'B';
           forceInit(s, 'fr-main').posture = posture;
@@ -76,7 +76,7 @@ describe('posture: dispersed or concentrated (§2.4b)', () => {
   });
 
   it('a force cannot be ordered to disperse while engaged in battle', () => {
-    const ctx = createContext(testGround((s) => (forceInit(s, 'ru-main').at = 'B')));
+    const ctx = passiveContext(testGround((s) => (forceInit(s, 'ru-main').at = 'B')));
     let s = newGame(ctx, 3);
     while (statusOf(s).kind !== 'awaitingOrders' || s.resolution.turn === 1) {
       const r = advance(s, inputFor(s, statusOf(s), { orders: () => [], round: () => 'hold', nightfall: () => 'stay' }), ctx);
@@ -91,7 +91,7 @@ describe('posture: dispersed or concentrated (§2.4b)', () => {
 
 describe('depots issue supplies directly (§2.6)', () => {
   it('a force at its own depot tops up at the end of the sub-step, and the depot pays for it', () => {
-    const ctx = createContext(
+    const ctx = passiveContext(
       testGround((s) => {
         forceInit(s, 'fr-flank').stock = { food: 0, fodder: 0, ammo: 0 };
         s.convoys = [];

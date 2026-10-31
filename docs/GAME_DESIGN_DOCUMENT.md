@@ -169,6 +169,8 @@ The Russian AI obeys exactly the same simulation rules as the player.
 3. **Political pressure** (0–100) rises as the Russians cede ground — sharply once old Russian territory like Smolensk province is threatened — and falls after they fight. High pressure makes standing or counter-attacking more likely. In the full campaign, very high pressure after a defeat can trigger a change of commander. The deeper you push, the more likely you get your battle, just when you are most stretched.
 4. **Seeded temperament.** Variation in caution and aggression, and friction between commanders. This is scenario randomness, documented in the notes as such.
 
+**Implemented in rules 0.4.0 (D-025):** the four plans above as *withdraw*, *strike*, *stand* and *hold*, with the Cossacks and Neverovsky as screens. Harassing supply lines arrives with convoy raids. Each turn's plan is logged for the after-action report and never shown during play.
+
 ## 2.10 Battles (sector system)
 **Getting a battle.** A battle happens when forces make contact and at least one side's engagement order allows it. A defender may try to withdraw. Success depends on cavalry, fatigue, terrain, and whether its retreat route is threatened. A failed withdrawal costs a rearguard action. **Pinning** the enemy prevents escape: approaching from two directions, threatening its line of retreat, catching it at a crossing, or at a city it must defend. This is the operational skill the game rewards.
 

@@ -64,5 +64,7 @@ export function vitebskDecision(): ScenarioDef {
     depots: DEPOTS.map((d) => ({ ...d, stock: { ...d.stock } })),
     convoys: CONVOYS.map((c) => ({ ...c })),
     districts: Object.fromEntries(Object.entries(DISTRICTS).map(([k, v]) => [k, { ...v }])),
+    // Places of Smolensk province, the "old Russian" soil whose loss raised pressure on Barclay (G-014).
+    pressurePlaces: ['rudnia', 'porechye', 'krasnyi', 'smolensk', 'smolensk-north', 'valutino', 'dorogobuzh'],
   };
 }

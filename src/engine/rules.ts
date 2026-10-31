@@ -1,5 +1,5 @@
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.3.0';
+export const RULES_VERSION = '0.4.0';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -57,6 +57,35 @@ export const RULES = {
     cohesionRecoveryWhenFed: 10,
   },
   weather: { rainPermille: 250 },
+  /** What a force can observe: a base radius plus reach from its horses, capped (§2.8). */
+  intel: { baseMetres: 15_000, metresPerThousandHorses: 4_000, maxMetres: 60_000, estimateErrorPermille: 200 },
+  /** The Russian command (§2.9). All values are game assumptions (G-014). */
+  russian: {
+    pressureStart: [55, 75],
+    temperament: [-10, 10],
+    pressurePerTurn: 3,
+    pressurePerOccupiedPlace: 5,
+    pressureReliefAfterBattle: 20,
+    /** A force with at least this share of Russian strength counts as a main army; the rest screen. */
+    mainSharePermille: 250,
+    /** A battle with a Russian force this large relieves the pressure. */
+    mainArmyMen: 20_000,
+    /** Sightings older than this many turns are not acted on. */
+    freshTurns: 1,
+    threatRadiusMetres: 50_000,
+    /** Enemy strength near the base, relative to the main armies, that counts as danger. */
+    dangerPermille: 1300,
+    mustStandPressure: 80,
+    isolationMetres: 40_000,
+    strikeReachMetres: 110_000,
+    strikeAdvantagePermille: 2000,
+    strikeResolve: 60,
+    standResolve: 50,
+    minFoodDaysToStrike: 3,
+    homeRadiusMetres: 5_000,
+    /** A screening detachment falls back from enemies this much stronger. */
+    screenOddsPermille: 2000,
+  },
   engagement: {
     minorMenThreshold: 3_000,
     withdrawBasePermille: 750,

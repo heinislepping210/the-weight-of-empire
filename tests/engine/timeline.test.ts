@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { RULES, advance, createContext, newGame, statusOf, stepOnce, submit } from '../../src/engine';
+import { RULES, advance, newGame, statusOf, stepOnce, submit } from '../../src/engine';
 import type { Context, GameState, GroupOrder } from '../../src/engine';
 import { ROUNDS_PER_SLOT, slotIndex } from '../../src/engine/time';
 import { inputFor, play, stepUntil, type Policy } from '../fixtures/driver';
-import { forceInit, testGround } from '../fixtures/testGround';
+import { forceInit, testGround, passiveContext } from '../fixtures/testGround';
 
 /** Both armies start in the same place, so a battle is set up in the very first sub-step. */
 function battleGround(): Context {
-  return createContext(
+  return passiveContext(
     testGround((s) => {
       forceInit(s, 'ru-main').at = 'B';
       forceInit(s, 'ru-main').men = 60_000;
@@ -54,7 +54,7 @@ describe('turn timeline (§3.4a)', () => {
   });
 
   it('T2: consumption never exceeds stock on hand; the shortfall is recorded and has effects', () => {
-    const ctx = createContext(
+    const ctx = passiveContext(
       testGround((s) => {
         forceInit(s, 'fr-main').stock.food = 10_000;
         s.convoys = [];
@@ -129,7 +129,7 @@ describe('turn timeline (§3.4a)', () => {
   });
 
   it('a defender avoiding battle tries to withdraw before it starts, with a seeded outcome', () => {
-    const ctx = createContext(testGround((s) => (forceInit(s, 'ru-main').at = 'B')));
+    const ctx = passiveContext(testGround((s) => (forceInit(s, 'ru-main').at = 'B')));
     const outcomes = new Set<boolean>();
     for (let seed = 0; seed < 40; seed++) {
       const s = ordersOnly(newGame(ctx, seed), ctx, [{ force: 'fr-main', engagement: 'avoid' }]);
@@ -147,7 +147,7 @@ describe('turn timeline (§3.4a)', () => {
 
   it('a force that withdraws falls back towards its own depots, not just to the first free place', () => {
     // With the French depot moved to C, the escape route is C, although A comes first alphabetically.
-    const ctx = createContext(
+    const ctx = passiveContext(
       testGround((s) => {
         forceInit(s, 'ru-main').at = 'B';
         s.depots = [{ node: 'C', side: 'fr', stock: { food: 100_000, fodder: 50_000, ammo: 5_000 } }, ...s.depots.filter((d) => d.side === 'ru')];
@@ -166,7 +166,7 @@ describe('turn timeline (§3.4a)', () => {
   });
 
   it('T9: fatigue rises with the march during a sub-step and recovers at night', () => {
-    const ctx = createContext(testGround());
+    const ctx = passiveContext(testGround());
     const start = newGame(ctx, 5);
     const f0 = start.forces['fr-flank']!.fatigue;
     const { marchSteady, halt, nightAfterMarch } = RULES.fatigue;

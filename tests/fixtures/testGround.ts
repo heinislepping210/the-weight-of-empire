@@ -1,4 +1,18 @@
-import type { ScenarioDef } from '../../src/engine';
+import { RULES, createContext } from '../../src/engine';
+import type { Context, GameState, ScenarioDef } from '../../src/engine';
+
+/** Russians who hold still and accept battle, so mechanics tests are not about AI choices. */
+export function holdStill(s: GameState): void {
+  for (const f of Object.values(s.forces)) {
+    if (f.side !== 'ru') continue;
+    f.route = [];
+    f.engagement = 'accept';
+  }
+}
+
+export function passiveContext(scenario: ScenarioDef): Context {
+  return createContext(scenario, RULES, { russianCommand: holdStill });
+}
 
 const NODES = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 

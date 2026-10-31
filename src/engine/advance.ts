@@ -4,7 +4,9 @@
 // stages until the next point that needs the player. Nothing here waits on the UI or keeps hidden
 // state outside the GameState, so a saved pause can be resumed exactly.
 
-import { decideNightfall, decideRound, planRussianTurn } from './ai';
+import { decideNightfall, decideRound } from './ai';
+import { updateIntel } from './intel';
+import { updatePressure } from './russian';
 import { resolveNightfall, resolveRound, retreatNodeFor } from './battle';
 import { edgeBetween, neighboursOf, shortestPath, type EdgeDef } from './graph';
 import { chance, drawBetween } from './rng';
@@ -29,7 +31,7 @@ import type {
   Status,
   Transit,
 } from './types';
-import { addInto, emptySupplies, enemyPresent, fatiguePermille, loseMen, must, note, otherSide, place, sortedValues } from './util';
+import { addInto, emptySupplies, enemyPresent, fatiguePermille, loseMen, must, note, otherSide, place, setPosture, sortedValues } from './util';
 
 export type AdvanceResult =
   | { ok: true; state: GameState; status: Status; log: LogEntry[] }
@@ -144,15 +146,10 @@ function applyInput(s: GameState, input: Input, ctx: Context, log: LogEntry[]): 
       if (o.route !== undefined) f.route = [...o.route];
       if (o.pace !== undefined) f.pace = o.pace;
       if (o.engagement !== undefined) f.engagement = o.engagement;
-      if (o.posture === 'dispersed') {
-        f.posture = 'dispersed';
-        f.gathering = 0;
-      } else if (o.posture === 'concentrated' && f.posture === 'dispersed' && f.gathering === 0) {
-        f.gathering = ctx.rules.posture.gatherSlots;
-      }
+      if (o.posture !== undefined) setPosture(f, o.posture, ctx.rules);
     }
     // The Russians re-plan only at the start of a turn, as the player does (§3.4).
-    planRussianTurn(s, ctx);
+    ctx.russianCommand(s, ctx, log);
     note(s, log, 'orders', { count: input.orders.length });
     s.resolution.stage = 'activity';
     return;
@@ -309,7 +306,9 @@ function stageNight(s: GameState, ctx: Context, log: LogEntry[]): void {
 }
 
 function stageEndOfTurn(s: GameState, ctx: Context, log: LogEntry[]): void {
-  // Events, political pressure and intelligence reports are added here as those systems are built.
+  // Events join here once that system is built.
+  updatePressure(s, ctx, log);
+  updateIntel(s, ctx);
   const next = s.resolution.turn + 1;
   if (next > ctx.scenario.turns) {
     s.ended = 'scenarioEnd';
@@ -552,6 +551,7 @@ function resolveEncounter(s: GameState, ctx: Context, enc: Encounter, log: LogEn
     // Caught dispersed: the force assembles while the fighting begins (§2.4b).
     if (f.posture === 'dispersed' && f.gathering === 0) f.gathering = ctx.rules.posture.gatherSlots;
   }
+  if (sides.ru.some((fid) => must(s.forces[fid], fid).men >= ctx.rules.russian.mainArmyMen)) s.russianCommand.foughtThisTurn = true;
   note(s, log, 'battleJoined', { battle: id, node: enc.node, attacker });
   return true;
 }

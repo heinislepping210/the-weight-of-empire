@@ -4,15 +4,17 @@ import { RULES_VERSION, createContext, replay, stateHash } from '../../src/engin
 import type { Context, GameState } from '../../src/engine';
 import { ROUNDS_PER_SLOT, slotIndex } from '../../src/engine/time';
 import { advancePolicy, play, randomPolicy, supplyTotals, type Run } from '../fixtures/driver';
-import { forceInit, testGround } from '../fixtures/testGround';
+import { forceInit, testGround, passiveContext } from '../fixtures/testGround';
 
-const open = createContext(testGround());
-const crowded = createContext(
+const open = passiveContext(testGround());
+const crowded = passiveContext(
   testGround((s) => {
     forceInit(s, 'ru-main').at = 'B';
     forceInit(s, 'ru-post').at = 'A';
   }),
 );
+/** The real Russian command, so the invariants also hold while the AI moves. */
+const lively = createContext(testGround());
 
 /**
  * Golden replays (§3.3): rules version → final-state hash of the scripted advance on seed 1812.
@@ -22,6 +24,7 @@ const GOLDEN: Record<string, string> = {
   '0.1.0': '8c8ffd59ea26b2e7',
   '0.2.0': 'c6a24c55ddaa0d93', // weight-based convoy loads; forced march 36 km/day
   '0.3.0': 'b835409fa27a2ceb', // posture and gathering, depot issue, wider foraging, retreat towards home
+  '0.4.0': '6b48ca020f71d0ab', // intelligence and the Russian command (run with Russians held still)
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved; nothing goes negative. */
@@ -114,7 +117,7 @@ describe('determinism, conservation and resumption', () => {
 
   it('random play keeps every invariant (T4, T6, T8, T10)', () => {
     fc.assert(
-      fc.property(fc.constantFrom(open, crowded), fc.integer({ min: 0, max: 0xffffffff }), fc.integer({ min: 0, max: 0xffffffff }), (ctx, seed, choices) => {
+      fc.property(fc.constantFrom(open, crowded, lively), fc.integer({ min: 0, max: 0xffffffff }), fc.integer({ min: 0, max: 0xffffffff }), (ctx, seed, choices) => {
         const run = play(ctx, seed, randomPolicy(ctx, choices));
         checkConservation(run);
         checkExclusivity(run);

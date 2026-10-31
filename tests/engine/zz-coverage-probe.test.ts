@@ -1,13 +1,12 @@
 import { expect, it } from 'vitest';
-import { createContext } from '../../src/engine';
 import { play, randomPolicy } from '../fixtures/driver';
-import { forceInit, testGround } from '../fixtures/testGround';
+import { forceInit, testGround, passiveContext } from '../fixtures/testGround';
 
 // The invariant tests are only as strong as the situations random play reaches.
 // This guards against them silently passing on games where nothing happens.
 it('random play reaches battles, nights, deliveries, shortfalls and withdrawals', () => {
-  const open = createContext(testGround());
-  const crowded = createContext(
+  const open = passiveContext(testGround());
+  const crowded = passiveContext(
     testGround((s) => {
       forceInit(s, 'ru-main').at = 'B';
       forceInit(s, 'ru-post').at = 'A';
