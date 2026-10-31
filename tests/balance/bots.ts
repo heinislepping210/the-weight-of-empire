@@ -2,14 +2,24 @@
 // directives and the staff planner, seeing only French intelligence, with battles left to the marshal.
 // They are tuned once for all seeds, never per seed.
 
-import { axesTo, leadGroup, ordersFrom, planDirective } from '../../src/engine';
-import type { Context, Directive, GameState, GroupOrder, NodeId } from '../../src/engine';
+import { axesTo, leadGroup, ordersFrom, planDirective, planLogistics } from '../../src/engine';
+import type { Context, Directive, GameState, GroupOrder, LogisticsOrders, NodeId } from '../../src/engine';
 import { randomPolicy, type Policy } from '../fixtures/driver';
 
-const base: Directive = { objective: null, axis: null, tempo: 'steady', posture: 'concentrated', engagement: 'seek', holdBack: [] };
+// Every bot brings its supply base forward, as a competent staff would (§2.6).
+const base: Directive = { objective: null, axis: null, tempo: 'steady', posture: 'concentrated', engagement: 'seek', holdBack: [], logistics: 'forward' };
+
+/** The directive a bot chose last, so its supply orders follow the same objective. */
+const chosen = new WeakMap<GameState, Directive>();
 
 function orders(s: GameState, ctx: Context, d: Partial<Directive>): GroupOrder[] {
-  return ordersFrom(planDirective(s, ctx, { ...base, ...d }));
+  const directive = { ...base, ...d };
+  chosen.set(s, directive);
+  return ordersFrom(planDirective(s, ctx, directive));
+}
+
+function supply(ctx: Context) {
+  return (s: GameState): LogisticsOrders | null => planLogistics(s, ctx, chosen.get(s) ?? base).orders;
 }
 
 function axisVia(s: GameState, ctx: Context, objective: NodeId, landmark: string): string | null {
@@ -32,7 +42,8 @@ const armySeenNear = (s: GameState, ctx: Context, node: NodeId, km: number, men:
 
 const delegate = { round: () => 'delegate' as const, nightfall: () => 'delegate' as const };
 
-export const BOTS: Record<string, (ctx: Context) => Policy> = {
+/** Every bot plays like a player: battles left to the marshal, supply to the staff. */
+const BASE_BOTS: Record<string, (ctx: Context) => Policy> = {
   /** The whole army up the Rudnia road to Smolensk's north bank, concentrated, seeking battle. */
   'concentrated-push': (ctx) => ({ orders: (s) => orders(s, ctx, { objective: 'smolensk-north' }), ...delegate }),
 
@@ -71,8 +82,11 @@ export const BOTS: Record<string, (ctx: Context) => Policy> = {
 
   /** Forced marches straight at Smolensk. */
   rush: (ctx) => ({ orders: (s) => orders(s, ctx, { objective: 'smolensk-north', tempo: 'forced' }), ...delegate }),
+};
 
-  /** Random valid orders: the control that should rarely do well. */
+export const BOTS: Record<string, (ctx: Context) => Policy> = {
+  ...Object.fromEntries(Object.entries(BASE_BOTS).map(([name, make]) => [name, (ctx: Context) => ({ ...make(ctx), logistics: supply(ctx) })])),
+  /** Random valid orders, random supply arrangements included: the control that should rarely do well. */
   random: (ctx) => randomPolicy(ctx, 0x5eed),
 };
 

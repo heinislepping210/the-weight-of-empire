@@ -18,7 +18,11 @@ describe('The Vitebsk Decision: starting situation', () => {
     const s = newGame(ctx, 1812);
     for (const f of Object.values(s.forces)) expect(ctx.graph.nodes.has(f.at), f.id).toBe(true);
     for (const d of Object.values(s.depots)) expect(ctx.graph.nodes.has(d.node), d.node).toBe(true);
-    for (const c of Object.values(s.convoys)) expect(s.forces[c.serves]?.side, c.id).toBe(c.side);
+    for (const c of Object.values(s.convoys)) {
+      // Each train supplies a force of its own side, or stands idle at its home depot as a line train.
+      if (c.serves !== null) expect(s.forces[c.serves]?.side, c.id).toBe(c.side);
+      else expect([c.feeds, s.depots[c.home]?.side], c.id).toEqual([c.home, c.side]);
+    }
   });
 
   it('keeps army totals inside the researched ranges for every seed (H-009)', () => {
@@ -45,7 +49,7 @@ describe('The Vitebsk Decision: starting situation', () => {
       const z = supplyTotals(run.final);
       const lost = Object.values(run.final.ledger.menLost).reduce((n, x) => n + x, 0);
       expect(z.men + lost).toBe(a.men);
-      expect(z.food + run.final.ledger.consumed.food).toBe(a.food + run.final.ledger.foraged.food);
+      expect(z.food + run.final.ledger.consumed.food + run.final.ledger.destroyed.food).toBe(a.food + run.final.ledger.foraged.food);
     }
   });
 });

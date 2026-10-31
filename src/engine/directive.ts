@@ -5,8 +5,8 @@
 import { edgeBetween, pathMetres, roadDistance, shortestPath, type EdgeDef } from './graph';
 import type { Context } from './scenario';
 import { calendar, slotIndex, SLOTS_PER_TURN } from './time';
-import type { Engagement, Force, ForceId, GameState, GroupOrder, NodeId, Pace, Posture, Slot, SlotRef } from './types';
-import { fatiguePermille, sortedValues } from './util';
+import type { ConvoyOrder, Engagement, Force, ForceId, GameState, GroupOrder, LogisticsOrders, NodeId, Pace, Posture, Slot, SlotRef } from './types';
+import { enemyPresent, fatiguePermille, sortedValues } from './util';
 
 export interface Axis {
   id: string;
@@ -27,6 +27,15 @@ export interface Directive {
   engagement: Engagement;
   /** Groups that stay where they are whatever the objective. */
   holdBack: ForceId[];
+  /** Keep the depots and wagon trains as they are, or bring the supply base forward behind the army (§2.6). */
+  logistics: LogisticsStance;
+}
+
+export type LogisticsStance = 'hold' | 'forward';
+
+export interface LogisticsPlan {
+  orders: LogisticsOrders | null;
+  reasons: string[];
 }
 
 export interface PlannedOrder {
@@ -278,6 +287,82 @@ export function planDirective(s: GameState, ctx: Context, d: Directive): Planned
     });
   }
   return plans;
+}
+
+const km = (metres: number) => `${Math.round(metres / 1000)} km`;
+
+/**
+ * The staff's supply arrangements for a directive (§2.6). Holding keeps everything as it is. Bringing
+ * the base forward founds one depot per turn where French troops stand far enough beyond the existing
+ * depots but within a line train's haul of one; sends each idle line train from a depot with a full load
+ * waiting to the depot nearest the front within its haul, so stores move up in relays; and has each
+ * group's wagons load at the nearest depot with at least a day's food for it.
+ */
+export function planLogistics(s: GameState, ctx: Context, d: Directive): LogisticsPlan {
+  if (d.logistics === 'hold') return { orders: null, reasons: ['Depots and wagon trains keep their present arrangements.'] };
+  const ours = sortedValues(s.depots).filter((x) => x.side === 'fr');
+  const french = sortedValues(s.forces).filter((f) => f.side === 'fr' && f.men > 0);
+  const largest = french.reduce<Force | null>((a, f) => (a === null || f.men > a.men ? f : a), null);
+  const front = d.objective ?? largest?.at ?? null;
+  if (front === null || ours.length === 0) return { orders: null, reasons: ['No French depot remains to supply from.'] };
+  const fromFront = (node: NodeId) => roadDistance(ctx.graph, node, front);
+  const nearestDepot = (node: NodeId) => Math.min(...ours.map((x) => roadDistance(ctx.graph, node, x.node)));
+  const byFront = (a: NodeId, b: NodeId) => fromFront(a) - fromFront(b) || (a < b ? -1 : 1);
+  const { minDepotSpacingMetres: spacing, maxLineHaulMetres: haul } = ctx.rules.logistics;
+  const reasons: string[] = [];
+
+  const sites = [...new Set(french.filter((f) => f.transit === null && f.battle === null).map((f) => f.at))]
+    .filter((n) => !s.depots[n] && !enemyPresent(s, 'fr', n) && nearestDepot(n) >= spacing && nearestDepot(n) <= haul)
+    .sort(byFront);
+  const site = sites[0];
+  if (site !== undefined) {
+    reasons.push(
+      `Found a depot at ${placeName(ctx, site)}, ${km(nearestDepot(site))} beyond the nearest one. It starts empty, and falls to the enemy if no French troops hold it: much of what is stored there would then be burned.`,
+    );
+  } else {
+    reasons.push(`No new depot: no place held by French troops lies between ${km(spacing)} and ${km(haul)} beyond the existing depots.`);
+  }
+
+  const depots = [...ours.map((x) => x.node), ...(site !== undefined ? [site] : [])];
+  const convoys: ConvoyOrder[] = [];
+
+  for (const c of sortedValues(s.convoys)) {
+    if (c.side !== 'fr') continue;
+    if (c.serves === null) {
+      // A train on its way with a load finishes that delivery first.
+      if (c.leg === 'outbound') continue;
+      const { convoy, gramsPerUnit } = ctx.rules;
+      const load = Math.floor((c.wagons * convoy.payloadGrams * convoy.loadPermille.food) / 1000 / gramsPerUnit.food);
+      const at = c.transit ? c.transit.to : c.at;
+      let best: { home: NodeId; feeds: NodeId; cost: number } | null = null;
+      for (const home of ours.filter((x) => x.stock.food >= load).map((x) => x.node)) {
+        for (const feeds of depots) {
+          if (feeds === home || byFront(feeds, home) >= 0 || roadDistance(ctx.graph, home, feeds) > haul) continue;
+          const cost = roadDistance(ctx.graph, at, home) + roadDistance(ctx.graph, home, feeds);
+          if (best === null || byFront(feeds, best.feeds) < 0 || (feeds === best.feeds && cost < best.cost)) best = { home, feeds, cost };
+        }
+      }
+      if (best === null || (best.home === c.home && best.feeds === c.feeds)) continue;
+      convoys.push({ convoy: c.id, home: best.home, feeds: best.feeds });
+      reasons.push(`Line train of ${c.wagons} wagons will carry supplies from ${placeName(ctx, best.home)} to ${placeName(ctx, best.feeds)}, ${km(roadDistance(ctx.graph, best.home, best.feeds))} by road.`);
+      continue;
+    }
+    const f = s.forces[c.serves];
+    if (!f || f.men <= 0) continue;
+    const at = f.transit ? f.transit.to : f.at;
+    const stocked = ours.filter((x) => x.stock.food >= f.men).map((x) => x.node);
+    const best = [...stocked].sort((a, b) => roadDistance(ctx.graph, at, a) - roadDistance(ctx.graph, at, b) || (a < b ? -1 : 1))[0];
+    if (best === undefined || best === c.home) continue;
+    const gain = roadDistance(ctx.graph, at, c.home) - roadDistance(ctx.graph, at, best);
+    if (gain <= 0) continue;
+    convoys.push({ convoy: c.id, home: best, serves: f.id });
+    reasons.push(`${f.name}: its wagons will load at ${placeName(ctx, best)} instead of ${placeName(ctx, c.home)}, ${km(gain)} closer.`);
+  }
+
+  const orders: LogisticsOrders = {};
+  if (site !== undefined) orders.foundDepot = site;
+  if (convoys.length > 0) orders.convoys = convoys;
+  return { orders: site !== undefined || convoys.length > 0 ? orders : null, reasons };
 }
 
 /** The orders to commit: the staff's plan with any of the player's own orders in place of the staff's. */

@@ -60,6 +60,17 @@ export function dispatches(entries: readonly LogEntry[], s: GameState, ctx: Cont
         break;
       case 'delivered':
         if (french(d.force)) text = `Wagons reached ${force(d.force)}: ${Number(d.food).toLocaleString('en-GB')} rations, ${Number(d.fodder).toLocaleString('en-GB')} fodder, ${Number(d.ammo).toLocaleString('en-GB')} ammunition.`;
+        else if (d.depot !== null && s.convoys[String(d.convoy)]?.side === 'fr') text = `A line train stocked the depot at ${place(d.depot)}: ${Number(d.food).toLocaleString('en-GB')} rations, ${Number(d.fodder).toLocaleString('en-GB')} fodder, ${Number(d.ammo).toLocaleString('en-GB')} ammunition.`;
+        break;
+      case 'depotFounded':
+        text = `A depot was founded at ${place(d.node)}.`;
+        break;
+      case 'depotCaptured':
+        // Both sides learn of a depot changing hands: it is where their own troops stand or stood.
+        text =
+          d.by === 'fr'
+            ? `We took the enemy stores at ${place(d.node)}: about ${Math.round(Number(d.burnedPermille) / 10)}% had been burned, ${Number(d.food).toLocaleString('en-GB')} rations saved.`
+            : `The enemy took our depot at ${place(d.node)}: about ${Math.round(Number(d.burnedPermille) / 10)}% of the stores were burned before it fell.`;
         break;
       case 'shortfall':
         if (french(d.force)) text = `${force(d.force)} went hungry: ${Number(d.food).toLocaleString('en-GB')} rations short${Number(d.fodder) > 0 ? `, and ${Number(d.fodder).toLocaleString('en-GB')} horse-rations of fodder` : ''}.`;

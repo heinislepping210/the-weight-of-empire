@@ -69,12 +69,15 @@ export interface Force {
 
 export type ConvoyLeg = 'loading' | 'outbound' | 'returning';
 
-/** A wagon park shuttling between its home depot and the force it supplies. */
+/** A wagon park shuttling from its home depot to the force it supplies, or to a depot it stocks (§2.6). */
 export interface Convoy {
   id: ConvoyId;
   side: Side;
   home: NodeId;
-  serves: ForceId;
+  /** The force it supplies, or null for a line train that stocks a depot. */
+  serves: ForceId | null;
+  /** The depot a line train stocks; equal to `home` when the train stands idle. */
+  feeds: NodeId | null;
   leg: ConvoyLeg;
   at: NodeId;
   transit: Transit | null;
@@ -145,6 +148,8 @@ export interface Ledger {
   foraged: { food: number; fodder: number };
   consumed: { food: number; fodder: number };
   ammoSpent: Record<Side, number>;
+  /** Stores burned when a depot was captured. */
+  destroyed: Supplies;
   menLost: Record<LossCause, number>;
   horsesLost: number;
 }
@@ -210,6 +215,20 @@ export interface GroupOrder {
   posture?: Posture;
 }
 
+/** A wagon train's new assignment: supply a force, or stock a depot (§2.6). */
+export interface ConvoyOrder {
+  convoy: ConvoyId;
+  home: NodeId;
+  serves?: ForceId;
+  feeds?: NodeId;
+}
+
+export interface LogisticsOrders {
+  /** Found an empty depot where French troops hold the ground. */
+  foundDepot?: NodeId;
+  convoys?: ConvoyOrder[];
+}
+
 export type BattleDecision =
   | { kind: 'deploy' }
   | { kind: 'round'; action: RoundAction }
@@ -217,7 +236,7 @@ export type BattleDecision =
   | { kind: 'delegate' };
 
 export type Input =
-  | { kind: 'orders'; turn: number; orders: GroupOrder[]; halt?: boolean }
+  | { kind: 'orders'; turn: number; orders: GroupOrder[]; halt?: boolean; logistics?: LogisticsOrders }
   | { kind: 'battle'; battleId: BattleId; round: number; decision: BattleDecision };
 
 export interface LogEntry {

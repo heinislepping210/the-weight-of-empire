@@ -26,25 +26,30 @@ const GOLDEN: Record<string, string> = {
   '0.3.0': 'b835409fa27a2ceb', // posture and gathering, depot issue, wider foraging, retreat towards home
   '0.4.0': '6b48ca020f71d0ab', // intelligence and the Russian command (run with Russians held still)
   '0.5.0': '2d02fdbd93033054', // halt for the season (state gains `halted`)
+  '0.6.0': 'fb9cd183b39e6999', // captured stores, forward depots and line trains (convoys gain `feeds`, ledger gains `destroyed`)
 };
 
-/** T8: men, horses, wagons, food, fodder and ammunition are conserved; nothing goes negative. */
+/** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */
 function checkConservation(run: Run): void {
   const a = supplyTotals(run.states[0]!);
   for (const s of run.states) {
     const t = supplyTotals(s);
     const lost = Object.values(s.ledger.menLost).reduce((n, x) => n + x, 0);
+    const burned = s.ledger.destroyed;
     expect(t.men + lost).toBe(a.men);
     expect(t.horses + s.ledger.horsesLost).toBe(a.horses);
     expect(t.wagons).toBe(a.wagons);
-    expect(t.food + s.ledger.consumed.food).toBe(a.food + s.ledger.foraged.food);
-    expect(t.fodder + s.ledger.consumed.fodder).toBe(a.fodder + s.ledger.foraged.fodder);
-    expect(t.ammo + s.ledger.ammoSpent.fr + s.ledger.ammoSpent.ru).toBe(a.ammo);
+    expect(t.food + s.ledger.consumed.food + burned.food).toBe(a.food + s.ledger.foraged.food);
+    expect(t.fodder + s.ledger.consumed.fodder + burned.fodder).toBe(a.fodder + s.ledger.foraged.fodder);
+    expect(t.ammo + s.ledger.ammoSpent.fr + s.ledger.ammoSpent.ru + burned.ammo).toBe(a.ammo);
     expect(t.districtFood + s.ledger.foraged.food).toBe(a.districtFood);
     expect(t.districtFodder + s.ledger.foraged.fodder).toBe(a.districtFodder);
     for (const f of Object.values(s.forces)) {
       for (const v of [f.men, f.horses, f.stock.food, f.stock.fodder, f.stock.ammo, f.fatigue, f.cohesion]) expect(v).toBeGreaterThanOrEqual(0);
     }
+    for (const d of Object.values(s.depots)) for (const v of [d.stock.food, d.stock.fodder, d.stock.ammo]) expect(v).toBeGreaterThanOrEqual(0);
+    // Every wagon train has exactly one task: a force to supply, or a depot to stock.
+    for (const c of Object.values(s.convoys)) expect(c.serves === null, c.id).not.toBe(c.feeds === null);
   }
 }
 

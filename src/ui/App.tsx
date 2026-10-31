@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ENDING_NAMES, advance, createContext, evaluate, newGame, ordersFrom, planDirective, statusOf, when } from '../engine';
+import { ENDING_NAMES, advance, createContext, evaluate, newGame, ordersFrom, planDirective, planLogistics, statusOf, when } from '../engine';
 import type { BattleDecision, Directive, GameState, GroupOrder, Input, LogEntry, Side } from '../engine';
 import { vitebskDecision } from '../data/vitebsk/scenario';
 import { BattlePanel } from './BattlePanel';
@@ -20,7 +20,7 @@ interface Run {
 }
 
 const startRun = (seed: number): Run => ({ seed, states: [newGame(ctx, seed)], inputs: [], logs: [] });
-const HOLD: Directive = { objective: null, axis: null, tempo: 'steady', posture: 'dispersed', engagement: 'accept', holdBack: [] };
+const HOLD: Directive = { objective: null, axis: null, tempo: 'steady', posture: 'dispersed', engagement: 'accept', holdBack: [], logistics: 'hold' };
 
 const total = (s: GameState, side: Side, k: 'men' | 'horses') =>
   Object.values(s.forces)
@@ -44,6 +44,7 @@ export function App() {
   // Once a halt is declared or about to be, the staff plans for holding where the army stands.
   const effective = s.halted || halt ? { ...directive, objective: null } : directive;
   const plan = useMemo(() => (status.kind === 'awaitingOrders' ? planDirective(s, ctx, effective) : []), [s, status.kind, effective.objective, directive]);
+  const supply = useMemo(() => (status.kind === 'awaitingOrders' ? planLogistics(s, ctx, effective) : null), [s, status.kind, effective.objective, directive]);
   const outcome = useMemo(() => (status.kind === 'ended' ? evaluate(run.states[0] as GameState, s, ctx) : null), [status.kind, run.states, s]);
   const news = useMemo(() => dispatches(run.logs.flat(), s, ctx, ctx.scenario.startDate).reverse(), [run.logs, s]);
 
@@ -60,7 +61,8 @@ export function App() {
   function commit() {
     if (status.kind !== 'awaitingOrders') return;
     const merged = Object.fromEntries(plan.map((p) => [p.force, overrides[p.force] ? { ...p.order, ...overrides[p.force] } : p.order]));
-    submit({ kind: 'orders', turn: status.turn, orders: ordersFrom(plan, Object.values(merged)), ...(halt ? { halt: true } : {}) });
+    const logistics = supply?.orders ?? null;
+    submit({ kind: 'orders', turn: status.turn, orders: ordersFrom(plan, Object.values(merged)), ...(halt ? { halt: true } : {}), ...(logistics ? { logistics } : {}) });
     setOverrides({});
     setHalt(false);
   }
@@ -168,6 +170,7 @@ export function App() {
                 directive={directive}
                 onDirective={setDirective}
                 plan={plan}
+                supply={supply}
                 overrides={overrides}
                 onOverride={(force, change) =>
                   setOverrides((cur) => {

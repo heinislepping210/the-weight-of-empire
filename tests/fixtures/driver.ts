@@ -1,12 +1,15 @@
 import { advance, newGame, statusOf, stepOnce } from '../../src/engine';
-import type { BattleState, Context, GameState, GroupOrder, Input, LogEntry, NightChoice, RoundAction, Status, Supplies } from '../../src/engine';
+import type { BattleState, ConvoyOrder, Context, GameState, GroupOrder, Input, LogEntry, LogisticsOrders, NightChoice, RoundAction, Status, Supplies } from '../../src/engine';
 import { neighboursOf } from '../../src/engine/graph';
 import { keyHash } from '../../src/engine/rng';
+import { enemyPresent } from '../../src/engine/util';
 
 export interface Policy {
   orders(s: GameState, turn: number): GroupOrder[];
   /** Declare a halt for the season with these orders. */
   halt?(s: GameState, turn: number): boolean;
+  /** Depots to found and wagon trains to reassign with these orders. */
+  logistics?(s: GameState, turn: number): LogisticsOrders | null;
   round?(s: GameState, battle: BattleState): RoundAction | 'delegate';
   nightfall?(s: GameState, battle: BattleState): NightChoice | 'delegate';
 }
@@ -21,8 +24,11 @@ export interface Run {
 
 export function inputFor(s: GameState, status: Status, policy: Policy): Input {
   if (status.kind === 'awaitingOrders') {
+    // Group orders first: a policy may arrange its supply to fit the directive it just chose.
+    const orders = policy.orders(s, status.turn);
     const halt = !s.halted && (policy.halt?.(s, status.turn) ?? false);
-    return { kind: 'orders', turn: status.turn, orders: policy.orders(s, status.turn), ...(halt ? { halt: true } : {}) };
+    const logistics = policy.logistics?.(s, status.turn) ?? null;
+    return { kind: 'orders', turn: status.turn, orders, ...(halt ? { halt: true } : {}), ...(logistics ? { logistics } : {}) };
   }
   if (status.kind !== 'awaitingBattleInput') throw new Error(`no input fits status ${status.kind}`);
   const b = s.battles[status.battleId];
@@ -97,6 +103,28 @@ export function randomPolicy(ctx: Context, choiceSeed: number): Policy {
         orders.push({ force: id, route, pace, engagement, ...(posture === 'keep' ? {} : { posture }) });
       }
       return orders;
+    },
+    logistics(s, turn) {
+      // Now and then found a depot where French troops hold the ground, and reassign a few wagon trains.
+      const ours = Object.values(s.depots).filter((d) => d.side === 'fr').map((d) => d.node).sort();
+      const held = [...new Set(Object.values(s.forces).filter((f) => f.side === 'fr' && f.men > 0 && f.transit === null).map((f) => f.at))]
+        .filter((n) => !s.depots[n] && !enemyPresent(s, 'fr', n))
+        .sort();
+      const found = held.length > 0 && keyHash(choiceSeed, [turn, 'found']) % 3 === 0 ? pick(held, [turn, 'site']) : undefined;
+      const bases = found === undefined ? ours : [...ours, found];
+      const french = Object.keys(s.forces).filter((id) => s.forces[id]?.side === 'fr').sort();
+      const convoys: ConvoyOrder[] =
+        bases.length === 0
+          ? []
+          : Object.keys(s.convoys)
+              .sort()
+              .filter((id) => s.convoys[id]?.side === 'fr' && keyHash(choiceSeed, [turn, id, 'reassign']) % 4 === 0)
+              .map((id) => {
+                const home = pick(bases, [turn, id, 'home']);
+                return keyHash(choiceSeed, [turn, id, 'role']) % 2 === 0 ? { convoy: id, home, serves: pick(french, [turn, id, 'serves']) } : { convoy: id, home, feeds: pick(bases, [turn, id, 'feeds']) };
+              });
+      if (found === undefined && convoys.length === 0) return null;
+      return { ...(found === undefined ? {} : { foundDepot: found }), ...(convoys.length > 0 ? { convoys } : {}) };
     },
     round: (_s, b) => pick(ROUND, ['round', b.id, b.roundsFought]),
     nightfall: (_s, b) => pick(NIGHT, ['night', b.id, b.roundsFought]),

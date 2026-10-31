@@ -24,6 +24,11 @@ interface Result {
   battles: number;
   cohesion: number;
   foodDays: number;
+  founded: number;
+  depotsLost: number;
+  tookSmolensk: boolean;
+  lineFood: number;
+  burnedFood: number;
 }
 
 it.skipIf(!enabled)('balance batch', () => {
@@ -37,7 +42,14 @@ it.skipIf(!enabled)('balance batch', () => {
       const run = play(ctx, seed, (BOTS[name] as (c: typeof ctx) => ReturnType<(typeof BOTS)[string]>)(ctx));
       for (const v of violations(run)) problems.push(`${name} seed ${seed}: ${v}`);
       const o = evaluate(run.states[0]!, run.final, ctx);
+      const log = run.logs.flat();
+      const captured = log.filter((e) => e.kind === 'depotCaptured');
       results[name]!.push({
+        founded: log.filter((e) => e.kind === 'depotFounded').length,
+        depotsLost: captured.filter((e) => e.detail.by === 'ru').length,
+        tookSmolensk: captured.some((e) => e.detail.by === 'fr' && e.detail.node === 'smolensk'),
+        lineFood: log.filter((e) => e.kind === 'delivered' && e.detail.depot !== null && run.final.convoys[String(e.detail.convoy)]?.side === 'fr').reduce((n, e) => n + Number(e.detail.food), 0),
+        burnedFood: run.final.ledger.destroyed.food,
         ending: o.ending,
         rank: ENDING_RANK[o.ending],
         frMen: o.frenchMenLostPermille / 10,
@@ -74,6 +86,20 @@ it.skipIf(!enabled)('balance batch', () => {
     );
   }
 
+  lines.push(
+    '',
+    '## Supply (means)',
+    '',
+    '| Strategy | Depots founded | French depots lost | Took the Smolensk stores | Food moved up by line trains | Stores burned (food) |',
+    '|---|---|---|---|---|---|',
+  );
+  for (const name of names) {
+    const rs = results[name]!;
+    lines.push(
+      `| ${name} | ${mean(rs.map((r) => r.founded)).toFixed(2)} | ${mean(rs.map((r) => r.depotsLost)).toFixed(2)} | ${pct(rs.filter((r) => r.tookSmolensk).length, rs.length)} | ${Math.round(mean(rs.map((r) => r.lineFood))).toLocaleString('en-GB')} | ${Math.round(mean(rs.map((r) => r.burnedFood))).toLocaleString('en-GB')} |`,
+    );
+  }
+
   // F1/F2/F3: achievability, several ways to win, no dominant approach (families only).
   const decisive = (name: string, seed: number) => results[name]![seed]!.ending === 'decisiveSuccess';
   let anyFamilyDecisive = 0;
@@ -107,4 +133,4 @@ it.skipIf(!enabled)('balance batch', () => {
   lines.push(`- **F6:** random play reaches Decisive Success on ${pct(random.filter((r) => r.ending === 'decisiveSuccess').length, SEEDS)} of seeds (target < 5%).`);
 
   console.log(['BALANCE-REPORT-START', ...lines, 'BALANCE-REPORT-END'].join('\n'));
-}, 600_000);
+}, 3_600_000);

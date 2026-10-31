@@ -32,12 +32,13 @@ Run them with `npm test`. All of these currently pass.
 | File | Covers |
 |---|---|
 | `tests/engine/timeline.test.ts` | T1, T2, T3, T5, T6, T7, T9; pre-battle withdrawal |
-| `tests/engine/properties.test.ts` | T4, T8, T10 under random play (fast-check, 60 games per run); determinism; the golden replay |
+| `tests/engine/properties.test.ts` | T4, T8, T10 under random play (fast-check, 60 games per run), random depot founding and wagon-train orders included; conservation counts burned stores; every wagon train has exactly one task; determinism; the golden replay |
 | `tests/engine/inputs.test.ts` | invalid inputs are rejected cleanly; `advance` never modifies its input |
 | `tests/engine/rng.test.ts` | counter-based randomness: purity, uniformity, ranges |
 | `tests/engine/zz-coverage-probe.test.ts` | guards that random play keeps reaching battles, nights, deliveries, shortfalls and withdrawals |
 | `tests/balance/bots.test.ts` | each strategy bot plays the scenario to an evaluated end without breaking any invariant; the halt is declared and holds |
-| `tests/balance/batch.test.ts` | the balance batch, skipped normally; run it with `BALANCE=1 BALANCE_SEEDS=1000 npx vitest run tests/balance/batch.test.ts` (about 40 s for 7,000 games). Reports are kept in `docs/balance/` |
+| `tests/balance/batch.test.ts` | the balance batch, skipped normally; run it with `BALANCE=1 BALANCE_SEEDS=1000 npx vitest run tests/balance/batch.test.ts` (about 90 s for 7,000 games). Reports are kept in `docs/balance/` |
+| `tests/engine/logistics.test.ts` | captured stores (who holds the ground, the burned share within its range and fixed by the seed, captors drawing on the rest, trains falling back); founding a depot only where French troops stand; one task per wagon train; idle line trains; a line train stocking a forward depot that troops then draw on; re-homing; the staff's supply plan (keep or bring forward, relays from each train's own depot, loaded trains left to finish) |
 | `tests/engine/directive.test.ts` | axes (three distinct routes, shortest first, stable IDs); the staff planner (routes follow the chosen axis by sensible roads, orders the engine accepts, holding, held-back groups, forecasts including gathering, enemies from the French picture only, player overrides) |
 | `tests/engine/russian.test.ts` | intelligence (sees only what is in range, with estimate error); the Russian command never uses unseen information; strike, hold, isolation, staleness, withdraw-or-stand, screening; determinism; political pressure |
 | `tests/engine/posture.test.ts` | dispersed foraging (wider, even, never under the enemy); concentrated foraging; gathering before marching; reduced strength while gathering; no dispersing in battle; depot issue |

@@ -1,5 +1,5 @@
 import { axesTo, leadGroup } from '../engine';
-import type { Context, Directive, Engagement, Force, GameState, GroupOrder, Pace, PlannedOrder, Posture } from '../engine';
+import type { Context, Directive, Engagement, Force, GameState, GroupOrder, LogisticsPlan, LogisticsStance, Pace, PlannedOrder, Posture } from '../engine';
 import { thousands } from './names';
 
 interface Props {
@@ -8,6 +8,7 @@ interface Props {
   directive: Directive;
   onDirective: (d: Directive) => void;
   plan: readonly PlannedOrder[];
+  supply: LogisticsPlan | null;
   overrides: Readonly<Record<string, Partial<GroupOrder>>>;
   onOverride: (force: string, change: Partial<GroupOrder> | null) => void;
   halt: boolean;
@@ -24,9 +25,13 @@ export function condition(f: Force): string {
 const PACES: Pace[] = ['rest', 'steady', 'forced'];
 const STANCES: Engagement[] = ['seek', 'accept', 'avoid'];
 const POSTURES: Posture[] = ['dispersed', 'concentrated'];
+const SUPPLY: [LogisticsStance, string][] = [
+  ['hold', 'Keep the depots'],
+  ['forward', 'Bring depots forward'],
+];
 const label = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-export function OrdersPanel({ s, ctx, directive, onDirective, plan, overrides, onOverride, halt, onHalt, onCommit }: Props) {
+export function OrdersPanel({ s, ctx, directive, onDirective, plan, supply, overrides, onOverride, halt, onHalt, onCommit }: Props) {
   const places = [...ctx.graph.nodes.values()].sort((a, b) => a.name.localeCompare(b.name));
   const lead = directive.objective ? leadGroup(s, ctx, directive.objective) : null;
   const axes = directive.objective && lead ? axesTo(ctx, lead.at, directive.objective) : [];
@@ -91,7 +96,26 @@ export function OrdersPanel({ s, ctx, directive, onDirective, plan, overrides, o
             </label>
           ))}
         </fieldset>
+        <fieldset>
+          <legend>Supply</legend>
+          {SUPPLY.map(([value, text]) => (
+            <label key={value} className="choice">
+              <input type="radio" name="supply" checked={directive.logistics === value} onChange={() => set({ logistics: value })} /> {text}
+            </label>
+          ))}
+        </fieldset>
       </div>
+
+      {supply && (
+        <>
+          <h3>Supply arrangements</h3>
+          <ul className="reasons">
+            {supply.reasons.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+        </>
+      )}
 
       <h3>Orders of the day</h3>
       <ol className="plan">

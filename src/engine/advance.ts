@@ -8,7 +8,7 @@ import { decideNightfall, decideRound } from './ai';
 import { updateIntel } from './intel';
 import { updatePressure } from './russian';
 import { resolveNightfall, resolveRound, retreatNodeFor } from './battle';
-import { edgeBetween, neighboursOf, shortestPath, type EdgeDef } from './graph';
+import { edgeBetween, neighboursOf, roadDistance, shortestPath, type EdgeDef } from './graph';
 import { chance, drawBetween } from './rng';
 import type { Context } from './scenario';
 import { ROUNDS_PER_SLOT, dayIndex, isAfternoon, nextDaylight, slotIndex } from './time';
@@ -16,12 +16,14 @@ import type {
   Activity,
   BattleState,
   Convoy,
+  Depot,
   Encounter,
   Force,
   ForceId,
   GameState,
   Input,
   LogEntry,
+  LogisticsOrders,
   NightChoice,
   NodeId,
   RoundAction,
@@ -129,7 +131,7 @@ function validate(s: GameState, input: Input, ctx: Context): string | null {
         prev = node;
       }
     }
-    return null;
+    return input.logistics ? validateLogistics(s, ctx, input.logistics) : null;
   }
 
   if (status.kind !== 'awaitingBattleInput') return 'no battle is waiting for a decision';
@@ -141,6 +143,45 @@ function validate(s: GameState, input: Input, ctx: Context): string | null {
   return null;
 }
 
+function validateLogistics(s: GameState, ctx: Context, lg: LogisticsOrders): string | null {
+  const ours = new Set(sortedValues(s.depots).filter((d) => d.side === 'fr').map((d) => d.node));
+  if (lg.foundDepot !== undefined) {
+    const site = lg.foundDepot;
+    if (!ctx.graph.nodes.has(site)) return `unknown place ${site}`;
+    if (s.depots[site]) return `there is already a depot at ${site}`;
+    const held = sortedValues(s.forces).some((f) => f.side === 'fr' && f.men > 0 && f.transit === null && f.at === site);
+    if (!held || enemyPresent(s, 'fr', site)) return 'a depot can only be founded where French troops hold the ground';
+    ours.add(site);
+  }
+  const seen = new Set<string>();
+  for (const o of lg.convoys ?? []) {
+    const c = s.convoys[o.convoy];
+    if (!c || c.side !== 'fr') return `unknown French wagon train ${o.convoy}`;
+    if (seen.has(o.convoy)) return `two orders for wagon train ${o.convoy}`;
+    seen.add(o.convoy);
+    if (!ours.has(o.home)) return 'a wagon train can only be based at a French depot';
+    if ((o.serves === undefined) === (o.feeds === undefined)) return 'a wagon train supplies either a force or a depot';
+    if (o.serves !== undefined && s.forces[o.serves]?.side !== 'fr') return `unknown French force ${o.serves}`;
+    if (o.feeds !== undefined && !ours.has(o.feeds)) return 'a line train can only stock a French depot';
+  }
+  return null;
+}
+
+function applyLogistics(s: GameState, lg: LogisticsOrders, log: LogEntry[]): void {
+  if (lg.foundDepot !== undefined) {
+    s.depots[lg.foundDepot] = { node: lg.foundDepot, side: 'fr', stock: emptySupplies(), incoming: emptySupplies() };
+    note(s, log, 'depotFounded', { node: lg.foundDepot });
+  }
+  for (const o of lg.convoys ?? []) {
+    const c = must(s.convoys[o.convoy], o.convoy);
+    c.home = o.home;
+    c.serves = o.serves ?? null;
+    c.feeds = o.feeds ?? null;
+    // A train waiting at its old depot sets off for the new one; one on the road finishes its errand first.
+    if (c.leg === 'loading' && (c.at !== c.home || c.transit !== null)) c.leg = 'returning';
+  }
+}
+
 function applyInput(s: GameState, input: Input, ctx: Context, log: LogEntry[]): void {
   if (input.kind === 'orders') {
     for (const o of input.orders) {
@@ -150,6 +191,7 @@ function applyInput(s: GameState, input: Input, ctx: Context, log: LogEntry[]): 
       if (o.engagement !== undefined) f.engagement = o.engagement;
       if (o.posture !== undefined) setPosture(f, o.posture, ctx.rules);
     }
+    if (input.logistics) applyLogistics(s, input.logistics, log);
     if (input.halt && !s.halted) {
       s.halted = true;
       note(s, log, 'halt');
@@ -272,11 +314,17 @@ function stageAccrual(s: GameState, ctx: Context, log: LogEntry[]): void {
   }
   for (const c of sortedValues(s.convoys)) {
     const depot = s.depots[c.home];
-    if (c.leg !== 'loading' || c.at !== c.home || !depot) continue;
+    if (c.leg !== 'loading' || c.at !== c.home || !depot || depot.side !== c.side) continue;
+    if (!deliveryOf(s, c)) {
+      // Standing idle at home: anything still on the wagons goes back into the depot.
+      addInto(depot.stock, c.cargo);
+      c.cargo = emptySupplies();
+      continue;
+    }
     // Loads are limited by weight: a wagon carries far fewer days of fodder than of bread (L-004).
     const payload = c.wagons * convoy.payloadGrams;
     for (const kind of ['food', 'fodder', 'ammo'] as const) {
-      const fits = Math.floor((payload * convoy.loadPermille[kind]) / 1000 / gramsPerUnit[kind]);
+      const fits = Math.max(0, Math.floor((payload * convoy.loadPermille[kind]) / 1000 / gramsPerUnit[kind]) - c.cargo[kind]);
       const amount = Math.min(fits, depot.stock[kind]);
       depot.stock[kind] -= amount;
       c.cargo[kind] += amount;
@@ -284,6 +332,7 @@ function stageAccrual(s: GameState, ctx: Context, log: LogEntry[]): void {
     c.leg = 'outbound';
     note(s, log, 'loaded', { convoy: c.id, food: c.cargo.food, fodder: c.cargo.fodder, ammo: c.cargo.ammo });
   }
+  captureDepots(s, ctx, log);
   const res = s.resolution;
   if (isAfternoon(res.slot)) res.stage = 'night';
   else {
@@ -456,23 +505,75 @@ function moveForce(s: GameState, ctx: Context, f: Force, log: LogEntry[]): void 
   );
 }
 
+/** Where a wagon train delivers: its force, or the depot it stocks. Null when it stands idle or its target is gone. */
+function deliveryOf(s: GameState, c: Convoy): { node: NodeId; force: Force | null; depot: Depot | null } | null {
+  if (c.serves !== null) {
+    const f = s.forces[c.serves];
+    return f && f.men > 0 ? { node: f.at, force: f, depot: null } : null;
+  }
+  if (c.feeds !== null && c.feeds !== c.home) {
+    const d = s.depots[c.feeds];
+    return d && d.side === c.side ? { node: d.node, force: null, depot: d } : null;
+  }
+  return null;
+}
+
 function moveConvoy(s: GameState, ctx: Context, c: Convoy, log: LogEntry[]): void {
   if (c.leg === 'loading') return;
-  const served = must(s.forces[c.serves], c.serves);
-  const target = c.leg === 'outbound' ? served.at : c.home;
+  const delivery = deliveryOf(s, c);
+  if (c.leg === 'outbound' && !delivery) c.leg = 'returning';
+  const target = c.leg === 'outbound' && delivery ? delivery.node : c.home;
   // Re-planned every sub-step: the force it serves may have moved on.
   c.route = c.transit ? [c.transit.to, ...(shortestPath(ctx.graph, c.transit.to, target) ?? [])] : (shortestPath(ctx.graph, c.at, target) ?? []);
   travel(s, ctx, c, ctx.rules.convoy.metresPerSlot, (node) => node === target, () => {});
   if (c.transit || c.at !== target) return;
-  if (c.leg === 'outbound') {
-    if (served.transit !== null || served.at !== c.at) return;
-    addInto(served.incoming, c.cargo);
-    note(s, log, 'delivered', { convoy: c.id, force: served.id, food: c.cargo.food, fodder: c.cargo.fodder, ammo: c.cargo.ammo });
+  if (c.leg === 'outbound' && delivery) {
+    if (delivery.force) {
+      if (delivery.force.transit !== null || delivery.force.at !== c.at) return;
+      addInto(delivery.force.incoming, c.cargo);
+    } else if (delivery.depot) {
+      addInto(delivery.depot.incoming, c.cargo);
+    }
+    note(s, log, 'delivered', { convoy: c.id, force: delivery.force?.id ?? null, depot: delivery.depot?.node ?? null, food: c.cargo.food, fodder: c.cargo.fodder, ammo: c.cargo.ammo });
     c.cargo = emptySupplies();
     c.leg = 'returning';
   } else {
     c.leg = 'loading';
     note(s, log, 'returned', { convoy: c.id });
+  }
+}
+
+/** A depot left to the enemy changes hands at the end of the sub-step, part of it burned first (§2.6). */
+function captureDepots(s: GameState, ctx: Context, log: LogEntry[]): void {
+  const res = s.resolution;
+  const holders = (side: Side, node: NodeId) => sortedValues(s.forces).some((f) => f.side === side && f.men > 0 && f.transit === null && f.at === node);
+  for (const d of sortedValues(s.depots)) {
+    const loser = d.side;
+    const winner = otherSide(loser);
+    if (holders(loser, d.node) || !holders(winner, d.node)) continue;
+    const { burnMinPermille, burnMaxPermille } = ctx.rules.capture;
+    const burn = drawBetween(s.seed, ['capture', d.node, res.turn, res.slot], burnMinPermille, burnMaxPermille);
+    for (const kind of ['food', 'fodder', 'ammo'] as const) {
+      const lost = Math.floor((d.stock[kind] * burn) / 1000);
+      d.stock[kind] -= lost;
+      s.ledger.destroyed[kind] += lost;
+    }
+    d.side = winner;
+    note(s, log, 'depotCaptured', { node: d.node, by: winner, food: d.stock.food, fodder: d.stock.fodder, ammo: d.stock.ammo, burnedPermille: burn });
+    // The losing side's wagon trains based or delivering here fall back on its nearest remaining depot.
+    const refuge = sortedValues(s.depots)
+      .filter((x) => x.side === loser)
+      .map((x) => x.node)
+      .sort((a, b) => roadDistance(ctx.graph, d.node, a) - roadDistance(ctx.graph, d.node, b))[0];
+    for (const c of sortedValues(s.convoys)) {
+      if (c.side !== loser) continue;
+      if (c.feeds === d.node) c.feeds = refuge ?? c.home;
+      if (c.home === d.node && refuge) {
+        c.home = refuge;
+        if (c.feeds === d.node) c.feeds = refuge;
+        if (c.leg === 'loading') c.leg = 'returning';
+      }
+    }
   }
 }
 

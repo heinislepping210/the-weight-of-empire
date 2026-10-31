@@ -43,6 +43,9 @@ const CONVOYS: ConvoyInit[] = [
   { id: 'cv-vitebsk-left', side: 'fr', home: 'vitebsk', serves: 'fr-left', wagons: 150 },
   { id: 'cv-orsha-right', side: 'fr', home: 'orsha', serves: 'fr-right', wagons: 250 },
   { id: 'cv-mogilev-south', side: 'fr', home: 'mogilev', serves: 'fr-south', wagons: 150 },
+  // Line trains of the transport battalions: idle at their depots until the staff sends them forward (G-016).
+  { id: 'cv-line-vitebsk', side: 'fr', home: 'vitebsk', wagons: 300 },
+  { id: 'cv-line-orsha', side: 'fr', home: 'orsha', wagons: 250 },
   { id: 'cv-smolensk-1st', side: 'ru', home: 'smolensk', serves: 'ru-1st', wagons: 100 },
   { id: 'cv-smolensk-2nd', side: 'ru', home: 'smolensk', serves: 'ru-2nd', wagons: 80 },
   { id: 'cv-smolensk-neverovsky', side: 'ru', home: 'smolensk', serves: 'ru-neverovsky', wagons: 40 },

@@ -143,6 +143,13 @@ The simulation underneath is identical; only the way you give orders changes.
 - **Depots.** A force standing at its own depot draws supplies directly, without wagons.
 - **Retreat.** A beaten force falls back towards its own depots.
 
+**Captured stores and forward depots (D-029, rules 0.6.0):**
+- **Capture.** A depot changes hands when only the enemy holds it. Part of its stores, 50–90%, is burned first. The rest feeds the captors. Wagon trains based there fall back on their side's nearest remaining depot.
+- **Founding.** A new depot can be founded where French troops hold the ground. It starts empty, and it falls if it is left unheld and the enemy arrives.
+- **Line trains** stock depots instead of supplying a force. Stores move forward in relays, a few days' haul at a time.
+- **The supply stance** is part of the directive. *Keep the depots* changes nothing. *Bring depots forward* founds one depot a turn, sends the line trains forward, and has each group's wagons load at the nearest stocked depot. Its reasons are listed before you commit.
+- **Not built yet:** garrison detachments for new depots, raids on convoys, and the free versus regulated foraging choice.
+
 **The forecast.** Every group and the army as a whole show *days of supply* as a range, such as "6–9 days". The range comes from carried stock, expected deliveries and expected forage under current orders. The Logistics layer marks lines delivering less than demand as **bottlenecks**, with a pattern as well as a colour.
 
 **Civilian consequences don't disappear.** Districts show their state (Intact / Requisitioned / Stripped / Hostile). The after-action report records the human cost of foraging choices. It reports this soberly, without lecturing.

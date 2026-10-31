@@ -102,6 +102,37 @@ Full report: [balance/2026-10-31-rules-0.5.0.md](balance/2026-10-31-rules-0.5.0.
 
 **Recommended next step (for your decision):** build the two planned mechanics first (1 and 2), then research the effect of hunger and marching forage (3) before touching those numbers, and run the batch again. No rule is to be tuned just to make the targets pass.
 
+## Second balance batch (rules 0.6.0, 1,000 seeds, 31 October 2026)
+
+Full report: [balance/2026-10-31-rules-0.6.0.md](balance/2026-10-31-rules-0.6.0.md). This batch adds the two missing mechanics: captured stores, and forward depots stocked by line trains (D-029, G-016). Every bot except the random one now brings its depots forward. No other rule value changed.
+
+**What holds:**
+- **Zero invariant violations** in 7,000 games, with burned stores and depot changes inside the conservation checks.
+- **F4, F5, F6** still hold. The strategy explains 57% of the variance in the ending and the seed 8%. The share explained by strategy fell from 72%, because the families no longer tie.
+
+**What changed:**
+- **The approach families now differ.**
+  - Concentrated push: 85% Collapse, 15% Limited Success.
+  - Southern envelopment: 76% Collapse, 15% Repulse, 8% Limited Success, 1% Costly Victory.
+  - Bait and converge: 44% Collapse, 46% Repulse, 7% Limited Success, 2% Costly Victory.
+  - F3 now means something. Bait and converge does best on 49% of seeds, just under the 50% line, mostly because it collapses less often. A Repulse ranks above a Collapse.
+- **The methodical approach improves.** It gets 33% Costly Victory and 40% Limited Success, and collapses in 19% of games (43% before). It reaches the first Decisive Successes (0.9%).
+- **Captured stores now matter.** The advancing bots take the Smolensk stores in 84–96% of games. But 50–90% has been burned by then: on average 650,000 rations go up in smoke in the concentrated push. Speed preserves more of the stores, as intended.
+- **Forward depots near the enemy are a liability.** The prudent halt founds depots where its dispersed troops stand. It loses 0.68 of them on average to the Russian strike, but little is burned.
+
+**What still fails, and why:**
+- **F1 and F2:** no approach family reaches Decisive Success. The armies still end hungry (0.4–1.1 days of food) and worn (cohesion 138–342 out of 1,000).
+- **The depot chain stops at Liozno.** Every advancing game founds exactly one depot.
+  - After Liozno, a group standing at the start of a turn is either too close to Liozno (Rudnia, 24 km away) or beyond a line train's 80 km haul.
+  - The line trains move about 834,000 rations up to Liozno, roughly 4½ days for the whole army. By then the army is 100 km further on, and corps wagons at 18 km/day cannot close the gap.
+  - This is how the historical advance went: the army outran its supply. But the player has no tool yet to build the chain on purpose, other than halting a group at the right place.
+- **The cohesion collapse looks too severe historically.** The Grande Armée reached Smolensk worn and hungry, but it did not collapse until the retreat. That points again to the hunger effect on cohesion (G-006: −100 a day at a full shortfall), which has not been researched yet.
+
+**Recommended next steps (for your decision):**
+1. **Research the hunger effects** (cohesion loss, straggling) and foraging on the march against sources. Adjust only within documented ranges.
+2. **Check the 80 km haul and the 40 km spacing** (G-016) against the French line of magazines in 1812. Consider letting the player name a depot site that a group should halt at.
+3. **Your play session (M1).** The numbers say the dilemmas exist. Only playing tells us whether you feel them.
+
 ## Acting on the results
 
 1. **First ask whether the model is plausible and the result understandable.** A low decisive-success rate that follows from historically plausible rules is a finding, not a bug.

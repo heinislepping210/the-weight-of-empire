@@ -6,7 +6,7 @@ import { vitebskDecision } from '../../src/data/vitebsk/scenario';
 
 const ctx = createContext(vitebskDecision());
 const start = () => newGame(ctx, 1812);
-const directive = (over: Partial<Directive>): Directive => ({ objective: null, axis: null, tempo: 'steady', posture: 'dispersed', engagement: 'accept', holdBack: [], ...over });
+const directive = (over: Partial<Directive>): Directive => ({ objective: null, axis: null, tempo: 'steady', posture: 'dispersed', engagement: 'accept', holdBack: [], logistics: 'hold', ...over });
 
 describe('axes: genuinely different routes to an objective', () => {
   const axes = axesTo(ctx, 'liozno', 'smolensk-north');

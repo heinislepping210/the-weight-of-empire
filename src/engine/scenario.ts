@@ -35,7 +35,8 @@ export interface ConvoyInit {
   id: string;
   side: Side;
   home: NodeId;
-  serves: ForceId;
+  /** The force it supplies; leave out for a line train, which starts idle at its home depot. */
+  serves?: ForceId;
   wagons: number;
 }
 
@@ -115,8 +116,20 @@ export function newGame(ctx: Context, seed: number): GameState {
 
   const convoys: Record<string, Convoy> = {};
   for (const c of scenario.convoys) {
-    if (!depots[c.home] || !forces[c.serves]) throw new Error(`convoy ${c.id} needs a home depot and a force to serve`);
-    convoys[c.id] = { id: c.id, side: c.side, home: c.home, serves: c.serves, leg: 'loading', at: c.home, transit: null, route: [], wagons: c.wagons, cargo: emptySupplies() };
+    if (!depots[c.home] || (c.serves !== undefined && !forces[c.serves])) throw new Error(`convoy ${c.id} needs a home depot, and a known force if it serves one`);
+    convoys[c.id] = {
+      id: c.id,
+      side: c.side,
+      home: c.home,
+      serves: c.serves ?? null,
+      feeds: c.serves === undefined ? c.home : null,
+      leg: 'loading',
+      at: c.home,
+      transit: null,
+      route: [],
+      wagons: c.wagons,
+      cargo: emptySupplies(),
+    };
   }
 
   const districts: Record<NodeId, District> = {};
@@ -152,6 +165,7 @@ export function newGame(ctx: Context, seed: number): GameState {
       foraged: { food: 0, fodder: 0 },
       consumed: { food: 0, fodder: 0 },
       ammoSpent: { fr: 0, ru: 0 },
+      destroyed: emptySupplies(),
       menLost: { battle: 0, sickness: 0, straggling: 0, withdrawal: 0 },
       horsesLost: 0,
     },
