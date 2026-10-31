@@ -1,0 +1,51 @@
+import { describe, expect, it } from 'vitest';
+import { createContext, newGame, stateHash } from '../../src/engine';
+import type { GameState, Side } from '../../src/engine';
+import { vitebskDecision } from '../../src/data/vitebsk/scenario';
+import { play, randomPolicy, supplyTotals } from '../fixtures/driver';
+
+const ctx = createContext(vitebskDecision());
+
+function menOf(s: GameState, side: Side): number {
+  return Object.values(s.forces)
+    .filter((f) => f.side === side)
+    .reduce((n, f) => n + f.men, 0);
+}
+
+describe('The Vitebsk Decision: starting situation', () => {
+  it('starts on 5 August 1812 with every force, depot and convoy on the map', () => {
+    expect(ctx.scenario.startDate).toBe('1812-08-05');
+    const s = newGame(ctx, 1812);
+    for (const f of Object.values(s.forces)) expect(ctx.graph.nodes.has(f.at), f.id).toBe(true);
+    for (const d of Object.values(s.depots)) expect(ctx.graph.nodes.has(d.node), d.node).toBe(true);
+    for (const c of Object.values(s.convoys)) expect(s.forces[c.serves]?.side, c.id).toBe(c.side);
+  });
+
+  it('keeps army totals inside the researched ranges for every seed (H-009)', () => {
+    for (let seed = 0; seed < 200; seed++) {
+      const s = newGame(ctx, seed * 2654435761 >>> 0);
+      expect(menOf(s, 'fr')).toBeGreaterThanOrEqual(160_000);
+      expect(menOf(s, 'fr')).toBeLessThanOrEqual(215_000);
+      expect(menOf(s, 'ru')).toBeGreaterThanOrEqual(120_000);
+      expect(menOf(s, 'ru')).toBeLessThanOrEqual(145_000);
+    }
+  });
+
+  it('draws strengths from the seed: reproducible, and different between seeds', () => {
+    expect(stateHash(newGame(ctx, 7))).toBe(stateHash(newGame(ctx, 7)));
+    const totals = new Set(Array.from({ length: 20 }, (_, i) => menOf(newGame(ctx, i), 'fr')));
+    expect(totals.size).toBeGreaterThan(15);
+  });
+
+  it('plays to the end under random orders with men and supplies conserved', () => {
+    for (const seed of [1, 2, 3]) {
+      const run = play(ctx, seed, randomPolicy(ctx, seed * 31));
+      expect(run.final.ended).toBe('scenarioEnd');
+      const a = supplyTotals(run.states[0]!);
+      const z = supplyTotals(run.final);
+      const lost = Object.values(run.final.ledger.menLost).reduce((n, x) => n + x, 0);
+      expect(z.men + lost).toBe(a.men);
+      expect(z.food + run.final.ledger.consumed.food).toBe(a.food + run.final.ledger.foraged.food);
+    }
+  });
+});

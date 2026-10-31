@@ -34,6 +34,23 @@ Effect, measured: a 60-wagon convoy now carries about 44,800 days of bread but o
 
 **Calibration hint, not a target:** if the popular estimate H-014 holds up, a broadly historical way of playing should lose a substantial share of men and horses to attrition rather than battle. The rates are tuned within the ranges above until the historical approach lands near the historical outcome (history is par, §2.13). Documented facts are never adjusted to reach it.
 
+## First scenario probe (31 October 2026, rules 0.2.0, seed 1812)
+
+The Vitebsk Decision, played for its 10 turns with **no orders at all** (every force stays in place):
+
+| Force | Men lost | Horses lost | Supplies at end |
+|---|---|---|---|
+| French groups | 15–26% | ~20–38% | none |
+| Russian armies | 10–23% | ~17–37% | none |
+
+There were 80 shortfall events and about 27,500 horses lost; 42,000 men straggled and 18,000 fell sick.
+
+**This is not historically plausible.** The halt at Vitebsk was a time of rest and partial recovery, and the Russians sat beside their own magazines. **Causes:**
+1. Forces forage only the district of their own place. Spreading out across many villages, the *Dispersed* posture of §2.4b, is not implemented yet.
+2. Depot stocks and wagon-park sizes are placeholders (G-012) that cannot meet a large army's daily need, even close to a depot.
+
+**Calibration target, before any tuning of fun:** a force halted and dispersed near its depot should be roughly sustainable and slowly recover. Sustainability should then fall off with distance from the depots, with the length and condition of the line, and with concentration. That is the core tension of the game (§2.1), and it has to come from the model, not from patched numbers.
+
 ## Acting on the results
 
 1. **First ask whether the model is plausible and the result understandable.** A low decisive-success rate that follows from historically plausible rules is a finding, not a bug.

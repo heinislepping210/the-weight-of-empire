@@ -1,15 +1,19 @@
 import { buildGraph, type EdgeDef, type Graph, type NodeDef } from './graph';
+import { drawBetween } from './rng';
 import { RULES, type Rules } from './rules';
 import type { Convoy, Depot, District, Engagement, Force, ForceId, GameState, NodeId, Pace, RoadCondition, Side, Supplies } from './types';
 import { emptySupplies } from './util';
+
+/** A fixed number, or an inclusive range drawn once per game from the seed (scenario variation, §2.12). */
+export type Strength = number | readonly [number, number];
 
 export interface ForceInit {
   id: ForceId;
   side: Side;
   name: string;
   at: NodeId;
-  men: number;
-  horses: number;
+  men: Strength;
+  horses: Strength;
   wagons: number;
   stock: Supplies;
   fatigue?: number;
@@ -57,6 +61,10 @@ export function createContext(scenario: ScenarioDef, rules: Rules = RULES): Cont
   return { rules, scenario, graph: buildGraph(scenario.nodes, scenario.edges) };
 }
 
+function resolveStrength(seed: number, forceId: ForceId, what: string, s: Strength): number {
+  return typeof s === 'number' ? s : drawBetween(seed, ['setup', forceId, what], s[0], s[1]);
+}
+
 export function newGame(ctx: Context, seed: number): GameState {
   if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw new Error('seed must be a 32-bit unsigned integer');
   const { scenario, rules, graph } = ctx;
@@ -75,8 +83,8 @@ export function newGame(ctx: Context, seed: number): GameState {
       engagement: f.engagement ?? 'accept',
       activity: 'halt',
       battle: null,
-      men: f.men,
-      horses: f.horses,
+      men: resolveStrength(seed, f.id, 'men', f.men),
+      horses: resolveStrength(seed, f.id, 'horses', f.horses),
       wagons: f.wagons,
       fatigue: f.fatigue ?? 200,
       cohesion: f.cohesion ?? 800,
