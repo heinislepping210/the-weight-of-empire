@@ -299,6 +299,21 @@ label.choice {
   font-size: 0.88rem;
 }
 
+/* What the orders mean, read before the detail of each group. */
+.summary li + li {
+  margin-top: 0.2rem;
+}
+
+.plan-details {
+  margin: 0.6rem 0;
+}
+
+.plan-details > summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.3rem 0;
+}
+
 .plan-controls {
   display: flex;
   flex-wrap: wrap;

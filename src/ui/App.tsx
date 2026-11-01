@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
-import { ENDING_NAMES, advance, createContext, evaluate, newGame, ordersFrom, planDirective, planLogistics, statusOf, when } from '../engine';
-import type { BattleDecision, Directive, GameState, GroupOrder, Input, LogEntry, Side } from '../engine';
+import { ENDING_NAMES, advance, createContext, evaluate, newGame, ordersFrom, planDirective, planLogistics, statusOf, summarizePlan, when } from '../engine';
+import type { BattleDecision, Directive, GameState, GroupOverride, Input, LogEntry, Side } from '../engine';
 import { vitebskDecision } from '../data/vitebsk/scenario';
 import { BattlePanel } from './BattlePanel';
 import { Compare } from './Compare';
 import { MapView } from './MapView';
 import { OrdersPanel } from './OrdersPanel';
 import { dispatches } from './dispatches';
-import { thousands } from './names';
+import { shortName, thousands } from './names';
 import { loadRuns, storeRuns, summarize, type SavedRun } from './runs';
 
 const ctx = createContext(vitebskDecision());
@@ -33,7 +33,7 @@ export function App() {
   const [run, setRun] = useState<Run>(() => startRun(1812));
   const [seedText, setSeedText] = useState('1812');
   const [directive, setDirective] = useState<Directive>(HOLD);
-  const [overrides, setOverrides] = useState<Record<string, Partial<GroupOrder>>>({});
+  const [overrides, setOverrides] = useState<Record<string, GroupOverride>>({});
   const [error, setError] = useState<string | null>(null);
   const [runs, setRuns] = useState<SavedRun[]>(loadRuns);
   const [runName, setRunName] = useState('');
@@ -42,9 +42,11 @@ export function App() {
 
   const s = run.states[run.states.length - 1] as GameState;
   const status = statusOf(s);
-  // Once a halt is declared or about to be, the staff plans for holding where the army stands.
-  const effective = s.halted || halt ? { ...directive, objective: null } : directive;
-  const plan = useMemo(() => (status.kind === 'awaitingOrders' ? planDirective(s, ctx, effective) : []), [s, status.kind, effective.objective, directive]);
+  // One plan for preview and commit: the player's own orders for a group are planned and forecast with
+  // the staff's (§2.4b). Once a halt is declared or about to be, the staff plans for holding where the army stands.
+  const effective: Directive = { ...directive, overrides, ...(s.halted || halt ? { objective: null } : {}) };
+  const plan = useMemo(() => (status.kind === 'awaitingOrders' ? planDirective(s, ctx, effective) : []), [s, status.kind, effective.objective, directive, overrides]);
+  const summary = useMemo(() => (status.kind === 'awaitingOrders' ? summarizePlan(s, ctx, plan) : null), [s, status.kind, plan]);
   const supply = useMemo(() => (status.kind === 'awaitingOrders' ? planLogistics(s, ctx, effective) : null), [s, status.kind, effective.objective, directive]);
   const outcome = useMemo(() => (status.kind === 'ended' ? evaluate(run.states[0] as GameState, s, ctx) : null), [status.kind, run.states, s]);
   const news = useMemo(() => dispatches(run.logs.flat(), s, ctx, ctx.scenario.startDate).reverse(), [run.logs, s]);
@@ -61,9 +63,9 @@ export function App() {
 
   function commit() {
     if (status.kind !== 'awaitingOrders') return;
-    const merged = Object.fromEntries(plan.map((p) => [p.force, overrides[p.force] ? { ...p.order, ...overrides[p.force] } : p.order]));
+    // The orders committed are exactly the orders shown.
     const logistics = supply?.orders ?? null;
-    submit({ kind: 'orders', turn: status.turn, orders: ordersFrom(plan, Object.values(merged)), ...(halt ? { halt: true } : {}), ...(logistics ? { logistics } : {}) });
+    submit({ kind: 'orders', turn: status.turn, orders: ordersFrom(plan), ...(halt ? { halt: true } : {}), ...(logistics ? { logistics } : {}) });
     setOverrides({});
     setHalt(false);
   }
@@ -111,9 +113,10 @@ export function App() {
   }
 
   const frMen = total(s, 'fr', 'men');
-  const food = Object.values(s.forces)
-    .filter((f) => f.side === 'fr')
-    .reduce((n, f) => n + f.stock.food, 0);
+  const french = Object.values(s.forces).filter((f) => f.side === 'fr' && f.men > 0);
+  const food = french.reduce((n, f) => n + f.stock.food, 0);
+  // The army's average can hide a starving group: name the worst-fed one too.
+  const hungriest = french.reduce<(typeof french)[number] | null>((w, f) => (w === null || f.stock.food / f.men < w.stock.food / w.men ? f : w), null);
   const start = run.states[0] as GameState;
 
   return (
@@ -123,7 +126,7 @@ export function App() {
           The Weight of Empire <span>The Vitebsk Decision · prototype</span>
         </h1>
         <p className="status" aria-live="polite">
-          {when(ctx, s.resolution)} · turn {s.resolution.turn} of {ctx.scenario.turns} · {s.rainToday ? 'rain' : 'dry'} · {thousands(frMen)} men · {thousands(total(s, 'fr', 'horses'))} horses · {(food / Math.max(1, frMen)).toFixed(1)} days' food in hand
+          {when(ctx, s.resolution)} · turn {s.resolution.turn} of {ctx.scenario.turns} · {s.rainToday ? 'rain' : 'dry'} · {thousands(frMen)} men · {thousands(total(s, 'fr', 'horses'))} horses · {(food / Math.max(1, frMen)).toFixed(1)} days' food in hand{hungriest ? ` (least: ${shortName(hungriest.id, hungriest.name)}, ${(hungriest.stock.food / hungriest.men).toFixed(1)})` : ''}
         </p>
         <div className="controls">
           <label>
@@ -171,6 +174,7 @@ export function App() {
                 directive={directive}
                 onDirective={setDirective}
                 plan={plan}
+                summary={summary}
                 supply={supply}
                 overrides={overrides}
                 onOverride={(force, change) =>

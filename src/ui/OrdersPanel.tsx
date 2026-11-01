@@ -1,5 +1,5 @@
 import { axesTo, leadGroup } from '../engine';
-import type { Context, Directive, Engagement, Force, GameState, GroupOrder, LogisticsPlan, LogisticsStance, Pace, PlannedOrder, Posture } from '../engine';
+import type { Axis, Context, Directive, Engagement, Force, GameState, GroupOverride, LogisticsPlan, LogisticsStance, Pace, PlannedOrder, PlanSummary, Posture } from '../engine';
 import { thousands } from './names';
 
 interface Props {
@@ -7,10 +7,12 @@ interface Props {
   ctx: Context;
   directive: Directive;
   onDirective: (d: Directive) => void;
+  /** The one plan, the player's own orders included: what is shown is what is committed. */
   plan: readonly PlannedOrder[];
+  summary: PlanSummary | null;
   supply: LogisticsPlan | null;
-  overrides: Readonly<Record<string, Partial<GroupOrder>>>;
-  onOverride: (force: string, change: Partial<GroupOrder> | null) => void;
+  overrides: Readonly<Record<string, GroupOverride>>;
+  onOverride: (force: string, change: GroupOverride | null) => void;
   halt: boolean;
   onHalt: (halt: boolean) => void;
   onCommit: () => void;
@@ -31,11 +33,23 @@ const SUPPLY: [LogisticsStance, string][] = [
 ];
 const label = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-export function OrdersPanel({ s, ctx, directive, onDirective, plan, supply, overrides, onOverride, halt, onHalt, onCommit }: Props) {
+/** Sets or clears one field of a group's own orders, keeping the other. */
+function changed(own: GroupOverride | undefined, field: keyof GroupOverride, value: string): GroupOverride | null {
+  const next: GroupOverride = { ...own, [field]: value || undefined };
+  if (next.pace === undefined) delete next.pace;
+  if (next.engagement === undefined) delete next.engagement;
+  return Object.keys(next).length > 0 ? next : null;
+}
+
+export function OrdersPanel({ s, ctx, directive, onDirective, plan, summary, supply, overrides, onOverride, halt, onHalt, onCommit }: Props) {
   const places = [...ctx.graph.nodes.values()].sort((a, b) => a.name.localeCompare(b.name));
   const lead = directive.objective ? leadGroup(s, ctx, directive.objective) : null;
-  const axes = directive.objective && lead ? axesTo(ctx, lead.at, directive.objective) : [];
+  // The routes traced from the current lead group, and the chosen one even when it was traced from another.
+  const traced = directive.objective && lead ? axesTo(ctx, lead.at, directive.objective) : [];
+  const kept = directive.axis && !traced.some((a) => a.id === directive.axis?.id) ? directive.axis : null;
+  const routes: Axis[] = kept ? [kept, ...traced] : traced;
   const set = (change: Partial<Directive>) => onDirective({ ...directive, ...change });
+  const ownCount = plan.filter((p) => p.own).length;
 
   return (
     <section className="panel" aria-labelledby="orders-title">
@@ -62,11 +76,11 @@ export function OrdersPanel({ s, ctx, directive, onDirective, plan, supply, over
         {directive.objective && (
           <label>
             Route
-            <select value={directive.axis ?? ''} onChange={(e) => set({ axis: e.target.value || null })}>
+            <select value={directive.axis?.id ?? ''} onChange={(e) => set({ axis: routes.find((a) => a.id === e.target.value) ?? null })}>
               <option value="">Shortest roads for each group</option>
-              {axes.map((a) => (
+              {routes.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.label} ({Math.round(a.metres / 1000)} km from {ctx.graph.nodes.get(a.places[0] ?? '')?.name})
+                  {a.label} ({Math.round(a.metres / 1000)} km from {ctx.graph.nodes.get(a.places[0] ?? '')?.name}){a === kept ? ', as chosen earlier' : ''}
                 </option>
               ))}
             </select>
@@ -106,6 +120,17 @@ export function OrdersPanel({ s, ctx, directive, onDirective, plan, supply, over
         </fieldset>
       </div>
 
+      {summary && (
+        <>
+          <h3>What these orders mean</h3>
+          <ul className="reasons summary">
+            {summary.lines.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+        </>
+      )}
+
       {supply && (
         <>
           <h3>Supply arrangements</h3>
@@ -117,65 +142,69 @@ export function OrdersPanel({ s, ctx, directive, onDirective, plan, supply, over
         </>
       )}
 
-      <h3>Orders of the day</h3>
-      <ol className="plan">
-        {plan.map((p) => {
-          const f = s.forces[p.force];
-          if (!f) return null;
-          const own = overrides[p.force];
-          const held = directive.holdBack.includes(p.force);
-          return (
-            <li key={p.force} className={own ? 'plan-overridden' : ''}>
-              <div className="plan-head">
-                <strong>{p.name}</strong>
-                <span className="figures">
-                  {thousands(f.men)} men · {thousands(f.horses + f.draught)} horses · {Math.floor(f.stock.food / Math.max(1, f.men))} days' food · {condition(f)}
-                  {own ? ' · Your order' : ''}
-                </span>
-              </div>
-              <ul className="reasons">
-                {p.reasons.map((r) => (
-                  <li key={r}>{r}</li>
-                ))}
-              </ul>
-              {f.battle === null && (
-                <div className="plan-controls">
-                  <label className="choice">
-                    <input
-                      type="checkbox"
-                      checked={held}
-                      onChange={(e) => set({ holdBack: e.target.checked ? [...directive.holdBack, p.force] : directive.holdBack.filter((x) => x !== p.force) })}
-                    />{' '}
-                    Hold back
-                  </label>
-                  <label>
-                    Pace{' '}
-                    <select value={own?.pace ?? ''} onChange={(e) => onOverride(p.force, e.target.value ? { ...own, pace: e.target.value as Pace } : null)}>
-                      <option value="">Staff: {p.order.pace ?? 'steady'}</option>
-                      {PACES.map((x) => (
-                        <option key={x} value={x}>
-                          {label(x)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Battle{' '}
-                    <select value={own?.engagement ?? ''} onChange={(e) => onOverride(p.force, e.target.value ? { ...own, engagement: e.target.value as Engagement } : null)}>
-                      <option value="">Staff: {p.order.engagement ?? 'accept'}</option>
-                      {STANCES.map((x) => (
-                        <option key={x} value={x}>
-                          {label(x)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+      <details className="plan-details">
+        <summary>
+          Orders for each group ({plan.length}){ownCount > 0 ? `, ${ownCount} with your own orders` : ''}
+        </summary>
+        <ol className="plan">
+          {plan.map((p) => {
+            const f = s.forces[p.force];
+            if (!f) return null;
+            const own = overrides[p.force];
+            const held = directive.holdBack.includes(p.force);
+            return (
+              <li key={p.force} className={p.own ? 'plan-overridden' : ''}>
+                <div className="plan-head">
+                  <strong>{p.name}</strong>
+                  <span className="figures">
+                    {thousands(f.men)} men · {thousands(f.horses + f.draught)} horses · {Math.floor(f.stock.food / Math.max(1, f.men))} days' food · {condition(f)}
+                    {p.own ? ' · Your order' : ''}
+                  </span>
                 </div>
-              )}
-            </li>
-          );
-        })}
-      </ol>
+                <ul className="reasons">
+                  {p.reasons.map((r) => (
+                    <li key={r}>{r}</li>
+                  ))}
+                </ul>
+                {f.battle === null && (
+                  <div className="plan-controls">
+                    <label className="choice">
+                      <input
+                        type="checkbox"
+                        checked={held}
+                        onChange={(e) => set({ holdBack: e.target.checked ? [...directive.holdBack, p.force] : directive.holdBack.filter((x) => x !== p.force) })}
+                      />{' '}
+                      Hold back
+                    </label>
+                    <label>
+                      Pace{' '}
+                      <select value={own?.pace ?? ''} onChange={(e) => onOverride(p.force, changed(own, 'pace', e.target.value))}>
+                        <option value="">Staff: {directive.tempo}</option>
+                        {PACES.map((x) => (
+                          <option key={x} value={x}>
+                            {label(x)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Battle{' '}
+                      <select value={own?.engagement ?? ''} onChange={(e) => onOverride(p.force, changed(own, 'engagement', e.target.value))}>
+                        <option value="">Staff: {directive.engagement}</option>
+                        {STANCES.map((x) => (
+                          <option key={x} value={x}>
+                            {label(x)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </details>
       <button type="button" className="primary" onClick={onCommit}>
         Commit orders for the next two days
       </button>

@@ -30,7 +30,7 @@ describe('the staff planner (§2.4b)', () => {
   it('sends every group to the objective along the chosen axis, by sensible roads', () => {
     const s = start();
     const southern = axesTo(ctx, 'liozno', 'smolensk').find((a) => a.label.includes('Rasasna'))!;
-    const plan = planDirective(s, ctx, directive({ objective: 'smolensk', axis: southern.id, posture: 'concentrated' }));
+    const plan = planDirective(s, ctx, directive({ objective: 'smolensk', axis: southern, posture: 'concentrated' }));
     for (const p of plan) expect(p.order.route?.at(-1)).toBe('smolensk');
     expect(plan.find((p) => p.force === 'fr-vanguard')!.order.route).toContain('rasasna');
     // Davout is already south of the Dnieper: he takes the main road, not a detour back to the crossing.

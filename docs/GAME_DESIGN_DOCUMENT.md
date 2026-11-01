@@ -83,7 +83,12 @@ Orders persist until you change them.
 
 ## 2.4b Challenge mode: directives, standing orders, decision points
 
-*Implementation status (D-026):* directives, axes, the staff planner with per-group orders, forecasts and reasons, and player overrides are built in the engine. Still to come: logistics stance, detached tasks, decision points (auto-advance and stop conditions), and wagon deliveries in the food forecast.
+*Implementation status (D-026, D-033):*
+- **Built:** directives, axes, the staff planner with per-group orders, forecasts and reasons, player overrides, and the logistics stance (D-029).
+- **One plan (D-033).** Your own pace or battle stance for a group is planned and forecast with the staff's, so the map, the forecast and the committed orders are always the same plan.
+- **The route is kept (D-033).** The chosen route is kept whole, so it still guides the groups after another group becomes the lead.
+- **Summary first (D-033).** A short army summary leads: how far apart the groups arrive (and who arrives only after the campaign ends), which groups may meet a stronger known enemy, the worst-fed group, and horses short of fodder. The orders of each group open on demand.
+- **Still to come:** detached tasks, decision points (auto-advance and stop conditions), wagon deliveries in the food forecast, and dragging a route.
 The simulation underneath is identical; only the way you give orders changes.
 
 - **One army directive replaces per-group orders.** It has five parts, and each defaults to your previous choice:

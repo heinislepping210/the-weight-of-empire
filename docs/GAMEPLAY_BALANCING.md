@@ -228,6 +228,29 @@ Stage B of the independent review: connect horses to transport, make carrying fi
 
 **Not changed, by design:** march speed still follows the infantry, so a group's horse losses cost it carrying, not speed. Wagon-train speed is unchanged too: wagons without horses simply stay behind.
 
+## The kept route (review stage C, 31 October 2026)
+
+Stage C made previews trustworthy (D-033). No rule changed, but one bot did. The southern-envelopment bot now keeps the route it chose on its first turn; before, the route was looked up by name from whichever group led, and when Davout took the lead at Krasnyi on turn 3 it silently fell back to the shortest roads. Report: [balance/2026-10-31-rules-0.9.0-route-kept.md](balance/2026-10-31-rules-0.9.0-route-kept.md).
+
+**The southern envelopment was flattered by the defect:**
+
+| southern-envelopment | Decisive Success | Costly Victory | Limited Success | Inconclusive | Repulse | Collapse | Smolensk held | Food days at end |
+|---|---|---|---|---|---|---|---|---|
+| Route lost on turn 3 (before) | 7.5% | 20.2% | 28.5% | 4.4% | 28.9% | 2.0% | 48.9% | 1.4 |
+| Route kept (now) | 0.2% | 0.8% | 5.0% | 28.4% | 59.9% | 5.7% | 5.1% | 0.3 |
+
+- **Why it fails now:** with the route kept, every corps marches the slow southern tracks by Liubavichi and Rasasna. The summary shows it before committing. The groups arrive up to 19 days apart, and Eugène's corps, coming from Surazh, only after the campaign ends.
+- **What it means:** what used to work was "start south, then take the shortest roads", not a southern envelopment.
+- **History did it differently.** In 1812 the army crossed the Dnieper at Rasasna on bridges built overnight (H-004), which needed the corps drawn together near the crossing first. How and where they assembled is still to be researched. A bot that concentrates first, or a planner that lets a far-off group converge by its own road, would come closer to the real manoeuvre.
+- **F3 and F4 shift with it:**
+  - Bait and converge is now best on 83% of seeds.
+  - The strategy explains 32% of the variance and the seed 14%, so F4 passes. But that is because one family got clearly worse, not because skill was measured better.
+
+**Open, for a design decision:** should the staff send a group far from the chosen route all the way round it?
+- **(a) Keep the route strict.** The player holds such a group back, or picks another route.
+- **(b) Converge when the detour is long.** Let a group converge by its own road when joining the route would add much more than its direct road, and say so in its reasons.
+- **(c) Let the player choose per group** between "follow the route" and "own road".
+
 ## Acting on the results
 
 1. **First ask whether the model is plausible and the result understandable.** A low decisive-success rate that follows from historically plausible rules is a finding, not a bug.

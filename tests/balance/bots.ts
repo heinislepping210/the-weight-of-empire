@@ -3,7 +3,7 @@
 // They are tuned once for all seeds, never per seed.
 
 import { axesTo, leadGroup, ordersFrom, planDirective, planLogistics } from '../../src/engine';
-import type { Context, Directive, GameState, GroupOrder, LogisticsOrders, LogisticsStance, NodeId } from '../../src/engine';
+import type { Axis, Context, Directive, GameState, GroupOrder, LogisticsOrders, LogisticsStance, NodeId } from '../../src/engine';
 import { randomPolicy, type Policy } from '../fixtures/driver';
 
 // By default every bot brings its supply base forward, as a competent staff would (§2.6); the paired
@@ -23,10 +23,10 @@ function supply(ctx: Context, stance: LogisticsStance) {
   return (s: GameState): LogisticsOrders | null => planLogistics(s, ctx, { ...(chosen.get(s) ?? base), logistics: stance }).orders;
 }
 
-function axisVia(s: GameState, ctx: Context, objective: NodeId, landmark: string): string | null {
+function axisVia(s: GameState, ctx: Context, objective: NodeId, landmark: string): Axis | null {
   const lead = leadGroup(s, ctx, objective);
   if (!lead) return null;
-  return axesTo(ctx, lead.at, objective).find((a) => a.label.includes(landmark))?.id ?? null;
+  return axesTo(ctx, lead.at, objective).find((a) => a.label.includes(landmark)) ?? null;
 }
 
 const frenchHold = (s: GameState, node: NodeId) =>
@@ -49,13 +49,18 @@ const BASE_BOTS: Record<string, (ctx: Context) => Policy> = {
   'concentrated-push': (ctx) => ({ orders: (s) => orders(s, ctx, { objective: 'smolensk-north' }), ...delegate }),
 
   /** Across the Dnieper at Rasasna to the Old Town, then on to Valutino to cut the Moscow road. */
-  'southern-envelopment': (ctx) => ({
-    orders: (s) =>
-      frenchHold(s, 'smolensk') || frenchHold(s, 'smolensk-north')
-        ? orders(s, ctx, { objective: 'valutino' })
-        : orders(s, ctx, { objective: 'smolensk', axis: axisVia(s, ctx, 'smolensk', 'Rasasna') }),
-    ...delegate,
-  }),
+  // The corridor is chosen once, as a player would choose it, and kept while the lead group changes.
+  'southern-envelopment': (ctx) => {
+    let corridor: Axis | null = null;
+    return {
+      orders: (s) => {
+        if (frenchHold(s, 'smolensk') || frenchHold(s, 'smolensk-north')) return orders(s, ctx, { objective: 'valutino' });
+        corridor ??= axisVia(s, ctx, 'smolensk', 'Rasasna');
+        return orders(s, ctx, { objective: 'smolensk', axis: corridor });
+      },
+      ...delegate,
+    };
+  },
 
   /** Concentrate at Liozno where the vanguard stands as bait, receive the Russian strike, then push on. */
   'bait-and-converge': (ctx) => {
