@@ -3,6 +3,7 @@ import { createContext, newGame, stateHash } from '../../src/engine';
 import type { GameState, Side } from '../../src/engine';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
 import { play, randomPolicy, supplyTotals } from '../fixtures/driver';
+import { capacityGrams, weightGrams } from '../../src/engine/carriage';
 
 const ctx = createContext(vitebskDecision());
 
@@ -35,6 +36,13 @@ describe('The Vitebsk Decision: starting situation', () => {
     }
   });
 
+  it('every group starts within what it can carry, for every seed (G-019)', () => {
+    for (let seed = 0; seed < 200; seed++) {
+      const s = newGame(ctx, seed * 2654435761 >>> 0);
+      for (const f of Object.values(s.forces)) expect(weightGrams(f.stock, ctx.rules), `${f.id}, seed ${seed}`).toBeLessThanOrEqual(capacityGrams(f, ctx.rules));
+    }
+  });
+
   it('draws strengths from the seed: reproducible, and different between seeds', () => {
     expect(stateHash(newGame(ctx, 7))).toBe(stateHash(newGame(ctx, 7)));
     const totals = new Set(Array.from({ length: 20 }, (_, i) => menOf(newGame(ctx, i), 'fr')));
@@ -49,7 +57,8 @@ describe('The Vitebsk Decision: starting situation', () => {
       const z = supplyTotals(run.final);
       const lost = Object.values(run.final.ledger.menLost).reduce((n, x) => n + x, 0);
       expect(z.men + lost).toBe(a.men);
-      expect(z.food + run.final.ledger.consumed.food + run.final.ledger.destroyed.food).toBe(a.food + run.final.ledger.foraged.food);
+      const { consumed, destroyed, abandoned, foraged } = run.final.ledger;
+      expect(z.food + consumed.food + destroyed.food + abandoned.food).toBe(a.food + foraged.food);
     }
   });
 });

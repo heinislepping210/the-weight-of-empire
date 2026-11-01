@@ -8,6 +8,7 @@ import { decideNightfall, decideRound } from './ai';
 import { updateIntel } from './intel';
 import { updatePressure } from './russian';
 import { fallBack, oncoming, resolveNightfall, resolveRound, retreatNodeFor } from './battle';
+import { capacityGrams, usableWagons, weightGrams, withinCapacity } from './carriage';
 import { edgeBetween, neighboursOf, roadDistance, shortestPath, type EdgeDef } from './graph';
 import { chance, drawBetween } from './rng';
 import type { Context } from './scenario';
@@ -245,8 +246,23 @@ function stageActivity(s: GameState, ctx: Context, log: LogEntry[]): void {
       f.gathering = ctx.rules.posture.gatherSlots;
     }
     f.activity = activityFor(ctx, f);
+    if (f.activity === 'march' || f.activity === 'cross') leaveBehind(s, ctx, f, log);
   }
   res.stage = 'movement';
+}
+
+/**
+ * A force can hold any amount in camp but marches only with what its men and horse-drawn wagons can
+ * carry (G-019). The rest goes back into its own depot if it stands at one; otherwise it is abandoned.
+ */
+function leaveBehind(s: GameState, ctx: Context, f: Force, log: LogEntry[]): void {
+  const { kept, dropped } = withinCapacity(f.stock, capacityGrams(f, ctx.rules), ctx.rules);
+  if (weightGrams(dropped, ctx.rules) === 0) return;
+  f.stock = kept;
+  const depot = f.transit === null ? s.depots[f.at] : undefined;
+  const toDepot = depot !== undefined && depot.side === f.side;
+  addInto(toDepot ? depot.stock : s.ledger.abandoned, dropped);
+  note(s, log, 'leftBehind', { force: f.id, food: dropped.food, fodder: dropped.fodder, ammo: dropped.ammo, depot: toDepot ? f.at : null });
 }
 
 function nextEdgeOf(ctx: Context, f: Force): EdgeDef | undefined {
@@ -340,8 +356,9 @@ function stageAccrual(s: GameState, ctx: Context, log: LogEntry[]): void {
       c.cargo = emptySupplies();
       continue;
     }
-    // Loads are limited by weight: a wagon carries far fewer days of fodder than of bread (L-004).
-    const payload = c.wagons * convoy.payloadGrams;
+    // Loads are limited by weight: a wagon carries far fewer days of fodder than of bread (L-004),
+    // and only wagons with their draught horses are loaded (G-019).
+    const payload = usableWagons(c.wagons, c.horses, ctx.rules) * convoy.payloadGrams;
     for (const kind of ['food', 'fodder', 'ammo'] as const) {
       const fits = Math.max(0, Math.floor((payload * convoy.loadPermille[kind]) / 1000 / gramsPerUnit[kind]) - c.cargo[kind]);
       const amount = Math.min(fits, depot.stock[kind]);
@@ -371,6 +388,7 @@ function stageNight(s: GameState, ctx: Context, log: LogEntry[]): void {
     }
   }
   for (const f of sortedValues(s.forces)) consume(s, ctx, f, log);
+  for (const c of sortedValues(s.convoys)) feedConvoy(s, ctx, c, log);
   for (const id of Object.keys(s.roads).sort()) s.roads[id] = s.rainToday ? 'mud' : 'dry';
   if (res.slot === 3) res.stage = 'endOfTurn';
   else {
@@ -411,19 +429,21 @@ function forageKind(a: Activity): 'halt' | 'gather' | 'march' | null {
 }
 
 /**
- * Gathering from the countryside (§2.6). A halted, dispersed force reaches its neighbouring
- * districts too, except where the enemy stands, and gathers more; everyone else uses their own district.
+ * Gathering from the countryside (§2.6). A halted, dispersed force gathers more, and reaches the
+ * neighbouring districts within its foragers' reach too, except where the enemy stands (G-019): a
+ * neighbouring district begins about half-way along the road. Everyone else uses their own district.
  */
 function forage(s: GameState, ctx: Context, f: Force): void {
   const kind = forageKind(f.activity);
   if (!kind || f.men <= 0) return;
   const rules = ctx.rules.forage;
   const wide = f.posture === 'dispersed' && kind === 'halt';
-  const nodes = wide ? [f.at, ...neighboursOf(ctx.graph, f.at).map((n) => n.node).filter((n) => !enemyPresent(s, f.side, n))] : [f.at];
+  const reachable = neighboursOf(ctx.graph, f.at).filter((n) => n.edge.metres <= 2 * rules.reachMetres && !enemyPresent(s, f.side, n.node));
+  const nodes = wide ? [f.at, ...reachable.map((n) => n.node)] : [f.at];
   const bonus = wide ? rules.dispersedPermille : 1000;
   const want = {
     food: Math.floor((Math.floor((f.men * rules.food[kind]) / 1000) * bonus) / 1000),
-    fodder: Math.floor((Math.floor((f.horses * rules.fodder[kind]) / 1000) * bonus) / 1000),
+    fodder: Math.floor((Math.floor(((f.horses + f.draught) * rules.fodder[kind]) / 1000) * bonus) / 1000),
   };
   for (const supply of ['food', 'fodder'] as const) {
     let left = want[supply];
@@ -443,20 +463,25 @@ function forage(s: GameState, ctx: Context, f: Force): void {
   }
 }
 
-/** A force standing at its own side's depot draws rations directly, without wagons. */
+/**
+ * A force standing at its own side's depot draws rations directly, without wagons, but only what it
+ * can carry (G-019): food first, then ammunition, then fodder.
+ */
 function issueFromDepot(s: GameState, ctx: Context, f: Force): void {
   const depot = s.depots[f.at];
   if (!depot || depot.side !== f.side || f.transit || f.men <= 0) return;
-  const { depotIssue, consumption } = ctx.rules;
+  const { depotIssue, consumption, gramsPerUnit } = ctx.rules;
   const target = {
     food: f.men * consumption.foodPerMan * depotIssue.foodDays,
-    fodder: f.horses * consumption.fodderPerHorse * depotIssue.fodderDays,
+    fodder: (f.horses + f.draught) * consumption.fodderPerHorse * depotIssue.fodderDays,
     ammo: Math.floor((f.men * depotIssue.ammoPerThousandMen) / 1000),
   };
-  for (const supply of ['food', 'fodder', 'ammo'] as const) {
-    const take = Math.min(Math.max(0, target[supply] - f.stock[supply]), depot.stock[supply]);
+  let free = Math.max(0, capacityGrams(f, ctx.rules) - weightGrams(f.stock, ctx.rules));
+  for (const supply of ['food', 'ammo', 'fodder'] as const) {
+    const take = Math.min(Math.max(0, target[supply] - f.stock[supply]), depot.stock[supply], Math.floor(free / gramsPerUnit[supply]));
     depot.stock[supply] -= take;
     f.stock[supply] += take;
+    free -= take * gramsPerUnit[supply];
   }
 }
 
@@ -581,14 +606,14 @@ function moveConvoy(s: GameState, ctx: Context, c: Convoy, log: LogEntry[]): voi
   travel(s, ctx, c, ctx.rules.convoy.metresPerSlot, (node) => node === target, () => {});
   if (c.transit || c.at !== target) return;
   if (c.leg === 'outbound' && delivery) {
-    if (delivery.force) {
-      if (delivery.force.transit !== null || delivery.force.at !== c.at) return;
-      addInto(delivery.force.incoming, c.cargo);
-    } else if (delivery.depot) {
-      addInto(delivery.depot.incoming, c.cargo);
-    }
-    note(s, log, 'delivered', { convoy: c.id, force: delivery.force?.id ?? null, depot: delivery.depot?.node ?? null, food: c.cargo.food, fodder: c.cargo.fodder, ammo: c.cargo.ammo });
-    c.cargo = emptySupplies();
+    if (delivery.force && (delivery.force.transit !== null || delivery.force.at !== c.at)) return;
+    // The train keeps back the fodder its own horses need to get home (G-019); the rest is handed over.
+    const daysHome = Math.max(1, Math.ceil(roadDistance(ctx.graph, c.at, c.home) / (ctx.rules.convoy.metresPerSlot * 2)));
+    const keep = Math.min(c.cargo.fodder, c.horses * ctx.rules.consumption.fodderPerHorse * daysHome);
+    const handed = { ...c.cargo, fodder: c.cargo.fodder - keep };
+    addInto(delivery.force ? delivery.force.incoming : must(delivery.depot, 'depot').incoming, handed);
+    note(s, log, 'delivered', { convoy: c.id, force: delivery.force?.id ?? null, depot: delivery.depot?.node ?? null, food: handed.food, fodder: handed.fodder, ammo: handed.ammo });
+    c.cargo = { food: 0, fodder: keep, ammo: 0 };
     c.leg = 'returning';
   } else {
     c.leg = 'loading';
@@ -776,7 +801,9 @@ function minorAction(s: GameState, ctx: Context, node: NodeId, sides: Record<Sid
 function consume(s: GameState, ctx: Context, f: Force, log: LogEntry[]): void {
   const { consumption, attrition, fatigue } = ctx.rules;
   const foodNeed = f.men * consumption.foodPerMan;
-  const fodderNeed = f.horses * consumption.fodderPerHorse;
+  // Draught horses eat with the saddle and artillery horses, and share their fate when fodder runs short.
+  const allHorses = f.horses + f.draught;
+  const fodderNeed = allHorses * consumption.fodderPerHorse;
   const food = Math.min(f.stock.food, foodNeed);
   const fodder = Math.min(f.stock.fodder, fodderNeed);
   f.stock.food -= food;
@@ -795,12 +822,47 @@ function consume(s: GameState, ctx: Context, f: Force, log: LogEntry[]): void {
   }
   let horsesDied = 0;
   if (fodderShort > 0) {
-    horsesDied = Math.min(f.horses, Math.floor((f.horses * fodderShort * attrition.horseLossPermilleAtFullShortfall) / (fodderNeed * 1000)));
-    f.horses -= horsesDied;
+    horsesDied = Math.min(allHorses, Math.floor((allHorses * fodderShort * attrition.horseLossPermilleAtFullShortfall) / (fodderNeed * 1000)));
+    const draughtDied = Math.floor((horsesDied * f.draught) / allHorses);
+    f.draught -= draughtDied;
+    f.horses -= horsesDied - draughtDied;
     s.ledger.horsesLost += horsesDied;
   }
   // Food and fodder shortfalls are reported separately: horses can starve while the men are fed.
   if (foodShort > 0 || fodderShort > 0) note(s, log, 'shortfall', { force: f.id, food: foodShort, fodder: fodderShort, horsesDied });
   f.fatigue = Math.max(0, f.fatigue - (f.marchedToday ? fatigue.nightAfterMarch : fatigue.nightAfterRest));
   f.marchedToday = false;
+}
+
+/**
+ * Wagon-train horses must eat too (G-019): they graze where they stand (at the halted rate when
+ * waiting at their depot, the marching rate otherwise, over two sub-steps), then eat the fodder they
+ * carry, then their depot's. On a long haul they eat part of what they were meant to deliver.
+ */
+function feedConvoy(s: GameState, ctx: Context, c: Convoy, log: LogEntry[]): void {
+  if (c.horses <= 0) return;
+  const { consumption, forage: rates, attrition } = ctx.rules;
+  const need = c.horses * consumption.fodderPerHorse;
+  const waiting = c.transit === null && c.leg === 'loading';
+  const district = s.districts[c.at];
+  const graze = district ? Math.min(district.fodder, Math.floor((c.horses * (waiting ? rates.fodder.halt : rates.fodder.march) * 2) / 1000), need) : 0;
+  if (district) district.fodder -= graze;
+  s.ledger.foraged.fodder += graze;
+  let eaten = graze;
+  const fromCargo = Math.min(c.cargo.fodder, need - eaten);
+  c.cargo.fodder -= fromCargo;
+  eaten += fromCargo;
+  const depot = s.depots[c.at];
+  if (waiting && c.at === c.home && depot && depot.side === c.side) {
+    const fromDepot = Math.min(depot.stock.fodder, need - eaten);
+    depot.stock.fodder -= fromDepot;
+    eaten += fromDepot;
+  }
+  s.ledger.consumed.fodder += eaten;
+  const short = need - eaten;
+  if (short <= 0) return;
+  const died = Math.min(c.horses, Math.floor((c.horses * short * attrition.horseLossPermilleAtFullShortfall) / (need * 1000)));
+  c.horses -= died;
+  s.ledger.horsesLost += died;
+  note(s, log, 'convoyShortfall', { convoy: c.id, fodder: short, horsesDied: died });
 }

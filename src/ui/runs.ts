@@ -29,10 +29,11 @@ export interface SavedRun {
 
 const KEY = 'twoe.runs.v1';
 
+/** Men, or all horses: saddle, artillery and draught. */
 const total = (s: GameState, side: Side, k: 'men' | 'horses') =>
   Object.values(s.forces)
     .filter((f) => f.side === side)
-    .reduce((n, f) => n + f[k], 0);
+    .reduce((n, f) => n + (k === 'men' ? f.men : f.horses + f.draught), 0);
 
 export function summarize(states: readonly GameState[], logs: readonly LogEntry[][], ctx: Context, label: string, seed: number): SavedRun {
   const place = (id: unknown) => ctx.graph.nodes.get(String(id))?.name ?? String(id);

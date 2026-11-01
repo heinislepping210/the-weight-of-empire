@@ -54,8 +54,11 @@ export interface Force {
   gathering: number;
   battle: BattleId | null;
   men: number;
+  /** Saddle and artillery horses. */
   horses: number;
   wagons: number;
+  /** Draught horses for its own wagons: a wagon without its horses stays behind (G-019). */
+  draught: number;
   /** 0–1000. */
   fatigue: number;
   /** 0–1000. */
@@ -83,6 +86,8 @@ export interface Convoy {
   transit: Transit | null;
   route: NodeId[];
   wagons: number;
+  /** Draught horses: only the wagons they can draw are loaded (G-019). */
+  horses: number;
   cargo: Supplies;
 }
 
@@ -152,6 +157,8 @@ export interface Ledger {
   ammoSpent: Record<Side, number>;
   /** Stores burned when a depot was captured. */
   destroyed: Supplies;
+  /** Stores left behind on the march because they could not be carried (G-019). */
+  abandoned: Supplies;
   menLost: Record<LossCause, number>;
   horsesLost: number;
 }

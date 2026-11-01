@@ -34,7 +34,13 @@ describe('captured stores (§2.6)', () => {
   });
 
   it('the captors draw on what was saved from the fire', () => {
-    const ctx = passiveContext(testGround((s) => (forceInit(s, 'fr-flank').at = 'F')));
+    // Without fodder of its own the flank has room to carry four days' food (G-019).
+    const ctx = passiveContext(
+      testGround((s) => {
+        forceInit(s, 'fr-flank').at = 'F';
+        forceInit(s, 'fr-flank').stock.fodder = 0;
+      }),
+    );
     const s = stepUntil(ordered(newGame(ctx, 3), ctx, {}), ctx, at(1, 'night'));
     expect(s.forces['fr-flank']!.stock.food).toBe(20_000 * RULES.depotIssue.foodDays);
   });
@@ -62,10 +68,12 @@ describe('captured stores (§2.6)', () => {
 });
 
 describe('forward depots and line trains (§2.6)', () => {
+  // The main body carries little fodder, so it has room to draw on a depot (G-019).
   const lineGround = () =>
     passiveContext(
       testGround((s) => {
         s.convoys.push({ id: 'cv-line', side: 'fr', home: 'A', wagons: 100 });
+        forceInit(s, 'fr-main').stock.fodder = 2_000;
       }),
     );
 

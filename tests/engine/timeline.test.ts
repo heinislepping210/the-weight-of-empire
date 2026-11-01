@@ -87,19 +87,22 @@ describe('turn timeline (§3.4a)', () => {
     expect(before.stock.food).toBeGreaterThanOrEqual(before.men);
     const { state, log } = stepOnce(atNight, ctx);
     const entry = log.find((e) => e.kind === 'shortfall' && e.detail.force === 'fr-main');
-    expect(entry?.detail).toMatchObject({ food: 0, fodder: before.horses });
-    expect(Number(entry?.detail.horsesDied)).toBe(before.horses - state.forces['fr-main']!.horses);
+    // Draught horses eat with the others (G-019).
+    const after = state.forces['fr-main']!;
+    expect(entry?.detail).toMatchObject({ food: 0, fodder: before.horses + before.draught });
+    expect(Number(entry?.detail.horsesDied)).toBe(before.horses + before.draught - after.horses - after.draught);
     expect(Number(entry?.detail.horsesDied)).toBeGreaterThan(0);
   });
 
   it('T3: a force in battle neither moves nor forages while the battle lasts', () => {
     const ctx = battleGround();
     let s = advanceUntil(newGame(ctx, 7), ctx, atStep('round'));
-    const district = { ...s.districts.B! };
+    // Food only: the wagon train's horses may graze district B's fodder while they wait there (G-019).
+    const food = s.districts.B!.food;
     let pauses = 0;
     while (s.forces['fr-main']!.battle !== null && pauses < 40) {
       expect(s.forces['fr-main']).toMatchObject({ at: 'B', transit: null, activity: 'fight' });
-      expect(s.districts.B).toEqual(district);
+      expect(s.districts.B!.food).toBe(food);
       s = next(s, ctx);
       pauses++;
     }

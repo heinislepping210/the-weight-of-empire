@@ -23,9 +23,10 @@ const FORCES: ForceInit[] = [
   { id: 'fr-south', side: 'fr', name: 'Southern group: Poniatowski and Junot', at: 'mogilev', men: [26_000, 36_000], horses: [6_000, 8_000], posture: 'dispersed', wagons: 200, stock: { food: days(31_000, 3), fodder: days(7_000, 1), ammo: 6_000 } },
 
   // Russians: united at Smolensk under political pressure to stop retreating
-  { id: 'ru-1st', side: 'ru', name: '1st Western Army (Barclay de Tolly)', at: 'smolensk-north', men: [70_000, 80_000], horses: [14_000, 18_000], posture: 'dispersed', wagons: 400, stock: { food: days(75_000, 6), fodder: days(16_000, 2), ammo: 15_000 } },
-  { id: 'ru-2nd', side: 'ru', name: '2nd Western Army (Bagration)', at: 'smolensk', men: [38_000, 46_000], horses: [8_000, 10_000], posture: 'dispersed', wagons: 250, stock: { food: days(42_000, 6), fodder: days(9_000, 2), ammo: 8_000 } },
-  { id: 'ru-cossacks', side: 'ru', name: "Platov's Cossacks", at: 'rudnia', men: [7_000, 10_000], horses: [9_000, 12_000], posture: 'dispersed', wagons: 30, stock: { food: days(8_500, 3), fodder: days(10_500, 1), ammo: 500 } },
+  // Starting stocks fit what each group can carry (G-019): a day of fodder for the armies, and Cossack horses living mostly off the grass.
+  { id: 'ru-1st', side: 'ru', name: '1st Western Army (Barclay de Tolly)', at: 'smolensk-north', men: [70_000, 80_000], horses: [14_000, 18_000], posture: 'dispersed', wagons: 400, stock: { food: days(75_000, 6), fodder: days(16_000, 1), ammo: 15_000 } },
+  { id: 'ru-2nd', side: 'ru', name: '2nd Western Army (Bagration)', at: 'smolensk', men: [38_000, 46_000], horses: [8_000, 10_000], posture: 'dispersed', wagons: 250, stock: { food: days(42_000, 6), fodder: days(9_000, 1), ammo: 8_000 } },
+  { id: 'ru-cossacks', side: 'ru', name: "Platov's Cossacks", at: 'rudnia', men: [7_000, 10_000], horses: [9_000, 12_000], posture: 'dispersed', wagons: 30, stock: { food: days(8_500, 3), fodder: 2_500, ammo: 500 } },
   { id: 'ru-neverovsky', side: 'ru', name: "Neverovsky's division", at: 'krasnyi', men: [6_000, 8_000], horses: [1_000, 1_500], posture: 'dispersed', wagons: 40, stock: { food: days(7_000, 5), fodder: days(1_200, 2), ammo: 1_500 } },
 ];
 

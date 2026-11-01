@@ -109,6 +109,7 @@ A turn is 2 days: **four daylight sub-steps** of 6 hours (06:00–12:00 and 12:0
      - If enemy forces stand at both ends of a road and both would set out along it in the same hour, a seeded draw for that road and hour decides which one gets onto it. The other holds its place.
      - A column may not overtake an enemy column ahead of it on the same road. It closes up behind it and follows it to the next place.
    - **A force that could not move at all rests** (activity *halt*) for the sub-step.
+   - **Setting out, a force leaves behind what it cannot carry** (rules 0.9.0, G-019): fodder first, then food, ammunition last. The excess goes back into the depot if the force stands at its own depot; otherwise it is abandoned and recorded in the ledger.
 4. **Contact.** Contacts found during movement are resolved in this order:
    1. **Reinforcements first.** A force (of either side) that stands at the place of an active battle and is not yet in it joins its own side there, in the fixed order of force IDs. Like a new battle, it deploys at this boundary and fights from the start of the next daylight sub-step. Until then it takes no part in rounds: no losses, ammunition or fatigue from them. It does not forage while assigned to the battle. A force arriving while still gathering keeps its gathering time and its reduced readiness.
    2. **New encounters**, in the fixed order of §3.4. Minor actions resolve at once. Before a major battle, the defender tries to withdraw. If it can't or won't, the battle is set up at the end of the sub-step — this is when you deploy — and its rounds are fought from the start of the next daylight sub-step.
@@ -119,7 +120,7 @@ A turn is 2 days: **four daylight sub-steps** of 6 hours (06:00–12:00 and 12:0
 **Implementation:** `src/engine/advance.ts`. Each stage above is one function. `stepOnce` runs a single stage so tests can watch the timeline between pauses.
 
 **Each night:**
-1. **Consumption.** A day's food and fodder are taken from stock actually on hand — never from supplies still on the road or in a depot elsewhere.
+1. **Consumption.** A day's food and fodder are taken from stock actually on hand — never from supplies still on the road or in a depot elsewhere. A group's draught horses eat with its other horses. Wagon-train horses graze where they stand at the marching rate, then eat the fodder they carry, then their depot's if they stand at it (G-019).
 2. **Shortfall effects.** Any recorded shortfall drives hunger, sickness, straggling, horse losses and loss of cohesion.
 3. **Recovery.** Fatigue recovers according to the day's activity. *Not built yet:* stragglers rejoining halted forces near depots (H-017).
 4. **Nightfall in battle.** Each side chooses to stay or withdraw (§3.4, step 6). A battle that continues resumes in the next daylight sub-step, across the turn boundary if necessary. Its forces can't take new movement orders meanwhile.

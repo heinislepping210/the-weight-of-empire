@@ -82,7 +82,8 @@ export function evaluate(start: GameState, end: GameState, ctx: Context): Outcom
   const frStart = sideOf(start, 'fr');
   const frEnd = sideOf(end, 'fr');
   const frenchMenLostPermille = Math.floor(((men(frStart) - men(frEnd)) * 1000) / Math.max(1, men(frStart)));
-  const horses = (forces: Force[]) => forces.reduce((n, f) => n + f.horses, 0);
+  // All the army's horses: saddle, artillery and draught (G-019).
+  const horses = (forces: Force[]) => forces.reduce((n, f) => n + f.horses + f.draught, 0);
   const frenchHorsesLostPermille = Math.floor(((horses(frStart) - horses(frEnd)) * 1000) / Math.max(1, horses(frStart)));
 
   const holders = (side: Side, node: NodeId) => men(sideOf(end, side).filter((f) => f.transit === null && f.at === node));

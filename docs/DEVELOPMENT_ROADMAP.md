@@ -43,7 +43,8 @@ The first release is **The Vitebsk Decision only**, made genuinely excellent bef
 - **Done (rules 0.6.0):** captured stores and forward depots, with a supply stance in the directive.
 - **Done (rules 0.7.0):** hunger's effect on cohesion set from the historical record, a judgment within a researched range (D-030).
 - **Done (rules 0.8.0):** contacts corrected after the independent review (D-031): reinforcements join battles, opposing columns cannot pass each other, retreats take time on the road, and a halt stops every march.
-- **Met:** "three approach families produce clearly different outcome distributions." On rules 0.8.0:
+- **Done (rules 0.9.0):** horses, carrying and foraging reach (D-032). The endings hardly depend on the new values within their researched ranges.
+- **Met:** "three approach families produce clearly different outcome distributions." On rules 0.8.0, and nearly the same on 0.9.0:
   - concentrated push: mostly Limited Success (58%), Operational Collapse in 30%;
   - southern envelopment: spread from Decisive Success (8%) to Repulse (31%);
   - bait and converge: mostly Costly Victory (75%).

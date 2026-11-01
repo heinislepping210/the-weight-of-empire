@@ -34,10 +34,11 @@ export function violations(run: Run): string[] {
     if (t.men + lost !== a.men) out.push(`${where}: men not conserved`);
     if (t.horses + s.ledger.horsesLost !== a.horses) out.push(`${where}: horses not conserved`);
     if (t.wagons !== a.wagons) out.push(`${where}: wagons not conserved`);
-    const burned = s.ledger.destroyed;
-    if (t.food + s.ledger.consumed.food + burned.food !== a.food + s.ledger.foraged.food) out.push(`${where}: food not conserved`);
-    if (t.fodder + s.ledger.consumed.fodder + burned.fodder !== a.fodder + s.ledger.foraged.fodder) out.push(`${where}: fodder not conserved`);
-    if (t.ammo + s.ledger.ammoSpent.fr + s.ledger.ammoSpent.ru + burned.ammo !== a.ammo) out.push(`${where}: ammunition not conserved`);
+    // Stores leave the books only by being eaten, spent, burned on capture or abandoned on the march.
+    const gone = { food: s.ledger.destroyed.food + s.ledger.abandoned.food, fodder: s.ledger.destroyed.fodder + s.ledger.abandoned.fodder, ammo: s.ledger.destroyed.ammo + s.ledger.abandoned.ammo };
+    if (t.food + s.ledger.consumed.food + gone.food !== a.food + s.ledger.foraged.food) out.push(`${where}: food not conserved`);
+    if (t.fodder + s.ledger.consumed.fodder + gone.fodder !== a.fodder + s.ledger.foraged.fodder) out.push(`${where}: fodder not conserved`);
+    if (t.ammo + s.ledger.ammoSpent.fr + s.ledger.ammoSpent.ru + gone.ammo !== a.ammo) out.push(`${where}: ammunition not conserved`);
     if (t.districtFood + s.ledger.foraged.food !== a.districtFood) out.push(`${where}: countryside food not conserved`);
     for (const c of Object.values(s.convoys)) {
       if ((c.serves === null) === (c.feeds === null)) out.push(`${where}: ${c.id} supplies both or neither a force and a depot`);

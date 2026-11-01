@@ -129,7 +129,7 @@ export function OrdersPanel({ s, ctx, directive, onDirective, plan, supply, over
               <div className="plan-head">
                 <strong>{p.name}</strong>
                 <span className="figures">
-                  {thousands(f.men)} men · {thousands(f.horses)} horses · {Math.floor(f.stock.food / Math.max(1, f.men))} days' food · {condition(f)}
+                  {thousands(f.men)} men · {thousands(f.horses + f.draught)} horses · {Math.floor(f.stock.food / Math.max(1, f.men))} days' food · {condition(f)}
                   {own ? ' · Your order' : ''}
                 </span>
               </div>

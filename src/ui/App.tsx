@@ -22,10 +22,11 @@ interface Run {
 const startRun = (seed: number): Run => ({ seed, states: [newGame(ctx, seed)], inputs: [], logs: [] });
 const HOLD: Directive = { objective: null, axis: null, tempo: 'steady', posture: 'dispersed', engagement: 'accept', holdBack: [], logistics: 'hold' };
 
+/** Men, or all horses: saddle, artillery and draught. */
 const total = (s: GameState, side: Side, k: 'men' | 'horses') =>
   Object.values(s.forces)
     .filter((f) => f.side === side)
-    .reduce((n, f) => n + f[k], 0);
+    .reduce((n, f) => n + (k === 'men' ? f.men : f.horses + f.draught), 0);
 
 /** Prototype (M1): the whole Vitebsk Decision on a plain map, with run comparison. */
 export function App() {

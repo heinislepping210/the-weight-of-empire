@@ -143,6 +143,13 @@ The simulation underneath is identical; only the way you give orders changes.
 - **Depots.** A force standing at its own depot draws supplies directly, without wagons.
 - **Retreat.** A beaten force falls back towards its own depots.
 
+**Horses, carrying and foraging reach (rules 0.9.0, G-019):**
+- **Draught horses.** Every wagon needs draught horses, in the wagon trains and in each group's own baggage. A wagon without its horses stays behind: fewer horses mean smaller loads, never faster or slower wagons.
+- **Feeding the draught horses.** Wagon-train horses graze along the way, then eat the fodder they carry, then their depot's. On a long haul they eat part of what they were meant to deliver.
+- **What a group can carry.** A group carries what its men (four days' rations each) and its horse-drawn wagons can take. In camp it may hold more. When it sets out on the march it leaves the rest behind: fodder first, ammunition last. At a depot the extra goes back into the depot; anywhere else it is lost. At a depot the staff draws only what the group can carry.
+- **Foraging reach.** A dispersed group reaches a neighbouring district only if that district begins within its foraging reach: half the road to the neighbouring place. Neighbours far down a long road are out of reach.
+- **March speed is unchanged.** The infantry sets the pace; horse losses cost carrying, not speed.
+
 **Captured stores and forward depots (D-029, rules 0.6.0):**
 - **Capture.** A depot changes hands when only the enemy holds it. Part of its stores, 50–90%, is burned first. The rest feeds the captors. Wagon trains based there fall back on their side's nearest remaining depot.
 - **Founding.** A new depot can be founded where French troops hold the ground. It starts empty, and it falls if it is left unheld and the enemy arrives.

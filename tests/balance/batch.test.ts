@@ -7,7 +7,7 @@
 
 import { expect, it } from 'vitest';
 import { ENDING_NAMES, ENDING_RANK, RULES, RULES_VERSION, createContext, evaluate } from '../../src/engine';
-import type { EndingId, Rules } from '../../src/engine';
+import type { EndingId, GameState, Rules } from '../../src/engine';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
 import { play } from '../fixtures/driver';
 import { violations } from '../fixtures/invariants';
@@ -15,6 +15,12 @@ import { BOTS, FAMILIES } from './bots';
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const enabled = env.BALANCE === '1';
+
+/** Share of the French wagon trains' draught horses lost over the game, in permille (G-019). */
+function trainHorsesLost(start: GameState, end: GameState): number {
+  const horses = (s: GameState) => Object.values(s.convoys).filter((c) => c.side === 'fr').reduce((n, c) => n + c.horses, 0);
+  return Math.floor(((horses(start) - horses(end)) * 1000) / Math.max(1, horses(start)));
+}
 const SEEDS = Number(env.BALANCE_SEEDS ?? 1000);
 const OVERRIDES = env.BALANCE_OVERRIDES ? (JSON.parse(env.BALANCE_OVERRIDES) as Record<string, unknown>) : null;
 
@@ -49,6 +55,9 @@ interface Result {
   tookSmolensk: boolean;
   lineFood: number;
   burnedFood: number;
+  abandonedFood: number;
+  abandonedFodder: number;
+  trainHorsesLostPermille: number;
 }
 
 it.skipIf(!enabled)('balance batch', () => {
@@ -71,6 +80,9 @@ it.skipIf(!enabled)('balance batch', () => {
         tookSmolensk: captured.some((e) => e.detail.by === 'fr' && e.detail.node === 'smolensk'),
         lineFood: log.filter((e) => e.kind === 'delivered' && e.detail.depot !== null && run.final.convoys[String(e.detail.convoy)]?.side === 'fr').reduce((n, e) => n + Number(e.detail.food), 0),
         burnedFood: run.final.ledger.destroyed.food,
+        abandonedFood: run.final.ledger.abandoned.food,
+        abandonedFodder: run.final.ledger.abandoned.fodder,
+        trainHorsesLostPermille: trainHorsesLost(run.states[0]!, run.final),
         ending: o.ending,
         rank: ENDING_RANK[o.ending],
         frMen: o.frenchMenLostPermille / 10,
@@ -124,13 +136,13 @@ it.skipIf(!enabled)('balance batch', () => {
     '',
     '## Supply (means)',
     '',
-    '| Strategy | Depots founded | French depots lost | Took the Smolensk stores | Food moved up by line trains | Stores burned (food) |',
-    '|---|---|---|---|---|---|',
+    '| Strategy | Depots founded | French depots lost | Took the Smolensk stores | Food moved up by line trains | Stores burned (food) | Left behind on the march (rations / fodder) | French wagon-train horses lost |',
+    '|---|---|---|---|---|---|---|---|',
   );
   for (const name of names) {
     const rs = results[name]!;
     lines.push(
-      `| ${name} | ${mean(rs.map((r) => r.founded)).toFixed(2)} | ${mean(rs.map((r) => r.depotsLost)).toFixed(2)} | ${pct(rs.filter((r) => r.tookSmolensk).length, rs.length)} | ${Math.round(mean(rs.map((r) => r.lineFood))).toLocaleString('en-GB')} | ${Math.round(mean(rs.map((r) => r.burnedFood))).toLocaleString('en-GB')} |`,
+      `| ${name} | ${mean(rs.map((r) => r.founded)).toFixed(2)} | ${mean(rs.map((r) => r.depotsLost)).toFixed(2)} | ${pct(rs.filter((r) => r.tookSmolensk).length, rs.length)} | ${Math.round(mean(rs.map((r) => r.lineFood))).toLocaleString('en-GB')} | ${Math.round(mean(rs.map((r) => r.burnedFood))).toLocaleString('en-GB')} | ${Math.round(mean(rs.map((r) => r.abandonedFood))).toLocaleString('en-GB')} / ${Math.round(mean(rs.map((r) => r.abandonedFodder))).toLocaleString('en-GB')} | ${(mean(rs.map((r) => r.trainHorsesLostPermille)) / 10).toFixed(1)}% |`,
     );
   }
 

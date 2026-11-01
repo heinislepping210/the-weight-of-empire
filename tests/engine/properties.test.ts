@@ -34,6 +34,8 @@ const GOLDEN: Record<string, string> = {
   // Contacts (D-031): forces move hour by hour, columns cannot pass on a road, retreats take time on the
   // road; battles gain `fightsFrom`. The scripted advance now ends with its beaten side still on the road.
   '0.8.0': '31fe2f88c0aa5ec3',
+  // Horses, carrying and foraging reach (G-019): forces gain `draught`, convoys `horses`, the ledger `abandoned`.
+  '0.9.0': '229a30ce286dce6b',
 };
 
 /**
@@ -42,6 +44,8 @@ const GOLDEN: Record<string, string> = {
  */
 const GOLDEN_VITEBSK: Record<string, string> = {
   '0.8.0': 'a4eba27f22269f08',
+  // G-019, and the Russian armies' starting fodder trimmed to what they can carry.
+  '0.9.0': 'fe2e22e26628a01e',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */
@@ -50,13 +54,14 @@ function checkConservation(run: Run): void {
   for (const s of run.states) {
     const t = supplyTotals(s);
     const lost = Object.values(s.ledger.menLost).reduce((n, x) => n + x, 0);
-    const burned = s.ledger.destroyed;
+    // Burned on capture or abandoned on the march: the two ways stores leave the books besides use.
+    const gone = (k: 'food' | 'fodder' | 'ammo') => s.ledger.destroyed[k] + s.ledger.abandoned[k];
     expect(t.men + lost).toBe(a.men);
     expect(t.horses + s.ledger.horsesLost).toBe(a.horses);
     expect(t.wagons).toBe(a.wagons);
-    expect(t.food + s.ledger.consumed.food + burned.food).toBe(a.food + s.ledger.foraged.food);
-    expect(t.fodder + s.ledger.consumed.fodder + burned.fodder).toBe(a.fodder + s.ledger.foraged.fodder);
-    expect(t.ammo + s.ledger.ammoSpent.fr + s.ledger.ammoSpent.ru + burned.ammo).toBe(a.ammo);
+    expect(t.food + s.ledger.consumed.food + gone('food')).toBe(a.food + s.ledger.foraged.food);
+    expect(t.fodder + s.ledger.consumed.fodder + gone('fodder')).toBe(a.fodder + s.ledger.foraged.fodder);
+    expect(t.ammo + s.ledger.ammoSpent.fr + s.ledger.ammoSpent.ru + gone('ammo')).toBe(a.ammo);
     expect(t.districtFood + s.ledger.foraged.food).toBe(a.districtFood);
     expect(t.districtFodder + s.ledger.foraged.fodder).toBe(a.districtFodder);
     for (const f of Object.values(s.forces)) {

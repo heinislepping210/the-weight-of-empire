@@ -1,5 +1,5 @@
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.8.0';
+export const RULES_VERSION = '0.9.0';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -25,6 +25,10 @@ export const RULES = {
   },
   /** Weight of one unit of supply: a man's daily ration (L-003), a horse's daily fodder (L-004), one ammunition unit. */
   gramsPerUnit: { food: 750, fodder: 9_000, ammo: 1_000 },
+  /** G-019 (L-009): draught horses an 800 kg wagon needs; a wagon without them stays behind (plausible 1–4). */
+  draught: { horsesPerWagon: 2 },
+  /** G-019 (L-010): stores a man carries, four days' rations; plausible three to six days. */
+  carrying: { manGrams: 3_000 },
   fatigue: {
     marchSteady: 70,
     marchForced: 140,
@@ -40,6 +44,11 @@ export const RULES = {
     fodder: { halt: 450, gather: 300, march: 250 },
     /** A halted, dispersed force spreads its foragers over neighbouring districts and gathers this much more. */
     dispersedPermille: 1800,
+    /**
+     * G-019 (L-011): how far foragers reach from a dispersed force's place (plausible 15–30 km). A neighbouring
+     * district begins about half-way along the road to its place, so it counts within twice this distance.
+     */
+    reachMetres: 22_000,
   },
   posture: {
     /** Sub-steps a dispersed force needs to assemble before it can march or fight at full strength. */

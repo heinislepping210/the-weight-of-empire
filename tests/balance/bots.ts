@@ -3,10 +3,11 @@
 // They are tuned once for all seeds, never per seed.
 
 import { axesTo, leadGroup, ordersFrom, planDirective, planLogistics } from '../../src/engine';
-import type { Context, Directive, GameState, GroupOrder, LogisticsOrders, NodeId } from '../../src/engine';
+import type { Context, Directive, GameState, GroupOrder, LogisticsOrders, LogisticsStance, NodeId } from '../../src/engine';
 import { randomPolicy, type Policy } from '../fixtures/driver';
 
-// Every bot brings its supply base forward, as a competent staff would (§2.6).
+// By default every bot brings its supply base forward, as a competent staff would (§2.6); the paired
+// supply-stance probe plays the same bots keeping the depots instead.
 const base: Directive = { objective: null, axis: null, tempo: 'steady', posture: 'concentrated', engagement: 'seek', holdBack: [], logistics: 'forward' };
 
 /** The directive a bot chose last, so its supply orders follow the same objective. */
@@ -18,8 +19,8 @@ function orders(s: GameState, ctx: Context, d: Partial<Directive>): GroupOrder[]
   return ordersFrom(planDirective(s, ctx, directive));
 }
 
-function supply(ctx: Context) {
-  return (s: GameState): LogisticsOrders | null => planLogistics(s, ctx, chosen.get(s) ?? base).orders;
+function supply(ctx: Context, stance: LogisticsStance) {
+  return (s: GameState): LogisticsOrders | null => planLogistics(s, ctx, { ...(chosen.get(s) ?? base), logistics: stance }).orders;
 }
 
 function axisVia(s: GameState, ctx: Context, objective: NodeId, landmark: string): string | null {
@@ -84,8 +85,13 @@ const BASE_BOTS: Record<string, (ctx: Context) => Policy> = {
   rush: (ctx) => ({ orders: (s) => orders(s, ctx, { objective: 'smolensk-north', tempo: 'forced' }), ...delegate }),
 };
 
+/** The purposeful bots with a given supply stance; their group orders are the same either way. */
+export function botsWithSupply(stance: LogisticsStance): Record<string, (ctx: Context) => Policy> {
+  return Object.fromEntries(Object.entries(BASE_BOTS).map(([name, make]) => [name, (ctx: Context) => ({ ...make(ctx), logistics: supply(ctx, stance) })]));
+}
+
 export const BOTS: Record<string, (ctx: Context) => Policy> = {
-  ...Object.fromEntries(Object.entries(BASE_BOTS).map(([name, make]) => [name, (ctx: Context) => ({ ...make(ctx), logistics: supply(ctx) })])),
+  ...botsWithSupply('forward'),
   /** Random valid orders, random supply arrangements included: the control that should rarely do well. */
   random: (ctx) => randomPolicy(ctx, 0x5eed),
 };

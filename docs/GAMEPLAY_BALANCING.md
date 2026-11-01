@@ -201,6 +201,33 @@ Rules 0.8.0 corrects them (D-031, TECHNICAL_ARCHITECTURE §3.4a), with tests wri
 
 **Reading:** these distributions are more trustworthy than those of 0.7.0, because the defect is gone. But the bots that do not concentrate before attacking now understate what the same approach could do in a player's hands. Before drawing balance conclusions, **review stage F** (better bots, a measure that separates battle luck from the scenario, held-out seeds) matters more than any rule value.
 
+## Horses, carrying and foraging reach (rules 0.9.0, adopted, 31 October 2026)
+
+Stage B of the independent review: connect horses to transport, make carrying finite, and bound foraging by distance (G-019; sources L-009 to L-011). Reports: [the batch](balance/2026-10-31-rules-0.9.0.md), and [sensitivity runs with the paired supply-stance probe](balance/2026-10-31-whatif-carriage.md). The values were set from the research before any run, and nothing was tuned afterwards.
+
+**What the batch shows:**
+- **The links bind.** Over a game the concentrated push leaves on average about 227,000 rations and 51,000 horse-rations of fodder by the road. Battle losses shrink what a corps can carry, so beaten corps abandon stores.
+- **French wagon trains lose 3–11% of their draught horses.** French horse losses overall rise by 1.5–4 points against rules 0.8.0.
+- **The halt now has a small price:**
+  - foraging only within reach costs its horses 4.7%;
+  - it ends with 4.1 days of food instead of 5.1;
+  - 0.5% of halts end precariously.
+- **Endings hardly move against 0.8.0**, within 2–5 points for every approach.
+
+**Sensitivity: the unknown values do not steer the result.**
+- **No change across the range:** with one horse or four per wagon, and with three or six days' rations per man, every approach family's chance of Decisive Success or Costly Victory moves by under 3 points. Collapse moves by under 3 points too.
+- **Foraging reach matters only where armies stand still:**
+  - at 15 km, the prudent halt consolidates successfully in 91% of games instead of 99.5%;
+  - at 30 km, the methodical approach wins less often (39% instead of 44%). Why has not been traced yet.
+
+**The paired supply-stance probe** (same bots and seeds, depots brought forward or kept):
+- **Forward supply helps a little and almost never hurts.**
+  - Most approaches reach the same ending in 88–98% of games either way.
+  - Bait and converge gains most: a better ending on 17% of seeds against a worse one on 7%, and Costly Victory in 73% of games instead of 55%.
+- **It is not yet a dilemma**, because founding a depot costs nothing and wagon trains cannot be raided. A garrison detachment for each new depot, and Cossack raids on convoys (both in §2.6), would give it a price.
+
+**Not changed, by design:** march speed still follows the infantry, so a group's horse losses cost it carrying, not speed. Wagon-train speed is unchanged too: wagons without horses simply stay behind.
+
 ## Acting on the results
 
 1. **First ask whether the model is plausible and the result understandable.** A low decisive-success rate that follows from historically plausible rules is a finding, not a bug.

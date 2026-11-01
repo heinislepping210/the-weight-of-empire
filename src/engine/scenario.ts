@@ -15,8 +15,11 @@ export interface ForceInit {
   name: string;
   at: NodeId;
   men: Strength;
+  /** Saddle and artillery horses. */
   horses: Strength;
   wagons: number;
+  /** Draught horses for its wagons; by default as many as the wagons need (G-019). */
+  draught?: number;
   stock: Supplies;
   fatigue?: number;
   cohesion?: number;
@@ -38,6 +41,8 @@ export interface ConvoyInit {
   /** The force it supplies; leave out for a line train, which starts idle at its home depot. */
   serves?: ForceId;
   wagons: number;
+  /** Draught horses; by default as many as the wagons need (G-019). */
+  horses?: number;
 }
 
 export interface ScenarioDef {
@@ -102,6 +107,7 @@ export function newGame(ctx: Context, seed: number): GameState {
       men: resolveStrength(seed, f.id, 'men', f.men),
       horses: resolveStrength(seed, f.id, 'horses', f.horses),
       wagons: f.wagons,
+      draught: f.draught ?? f.wagons * rules.draught.horsesPerWagon,
       fatigue: f.fatigue ?? 200,
       cohesion: f.cohesion ?? 800,
       stock: { ...f.stock },
@@ -128,6 +134,7 @@ export function newGame(ctx: Context, seed: number): GameState {
       transit: null,
       route: [],
       wagons: c.wagons,
+      horses: c.horses ?? c.wagons * rules.draught.horsesPerWagon,
       cargo: emptySupplies(),
     };
   }
@@ -166,6 +173,7 @@ export function newGame(ctx: Context, seed: number): GameState {
       consumed: { food: 0, fodder: 0 },
       ammoSpent: { fr: 0, ru: 0 },
       destroyed: emptySupplies(),
+      abandoned: emptySupplies(),
       menLost: { battle: 0, sickness: 0, straggling: 0, withdrawal: 0 },
       horsesLost: 0,
     },

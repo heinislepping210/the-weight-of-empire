@@ -154,7 +154,7 @@ export function supplyTotals(s: GameState): Supplies & { men: number; horses: nu
     add(f.stock);
     add(f.incoming);
     t.men += f.men;
-    t.horses += f.horses;
+    t.horses += f.horses + f.draught;
     t.wagons += f.wagons;
   }
   for (const d of Object.values(s.depots)) {
@@ -164,6 +164,7 @@ export function supplyTotals(s: GameState): Supplies & { men: number; horses: nu
   for (const c of Object.values(s.convoys)) {
     add(c.cargo);
     t.wagons += c.wagons;
+    t.horses += c.horses;
   }
   for (const d of Object.values(s.districts)) {
     t.districtFood += d.food;

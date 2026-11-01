@@ -2,6 +2,7 @@
 // French group, each with a forecast and its reasons, using only what the French know. Planning never
 // changes the state: the player reviews the plan, may override any order, and only then commits.
 
+import { capacityGrams, weightGrams, withinCapacity } from './carriage';
 import { edgeBetween, pathMetres, roadDistance, shortestPath, type EdgeDef } from './graph';
 import type { Context } from './scenario';
 import { calendar, slotIndex, SLOTS_PER_TURN } from './time';
@@ -48,6 +49,7 @@ export interface PlannedOrder {
 }
 
 const placeName = (ctx: Context, id: NodeId) => ctx.graph.nodes.get(id)?.name ?? id;
+const tonnes = (g: number) => `${Math.round(g / 1_000_000).toLocaleString('en-GB')} t`;
 
 /** The French group nearest to the objective: the axes are traced from there. */
 export function leadGroup(s: GameState, ctx: Context, objective: NodeId): Force | null {
@@ -252,7 +254,9 @@ export function planDirective(s: GameState, ctx: Context, d: Directive): Planned
     const mud = slotsToCover(s, ctx, f, route, d.tempo, true);
     const days = Math.ceil(dry / 2);
     const foraged = Math.floor((f.men * ctx.rules.forage.food.march) / 1000) * dry;
-    const foodDays = Math.max(0, Math.floor((f.stock.food + foraged - f.men * days) / Math.max(1, f.men)));
+    // Setting out, it keeps only what its men and horse-drawn wagons can carry (G-019).
+    const { kept, dropped } = withinCapacity(f.stock, capacityGrams(f, ctx.rules), ctx.rules);
+    const foodDays = Math.max(0, Math.floor((kept.food + foraged - f.men * days) / Math.max(1, f.men)));
     const crossings = path.flatMap((n, i) => {
       const from = i === 0 ? start : (path[i - 1] as NodeId);
       const e = edgeBetween(ctx.graph, from, n);
@@ -267,6 +271,15 @@ export function planDirective(s: GameState, ctx: Context, d: Directive): Planned
     }
     if (crossings.length > 0) reasons.push(`Crosses a river between ${crossings.join(', ')}: slower going.`);
     if (f.posture === 'dispersed' || f.gathering > 0) reasons.push('Gathers first from its cantonments: about a day before it can march.');
+    if (weightGrams(dropped, ctx.rules) > 0) {
+      const parts = [
+        dropped.food > 0 ? `${dropped.food.toLocaleString('en-GB')} rations` : '',
+        dropped.fodder > 0 ? `${dropped.fodder.toLocaleString('en-GB')} horse-rations of fodder` : '',
+        dropped.ammo > 0 ? `${dropped.ammo.toLocaleString('en-GB')} ammunition` : '',
+      ].filter(Boolean);
+      const depot = !f.transit && s.depots[f.at]?.side === 'fr';
+      reasons.push(`Can carry only ${tonnes(capacityGrams(f, ctx.rules))} of its ${tonnes(weightGrams(f.stock, ctx.rules))} of stores: it leaves ${parts.join(', ')} behind${depot ? ', back in the depot' : ', lost'}.`);
+    }
     if (d.tempo === 'forced') reasons.push('Forced march: faster, but tires men and horses and leaves stragglers.');
     reasons.push(
       Number.isFinite(dry)

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { RULES, advance, newGame, statusOf, stepOnce, submit } from '../../src/engine';
 import type { Context, GameState, GroupOrder, Posture } from '../../src/engine';
+import { capacityGrams } from '../../src/engine/carriage';
 import { inputFor, stepUntil } from '../fixtures/driver';
 import { forceInit, testGround, passiveContext } from '../fixtures/testGround';
 
@@ -102,8 +103,11 @@ describe('depots issue supplies directly (§2.6)', () => {
     const s = stepOnce(stepOnce(stepOnce(stepOnce(stepOnce(start, ctx).state, ctx).state, ctx).state, ctx).state, ctx).state;
     expect(s.resolution).toMatchObject({ slot: 1, stage: 'activity' });
     const f = s.forces['fr-flank']!;
+    // Food first, then ammunition, then as much fodder as the group can still carry (G-019).
     expect(f.stock.food).toBe(f.men * RULES.depotIssue.foodDays);
-    expect(f.stock.fodder).toBe(f.horses * RULES.depotIssue.fodderDays);
+    expect(f.stock.ammo).toBe(Math.floor((f.men * RULES.depotIssue.ammoPerThousandMen) / 1000));
+    const room = capacityGrams(f, RULES) - f.stock.food * RULES.gramsPerUnit.food - f.stock.ammo * RULES.gramsPerUnit.ammo;
+    expect(f.stock.fodder).toBe(Math.min((f.horses + f.draught) * RULES.depotIssue.fodderDays, Math.floor(room / RULES.gramsPerUnit.fodder)));
     expect(s.depots.A!.stock.food).toBe(start.depots.A!.stock.food - f.stock.food);
   });
 });
