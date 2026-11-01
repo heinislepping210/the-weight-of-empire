@@ -5,7 +5,7 @@
 // What-if runs: BALANCE_OVERRIDES='{"attrition":{"cohesionLossAtFullShortfall":30}}' replaces rule values
 // for this run only, to test a researched range before anything is adopted. The report names the overrides.
 
-import { it } from 'vitest';
+import { expect, it } from 'vitest';
 import { ENDING_NAMES, ENDING_RANK, RULES, RULES_VERSION, createContext, evaluate } from '../../src/engine';
 import type { EndingId, Rules } from '../../src/engine';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
@@ -38,6 +38,10 @@ interface Result {
   ruMain: number;
   held: boolean;
   battles: number;
+  rounds: number;
+  frJoins: number;
+  ruJoins: number;
+  frLostBattles: number;
   cohesion: number;
   foodDays: number;
   founded: number;
@@ -74,6 +78,10 @@ it.skipIf(!enabled)('balance batch', () => {
         ruMain: o.russianMainLostPermille / 10,
         held: o.holdsKeyGround,
         battles: run.logs.flat().filter((e) => e.kind === 'battleJoined').length,
+        rounds: Object.values(run.final.battles).reduce((n, b) => n + b.roundsFought, 0),
+        frJoins: log.filter((e) => e.kind === 'reinforced' && e.detail.side === 'fr').length,
+        ruJoins: log.filter((e) => e.kind === 'reinforced' && e.detail.side === 'ru').length,
+        frLostBattles: Object.values(run.final.battles).filter((b) => b.winner === 'ru').length,
         cohesion: o.frenchCohesion,
         foodDays: o.frenchFoodDays,
       });
@@ -101,6 +109,14 @@ it.skipIf(!enabled)('balance batch', () => {
     const rs = results[name]!;
     lines.push(
       `| ${name} | ${mean(rs.map((r) => r.frMen)).toFixed(1)}% | ${mean(rs.map((r) => r.frHorses)).toFixed(1)}% | ${mean(rs.map((r) => r.ruMain)).toFixed(1)}% | ${pct(rs.filter((r) => r.held).length, rs.length)} | ${mean(rs.map((r) => r.battles)).toFixed(1)} | ${mean(rs.map((r) => r.cohesion)).toFixed(0)} | ${mean(rs.map((r) => r.foodDays)).toFixed(1)} |`,
+    );
+  }
+
+  lines.push('', '## Contacts (means)', '', '| Strategy | Battles | Rounds fought | French reinforcements joined | Russian reinforcements joined | Battles the French lost |', '|---|---|---|---|---|---|');
+  for (const name of names) {
+    const rs = results[name]!;
+    lines.push(
+      `| ${name} | ${mean(rs.map((r) => r.battles)).toFixed(1)} | ${mean(rs.map((r) => r.rounds)).toFixed(1)} | ${mean(rs.map((r) => r.frJoins)).toFixed(2)} | ${mean(rs.map((r) => r.ruJoins)).toFixed(2)} | ${mean(rs.map((r) => r.frLostBattles)).toFixed(2)} |`,
     );
   }
 
@@ -151,4 +167,6 @@ it.skipIf(!enabled)('balance batch', () => {
   lines.push(`- **F6:** random play reaches Decisive Success on ${pct(random.filter((r) => r.ending === 'decisiveSuccess').length, SEEDS)} of seeds (target < 5%).`);
 
   console.log(['BALANCE-REPORT-START', ...lines, 'BALANCE-REPORT-END'].join('\n'));
+  // Integrity is a gate; the fairness diagnostics above are not.
+  expect(problems.slice(0, 20)).toEqual([]);
 }, 3_600_000);

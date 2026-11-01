@@ -35,10 +35,13 @@ export function dispatches(entries: readonly LogEntry[], s: GameState, ctx: Cont
         text = `Contact with the enemy at ${place(d.node)}.`;
         break;
       case 'minorAction':
-        text = `Skirmish at ${place(d.node)}: the ${sideName(d.retreated)} side fell back${d.to ? ` to ${place(d.to)}` : ''}.`;
+        text = `Skirmish at ${place(d.node)}: the ${sideName(d.retreated)} side fell back${d.to ? ` towards ${place(d.to)}` : ''}.`;
         break;
       case 'withdrawal':
-        text = `${sideName(d.side)} troops at ${place(d.node)} ${d.success ? 'slipped away before battle' : 'tried to withdraw but were held'}.`;
+        text = `${sideName(d.side)} troops at ${place(d.node)} ${d.success ? `slipped away before battle, falling back towards ${place(d.to)}` : 'tried to withdraw but were held'}.`;
+        break;
+      case 'reinforced':
+        text = french(d.force) ? `${force(d.force)} joined the battle; it fights from the next sub-step.` : `Enemy reinforcements joined the battle at ${place(s.battles[String(d.battle)]?.node)}.`;
         break;
       case 'battleJoined':
         text = `Battle joined at ${place(d.node)}.`;
@@ -53,7 +56,7 @@ export function dispatches(entries: readonly LogEntry[], s: GameState, ctx: Cont
         text = d.winner === 'fr' ? 'The enemy gave way: the field is ours.' : d.winner === 'ru' ? 'Our troops were driven from the field.' : 'The battle ended without a victor.';
         break;
       case 'retreated':
-        text = `${force(d.force)} fell back to ${place(d.to)}.`;
+        text = `${force(d.force)} is falling back towards ${place(d.to)}.`;
         break;
       case 'trapped':
         text = `${force(d.force)} was cut off at ${place(d.node)} and suffered heavily.`;
@@ -72,9 +75,18 @@ export function dispatches(entries: readonly LogEntry[], s: GameState, ctx: Cont
             ? `We took the enemy stores at ${place(d.node)}: about ${Math.round(Number(d.burnedPermille) / 10)}% had been burned, ${Number(d.food).toLocaleString('en-GB')} rations saved.`
             : `The enemy took our depot at ${place(d.node)}: about ${Math.round(Number(d.burnedPermille) / 10)}% of the stores were burned before it fell.`;
         break;
-      case 'shortfall':
-        if (french(d.force)) text = `${force(d.force)} went hungry: ${Number(d.food).toLocaleString('en-GB')} rations short${Number(d.fodder) > 0 ? `, and ${Number(d.fodder).toLocaleString('en-GB')} horse-rations of fodder` : ''}.`;
+      case 'shortfall': {
+        if (!french(d.force)) break;
+        const food = Number(d.food);
+        const fodder = Number(d.fodder);
+        const died = Number(d.horsesDied ?? 0);
+        const horses = fodder > 0 ? `${Number(fodder).toLocaleString('en-GB')} horse-rations of fodder short${died > 0 ? `, ${died.toLocaleString('en-GB')} horses died` : ''}` : '';
+        text =
+          food > 0
+            ? `${force(d.force)} went hungry: ${food.toLocaleString('en-GB')} rations short${horses ? `; ${horses}` : ''}.`
+            : `${force(d.force)}'s horses went short: ${horses}.`;
         break;
+      }
       case 'ended':
         text = 'The campaign has reached its end.';
         break;

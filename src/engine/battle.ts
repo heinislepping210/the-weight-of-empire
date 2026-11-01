@@ -1,12 +1,12 @@
 // Battle resolution. The round model is a placeholder that already obeys the timeline rules
 // (time, ammunition, exclusivity); the sector system of §2.10 replaces its combat maths.
 
-import { neighboursOf, roadDistance } from './graph';
+import { edgeBetween, neighboursOf, roadDistance } from './graph';
 import { drawBetween } from './rng';
 import type { Context } from './scenario';
-import { dayIndex } from './time';
+import { dayIndex, slotIndex } from './time';
 import type { BattleState, Force, GameState, LogEntry, NightChoice, NodeId, RoundAction, Side } from './types';
-import { enemyPresent, fatiguePermille, loseMen, must, note, otherSide, place, sortedValues } from './util';
+import { enemyPresent, fatiguePermille, loseMen, must, note, otherSide, sortedValues } from './util';
 
 export const SIDES: readonly Side[] = ['fr', 'ru'];
 
@@ -14,11 +14,16 @@ export function sideForces(s: GameState, b: BattleState, side: Side): Force[] {
   return b.sides[side].map((id) => must(s.forces[id], `force ${id}`));
 }
 
-export function sideTotals(s: GameState, b: BattleState, side: Side): { men: number; cohesion: number; fatigue: number } {
+/** The side's forces taking part in rounds at sub-step index `at`: a reinforcement only once it has deployed. */
+export function activeForces(s: GameState, b: BattleState, side: Side, at: number): Force[] {
+  return sideForces(s, b, side).filter((f) => (b.fightsFrom[f.id] ?? 0) <= at);
+}
+
+export function sideTotals(s: GameState, b: BattleState, side: Side, at: number): { men: number; cohesion: number; fatigue: number } {
   let men = 0;
   let cohesion = 0;
   let fatigue = 0;
-  for (const f of sideForces(s, b, side)) {
+  for (const f of activeForces(s, b, side, at)) {
     men += f.men;
     cohesion += f.cohesion * f.men;
     fatigue += f.fatigue * f.men;
@@ -27,11 +32,19 @@ export function sideTotals(s: GameState, b: BattleState, side: Side): { men: num
   return { men, cohesion: Math.floor(cohesion / men), fatigue: Math.floor(fatigue / men) };
 }
 
-/** The neighbouring place, free of the enemy, that lies nearest to one of the side's own depots: beaten forces fall back towards home. */
+/** An enemy column on this road marching towards `node`. */
+export function oncoming(s: GameState, side: Side, edgeId: string, node: NodeId): boolean {
+  return Object.values(s.forces).some((f) => f.side !== side && f.men > 0 && f.transit !== null && f.transit.edge === edgeId && f.transit.to === node);
+}
+
+/**
+ * The neighbouring place, free of the enemy, that lies nearest to one of the side's own depots: beaten
+ * forces fall back towards home. A road with an enemy column coming the other way is no line of retreat.
+ */
 export function retreatNodeFor(s: GameState, ctx: Context, node: NodeId, side: Side): NodeId | null {
   const options = neighboursOf(ctx.graph, node)
-    .map((n) => n.node)
-    .filter((n) => !enemyPresent(s, side, n));
+    .filter((n) => !enemyPresent(s, side, n.node) && !oncoming(s, side, n.edge.id, node))
+    .map((n) => n.node);
   const homes = sortedValues(s.depots)
     .filter((d) => d.side === side)
     .map((d) => d.node);
@@ -74,13 +87,26 @@ function inflict(s: GameState, forces: Force[], total: number): void {
   }
 }
 
+/**
+ * Falling back takes time (§3.4a step 4): the force leaves the place at once, as a body, onto the road
+ * towards `dest`, and marches the rest of the way in later sub-steps.
+ */
+export function fallBack(ctx: Context, f: Force, dest: NodeId): void {
+  const edge = must(edgeBetween(ctx.graph, f.at, dest), `road ${f.at}–${dest}`);
+  f.transit = { edge: edge.id, to: dest, metres: 0 };
+  f.route = [dest];
+  f.posture = 'concentrated';
+  f.gathering = 0;
+  if (f.pace === 'rest') f.pace = 'steady';
+}
+
 function withdrawSide(s: GameState, ctx: Context, b: BattleState, side: Side, log: LogEntry[]): void {
   const { engagement, battle } = ctx.rules;
   for (const f of sideForces(s, b, side)) {
     const dest = retreatNodeFor(s, ctx, b.node, side);
     if (dest) {
       loseMen(s, f, Math.floor((f.men * engagement.withdrawalLossPermille) / 1000), 'withdrawal');
-      place(f, dest);
+      fallBack(ctx, f, dest);
       note(s, log, 'retreated', { force: f.id, to: dest });
     } else {
       loseMen(s, f, Math.floor((f.men * battle.trappedLossPermille) / 1000), 'battle');
@@ -113,16 +139,18 @@ export function resolveRound(s: GameState, ctx: Context, b: BattleState, acts: R
   const withdrawing = SIDES.filter((side) => acts[side] === 'withdraw');
   if (withdrawing.length > 0) return endByWithdrawal(s, ctx, b, withdrawing, log);
 
+  // Reinforcements still deploying take no part: no losses, ammunition or fatigue from this round.
+  const now = slotIndex(s.resolution);
   const power: Record<Side, number> = { fr: 0, ru: 0 };
   for (const side of SIDES) {
-    const t = sideTotals(s, b, side);
+    const t = sideTotals(s, b, side, now);
     // Men of a force still gathering from dispersal are not yet all on the field (§2.4b).
-    const ready = sideForces(s, b, side).reduce(
+    const ready = activeForces(s, b, side, now).reduce(
       (n, f) => n + Math.floor((f.men * Math.max(0, 1000 - f.gathering * ctx.rules.posture.readinessLossPerSlotPermille)) / 1000),
       0,
     );
     const need = Math.floor((ready * r.ammoPerThousandMen[acts[side]]) / 1000);
-    const spent = spendAmmo(sideForces(s, b, side), need);
+    const spent = spendAmmo(activeForces(s, b, side, now), need);
     s.ledger.ammoSpent[side] += spent;
     const base = Math.floor((ready * (500 + Math.floor(t.cohesion / 2))) / 1000);
     const tired = Math.floor((base * fatiguePermille(t.fatigue, ctx.rules)) / 1000);
@@ -135,12 +163,12 @@ export function resolveRound(s: GameState, ctx: Context, b: BattleState, acts: R
     let losses = Math.floor((power[enemy] * rate) / 1000);
     if (side !== b.attacker && acts[side] === 'hold') losses = Math.floor((losses * r.defenderHoldPermille) / 1000);
     losses = Math.floor((losses * drawBetween(s.seed, ['battle', b.id, b.roundsFought, side], 800, 1200)) / 1000);
-    inflict(s, sideForces(s, b, side), losses);
+    inflict(s, activeForces(s, b, side, now), losses);
   }
 
-  for (const side of SIDES) for (const f of sideForces(s, b, side)) f.fatigue = Math.min(1000, f.fatigue + ctx.rules.fatigue.fightRound);
+  for (const side of SIDES) for (const f of activeForces(s, b, side, now)) f.fatigue = Math.min(1000, f.fatigue + ctx.rules.fatigue.fightRound);
 
-  const broken = SIDES.filter((side) => sideTotals(s, b, side).cohesion < r.breakCohesion);
+  const broken = SIDES.filter((side) => sideTotals(s, b, side, now).cohesion < r.breakCohesion);
   if (broken.length > 0) endByWithdrawal(s, ctx, b, broken, log);
 }
 

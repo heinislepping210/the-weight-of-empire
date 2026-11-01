@@ -10,7 +10,8 @@ export interface RunPoint {
   frMen: number;
   frHorses: number;
   frFoodDays: number;
-  ruMen: number;
+  /** True Russian strength: recorded only for a run saved after the campaign ended (§2.8). */
+  ruMen: number | null;
 }
 
 export interface SavedRun {
@@ -21,8 +22,9 @@ export interface SavedRun {
   ended: boolean;
   series: RunPoint[];
   battles: string[];
-  russianPlans: string[];
-  finalPositions: string[];
+  /** Hidden information, revealed only for a finished campaign: null while it is still being played. */
+  russianPlans: string[] | null;
+  finalPositions: string[] | null;
 }
 
 const KEY = 'twoe.runs.v1';
@@ -34,6 +36,8 @@ const total = (s: GameState, side: Side, k: 'men' | 'horses') =>
 
 export function summarize(states: readonly GameState[], logs: readonly LogEntry[][], ctx: Context, label: string, seed: number): SavedRun {
   const place = (id: unknown) => ctx.graph.nodes.get(String(id))?.name ?? String(id);
+  // A campaign still in play keeps its fog of war: nothing the French do not know is stored (§2.8).
+  const ended = states[states.length - 1]?.ended != null;
   const checkpoints = states.filter((s, i) => i === states.length - 1 || statusOf(s).kind === 'awaitingOrders');
   const series = checkpoints.map((s) => {
     const men = total(s, 'fr', 'men');
@@ -41,7 +45,7 @@ export function summarize(states: readonly GameState[], logs: readonly LogEntry[
       .filter((f) => f.side === 'fr')
       .reduce((n, f) => n + f.stock.food, 0);
     const date = s.ended ? 'End of campaign' : when(ctx, { turn: s.resolution.turn, slot: 0 });
-    return { turn: s.resolution.turn, date, frMen: men, frHorses: total(s, 'fr', 'horses'), frFoodDays: Math.round((food / Math.max(1, men)) * 10) / 10, ruMen: total(s, 'ru', 'men') };
+    return { turn: s.resolution.turn, date, frMen: men, frHorses: total(s, 'fr', 'horses'), frFoodDays: Math.round((food / Math.max(1, men)) * 10) / 10, ruMen: ended ? total(s, 'ru', 'men') : null };
   });
   const entries = logs.flat();
   const final = states[states.length - 1] as GameState;
@@ -50,11 +54,11 @@ export function summarize(states: readonly GameState[], logs: readonly LogEntry[
     label,
     seed,
     rules: RULES_VERSION,
-    ended: final.ended !== null,
+    ended,
     series,
     battles: entries.filter((e) => e.kind === 'battleJoined').map((e) => `${place(e.detail.node)} (${when(ctx, e)})`),
-    russianPlans: entries.filter((e) => e.kind === 'russianPlan').map((e) => `${when(ctx, e)}: ${e.detail.plan}${e.detail.target ? ` → ${place(e.detail.target)}` : ''}`),
-    finalPositions: Object.values(final.forces).map((f) => `${f.name}: ${place(f.at)}`),
+    russianPlans: !ended ? null : entries.filter((e) => e.kind === 'russianPlan').map((e) => `${when(ctx, e)}: ${e.detail.plan}${e.detail.target ? ` → ${place(e.detail.target)}` : ''}`),
+    finalPositions: !ended ? null : Object.values(final.forces).map((f) => `${f.name}: ${place(f.at)}`),
   };
 }
 

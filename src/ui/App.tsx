@@ -138,7 +138,7 @@ export function App() {
             Run name <input value={runName} onChange={(e) => setRunName(e.target.value)} placeholder={`Run ${runs.length + 1}`} size={14} />
           </label>
           <button type="button" onClick={save}>
-            Save run
+            Save for comparison
           </button>
           <button type="button" onClick={() => setView(view === 'play' ? 'compare' : 'play')}>
             {view === 'play' ? `Compare runs (${runs.length})` : 'Back to the campaign'}

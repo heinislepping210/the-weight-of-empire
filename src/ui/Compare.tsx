@@ -16,11 +16,15 @@ export function Compare({ runs, onDelete, onClose }: Props) {
   const turns = Math.max(a?.series.length ?? 0, b?.series.length ?? 0);
   const pick = (i: 0 | 1, id: string) => setIds((cur) => (i === 0 ? [id, cur[1]] : [cur[0], id]));
   const lost = (r: SavedRun | undefined, k: 'frMen' | 'frHorses' | 'ruMen') => {
-    if (!r || r.series.length === 0) return '—';
+    if (!r || r.series.length === 0 || (k === 'ruMen' && !r.ended)) return '—';
     const first = r.series[0]![k];
     const last = r.series.at(-1)![k];
+    if (first === null || last === null) return '—';
     return `${(((first - last) / first) * 100).toFixed(1)}%`;
   };
+  // Hidden Russian information stays hidden until a run's campaign has ended, even in summaries saved earlier (§2.8).
+  const russians = (r: SavedRun, men: number | null) => (r.ended && men !== null ? thousands(men) : 'hidden');
+  const HIDDEN = 'Revealed when this campaign ends.';
 
   return (
     <section className="panel compare" aria-labelledby="compare-title">
@@ -50,7 +54,7 @@ export function Compare({ runs, onDelete, onClose }: Props) {
           </div>
           {a && b && a.seed !== b.seed && <p className="warning">These runs use different seeds, so their weather, strengths and Russian temperament differ.</p>}
           <table>
-            <caption>French figures each turn; Russian figures are revealed for comparison</caption>
+            <caption>French figures each turn; Russian figures are revealed only for finished campaigns</caption>
             <thead>
               <tr>
                 <th scope="col">Turn</th>
@@ -74,11 +78,11 @@ export function Compare({ runs, onDelete, onClose }: Props) {
                     <td>{pa ? thousands(pa.frMen) : ''}</td>
                     <td>{pa ? thousands(pa.frHorses) : ''}</td>
                     <td>{pa?.frFoodDays ?? ''}</td>
-                    <td>{pa ? thousands(pa.ruMen) : ''}</td>
+                    <td>{a && pa ? russians(a, pa.ruMen) : ''}</td>
                     <td>{pb ? thousands(pb.frMen) : ''}</td>
                     <td>{pb ? thousands(pb.frHorses) : ''}</td>
                     <td>{pb?.frFoodDays ?? ''}</td>
-                    <td>{pb ? thousands(pb.ruMen) : ''}</td>
+                    <td>{b && pb ? russians(b, pb.ruMen) : ''}</td>
                   </tr>
                 );
               })}
@@ -108,10 +112,10 @@ export function Compare({ runs, onDelete, onClose }: Props) {
                     <strong>Battles:</strong> {r.battles.length ? r.battles.join('; ') : 'none'}
                   </p>
                   <p>
-                    <strong>What the Russian command intended:</strong> {r.russianPlans.join('; ')}
+                    <strong>What the Russian command intended:</strong> {r.ended && r.russianPlans ? r.russianPlans.join('; ') : HIDDEN}
                   </p>
                   <p>
-                    <strong>Where everyone ended:</strong> {r.finalPositions.join('; ')}
+                    <strong>Where everyone ended:</strong> {r.ended && r.finalPositions ? r.finalPositions.join('; ') : HIDDEN}
                   </p>
                   <button type="button" onClick={() => onDelete(r.id)}>
                     Delete this run

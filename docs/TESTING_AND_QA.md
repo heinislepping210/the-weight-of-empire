@@ -23,7 +23,7 @@ Automated tests, browser checks and human playtests. Fairness testing is describ
 - **T7** A battle that continues overnight across the turn boundary locks its forces out of new movement orders and resumes at dawn.
 - **T8** Men, horses, wagons and supplies are conserved across every stage.
 - **T9** Fatigue rises and recovers on the timeline: marching raises it within a sub-step, and night rest lowers it.
-- **T10** Saving and loading at every stage, including the night phase and mid-battle, gives an identical final state.
+- **T10** Saving and loading at every stage, including the night phase and mid-battle, gives an identical final state. *Covered today:* engine states serialised to JSON at every pause, mid-battle included, then replayed. *Not yet covered:* browser saves (not built, §3.5), reload in a browser, checksums and corrupt saves, and resuming from internal stages between pauses.
 
 ## Where the tests live (status: 31 October 2026)
 
@@ -32,12 +32,14 @@ Run them with `npm test`. All of these currently pass.
 | File | Covers |
 |---|---|
 | `tests/engine/timeline.test.ts` | T1, T2, T3, T5, T6, T7, T9; pre-battle withdrawal |
-| `tests/engine/properties.test.ts` | T4, T8, T10 under random play (fast-check, 60 games per run), random depot founding and wagon-train orders included; conservation counts burned stores; every wagon train has exactly one task; determinism; the golden replay |
+| `tests/engine/properties.test.ts` | T4, T8, T10 under random play (fast-check, 60 games per run), random depot founding and wagon-train orders included; conservation counts burned stores; every wagon train has exactly one task; contact rules at every pause (no force left outside a battle at its place, no opposing columns heading towards each other on one road); determinism; golden replays on the synthetic map and, from rules 0.8.0, on the real scenario with the real Russian command |
+| `tests/engine/contacts.test.ts` | contacts (D-031): reinforcements of either side join at the sub-step boundary and fight from the next sub-step, without losses, ammunition or fatigue from rounds before then; columns marching towards each other meet instead of passing; no setting out along a road with an oncoming enemy column; no overtaking; withdrawals fall back along the road and arrive later; a halt stops every standing march. Written to fail on rules 0.7.0, as reproductions of the independent review |
+| `tests/ui/runs.test.ts` | saved comparison summaries keep the fog of war: no Russian strength, plans or positions for an unfinished campaign; all of them revealed for a finished one |
 | `tests/engine/inputs.test.ts` | invalid inputs are rejected cleanly; `advance` never modifies its input |
 | `tests/engine/rng.test.ts` | counter-based randomness: purity, uniformity, ranges |
 | `tests/engine/zz-coverage-probe.test.ts` | guards that random play keeps reaching battles, nights, deliveries, shortfalls and withdrawals |
 | `tests/balance/bots.test.ts` | each strategy bot plays the scenario to an evaluated end without breaking any invariant; the halt is declared and holds |
-| `tests/balance/batch.test.ts` | the balance batch, skipped normally; run it with `BALANCE=1 BALANCE_SEEDS=1000 npx vitest run tests/balance/batch.test.ts` (about 90 s for 7,000 games). Reports are kept in `docs/balance/`. What-if runs lay rule values over the adopted rules for one run, e.g. `BALANCE_OVERRIDES='{"attrition":{"cohesionLossAtFullShortfall":30}}'`; an unknown rule name is an error, and the report is marked as a what-if |
+| `tests/balance/batch.test.ts` | the balance batch, skipped normally; run it with `BALANCE=1 BALANCE_SEEDS=1000 npx vitest run tests/balance/batch.test.ts` (about 80 s for 7,000 games). It fails on any invariant violation; the fairness diagnostics are reported but never fail it. Reports are kept in `docs/balance/`. What-if runs lay rule values over the adopted rules for one run, e.g. `BALANCE_OVERRIDES='{"attrition":{"cohesionLossAtFullShortfall":30}}'`; an unknown rule name is an error, and the report is marked as a what-if |
 | `tests/engine/logistics.test.ts` | captured stores (who holds the ground, the burned share within its range and fixed by the seed, captors drawing on the rest, trains falling back); founding a depot only where French troops stand; one task per wagon train; idle line trains; a line train stocking a forward depot that troops then draw on; re-homing; the staff's supply plan (keep or bring forward, relays from each train's own depot, loaded trains left to finish) |
 | `tests/engine/directive.test.ts` | axes (three distinct routes, shortest first, stable IDs); the staff planner (routes follow the chosen axis by sensible roads, orders the engine accepts, holding, held-back groups, forecasts including gathering, enemies from the French picture only, player overrides) |
 | `tests/engine/russian.test.ts` | intelligence (sees only what is in range, with estimate error); the Russian command never uses unseen information; strike, hold, isolation, staleness, withdraw-or-stand, screening; determinism; political pressure |

@@ -112,6 +112,8 @@ export interface BattleState {
   phase: BattlePhase;
   /** First daylight sub-step in which rounds are fought. */
   startsAt: SlotRef;
+  /** Reinforcements: the sub-step index (`slotIndex`) from which each one takes part in rounds (§3.4a step 4). */
+  fightsFrom: Record<ForceId, number>;
   roundsFought: number;
   roundsThisSlot: number;
   awaiting: BattleStep | null;

@@ -100,7 +100,19 @@ A turn is 2 days: **four daylight sub-steps** of 6 hours (06:00–12:00 and 12:0
 1. **Availability.** Only supplies already on hand count. A delivery that arrives during a sub-step is held as *incoming* and joins the force's stock at the end of that sub-step (step 6). It can't be used for marching or fighting during the sub-step it arrives in, but it is on hand that night and afterwards.
 2. **Activity.** Each force has exactly one activity: *march*, *halt*, *cross* (river crossing or bridging), *withdraw* or *fight*. A force in battle is set to *fight* for every sub-step the battle occupies, so it cannot also march, forage or join another battle.
 3. **Movement.** Marching forces and convoys advance as far as their condition at the *start* of the sub-step allows: fatigue, horses, road condition, that day's weather, column length.
-4. **Contact.** Contacts found during movement become encounters, in the fixed order of §3.4. Minor actions resolve at once. Before a major battle, the defender tries to withdraw. If it can't or won't, the battle is set up at the end of the sub-step — this is when you deploy — and its rounds are fought from the start of the next daylight sub-step.
+   - **Forces move together, hour by hour** (rules 0.8.0, D-031). Each force's six-hour march budget is split into six hourly shares. Every hour, all marching forces advance by their share in a fixed order before the next hour begins.
+   - **Contact happens at places, never on the road:**
+     - A force that reaches a place held by the enemy stops there; that is contact.
+     - A force standing where the enemy also stands does not march on: the contact must be resolved first.
+   - **Opposing columns cannot pass each other on a road:**
+     - A force may not set out along a road on which an enemy column is coming the other way. It holds its place, and the enemy column reaches it there.
+     - If enemy forces stand at both ends of a road and both would set out along it in the same hour, a seeded draw for that road and hour decides which one gets onto it. The other holds its place.
+     - A column may not overtake an enemy column ahead of it on the same road. It closes up behind it and follows it to the next place.
+   - **A force that could not move at all rests** (activity *halt*) for the sub-step.
+4. **Contact.** Contacts found during movement are resolved in this order:
+   1. **Reinforcements first.** A force (of either side) that stands at the place of an active battle and is not yet in it joins its own side there, in the fixed order of force IDs. Like a new battle, it deploys at this boundary and fights from the start of the next daylight sub-step. Until then it takes no part in rounds: no losses, ammunition or fatigue from them. It does not forage while assigned to the battle. A force arriving while still gathering keeps its gathering time and its reduced readiness.
+   2. **New encounters**, in the fixed order of §3.4. Minor actions resolve at once. Before a major battle, the defender tries to withdraw. If it can't or won't, the battle is set up at the end of the sub-step — this is when you deploy — and its rounds are fought from the start of the next daylight sub-step.
+   - **Falling back takes time** (D-031). A force that withdraws, loses a minor action or retreats from a battle leaves the place at once, but onto the road towards its retreat place, at the start of that road. It marches the rest of the way in the following sub-steps, at its own pace (a resting force falls back at a steady pace). A road on which an enemy column is coming the other way is not a line of retreat.
 5. **Battle rounds.** Each round takes 2 hours and uses only the ammunition the force carries at that moment. A battle ends when a side breaks or withdraws, or at nightfall. Ammunition can only be topped up by wagons that are already at the battlefield at a sub-step boundary.
 6. **Accrual.** Food and fodder gathered by foraging join the force's stock at the end of the sub-step. Foraging yields less while marching and nothing while fighting. Fatigue rises with the activity. Deliveries received during the sub-step join the stock now. A convoy at its home depot loads now and sets out in the next sub-step. Last, a depot held only by the enemy changes hands, part of its stores burned (D-029).
 
@@ -109,15 +121,17 @@ A turn is 2 days: **four daylight sub-steps** of 6 hours (06:00–12:00 and 12:0
 **Each night:**
 1. **Consumption.** A day's food and fodder are taken from stock actually on hand — never from supplies still on the road or in a depot elsewhere.
 2. **Shortfall effects.** Any recorded shortfall drives hunger, sickness, straggling, horse losses and loss of cohesion.
-3. **Recovery.** Fatigue recovers according to the day's activity, and stragglers rejoin halted forces near depots.
+3. **Recovery.** Fatigue recovers according to the day's activity. *Not built yet:* stragglers rejoining halted forces near depots (H-017).
 4. **Nightfall in battle.** Each side chooses to stay or withdraw (§3.4, step 6). A battle that continues resumes in the next daylight sub-step, across the turn boundary if necessary. Its forces can't take new movement orders meanwhile.
 5. **Roads.** Road condition is updated from the day's rain.
 
-**End of turn:** events, political pressure, new intelligence reports (with their age), the next turn's weather forecast, autosave, then `awaitingOrders`.
+**End of turn:** events, political pressure, new intelligence reports (with their age), the next turn's weather forecast, autosave, then `awaitingOrders`. *Built so far:* political pressure and intelligence reports. Events, the forecast and autosave are not built yet.
 
 **Conservation and exclusivity.** Men, horses, wagons, food, fodder and ammunition are conserved: every unit is in exactly one place — with a force, in a depot or on a convoy — or lost with a recorded cause. Each force has one activity per sub-step and belongs to at most one encounter in it.
 
 ## 3.5 Persistence
+*Status (31 October 2026): designed, not built.* The engine can resume from any saved state, and the tests check this. But the browser does not yet save a campaign: "Save for comparison" in the prototype stores only a summary for the comparison screen. Real saves are an M3 criterion (DEVELOPMENT_ROADMAP.md).
+
 - **A save holds the scenario, seed and rules version, the input log (orders, battle decisions, event choices), a snapshot at the latest pause point, and a checksum.** It is stored in IndexedDB through a tiny wrapper (one small dependency, or about 50 lines of our own).
 - **Autosave at every pause point** (§3.4). Two save slots are written alternately, so a crash during a write never loses the previous save.
 - Loading verifies the checksum and resumes from the snapshot. If that fails, the game rebuilds the state by replaying the input log. If that also fails, you get a clear message plus the option to export the raw file.

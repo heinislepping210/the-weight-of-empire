@@ -4,6 +4,9 @@ import { RULES_VERSION, createContext, replay, stateHash } from '../../src/engin
 import type { Context, GameState } from '../../src/engine';
 import { ROUNDS_PER_SLOT, slotIndex } from '../../src/engine/time';
 import { advancePolicy, play, randomPolicy, supplyTotals, type Run } from '../fixtures/driver';
+import { contactViolations } from '../fixtures/invariants';
+import { vitebskDecision } from '../../src/data/vitebsk/scenario';
+import { BOTS } from '../balance/bots';
 import { forceInit, testGround, passiveContext } from '../fixtures/testGround';
 
 const open = passiveContext(testGround());
@@ -28,6 +31,17 @@ const GOLDEN: Record<string, string> = {
   '0.5.0': '2d02fdbd93033054', // halt for the season (state gains `halted`)
   '0.6.0': 'fb9cd183b39e6999', // captured stores, forward depots and line trains (convoys gain `feeds`, ledger gains `destroyed`)
   '0.7.0': '618aa3acc8914520', // hunger costs 30 cohesion a day at a full shortfall, not 100 (G-017)
+  // Contacts (D-031): forces move hour by hour, columns cannot pass on a road, retreats take time on the
+  // road; battles gain `fightsFrom`. The scripted advance now ends with its beaten side still on the road.
+  '0.8.0': '31fe2f88c0aa5ec3',
+};
+
+/**
+ * Golden replays on the real scenario with the real Russian command (from rules 0.8.0): the methodical
+ * bot on seed 1812, the run in which the independent review found reinforcements left outside battle 7.2.0.
+ */
+const GOLDEN_VITEBSK: Record<string, string> = {
+  '0.8.0': 'a4eba27f22269f08',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */
@@ -72,6 +86,8 @@ function checkExclusivity(run: Run): void {
       expect(active.length).toBeLessThanOrEqual(1);
       expect(f.battle).toBe(active[0]?.id ?? null);
     }
+    // Arrivals at a battle are in it; opposing columns never share a road heading towards each other.
+    expect(contactViolations(s)).toEqual([]);
   }
 }
 
@@ -110,6 +126,14 @@ describe('determinism, conservation and resumption', () => {
 
   it('golden replay: results change only with the rules version', () => {
     expect(stateHash(play(open, 1812, advancePolicy).final)).toBe(GOLDEN[RULES_VERSION]);
+  });
+
+  it('golden replay on the real scenario, with the Russian command and reinforcements', () => {
+    const ctx = createContext(vitebskDecision());
+    const run = play(ctx, 1812, BOTS.methodical!(ctx));
+    expect(run.logs.flat().some((e) => e.kind === 'reinforced')).toBe(true);
+    for (const s of run.states) expect(contactViolations(s)).toEqual([]);
+    expect(stateHash(run.final)).toBe(GOLDEN_VITEBSK[RULES_VERSION]);
   });
 
   it('T10: saving and loading at every pause, mid-battle included, gives an identical final state', () => {

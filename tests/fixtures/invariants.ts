@@ -4,6 +4,26 @@ import type { GameState } from '../../src/engine';
 import { ROUNDS_PER_SLOT, slotIndex } from '../../src/engine/time';
 import { supplyTotals, type Run } from './driver';
 
+/**
+ * Contact rules at a pause: no living force stands at the place of an active battle without being in
+ * it, and no two opposing columns are on the same road heading in opposite directions.
+ */
+export function contactViolations(s: GameState): string[] {
+  const out: string[] = [];
+  const forces = Object.values(s.forces).filter((f) => f.men > 0);
+  for (const b of Object.values(s.battles)) {
+    if (b.phase === 'over') continue;
+    for (const f of forces) if (f.transit === null && f.at === b.node && f.battle !== b.id) out.push(`${f.id} stands at battle ${b.id} without fighting in it`);
+  }
+  for (const f of forces) {
+    if (f.side !== 'fr' || f.transit === null) continue;
+    for (const e of forces) {
+      if (e.side === 'ru' && e.transit !== null && e.transit.edge === f.transit.edge && e.transit.to !== f.transit.to) out.push(`${f.id} and ${e.id} are on road ${f.transit.edge} heading towards each other`);
+    }
+  }
+  return out;
+}
+
 export function violations(run: Run): string[] {
   const out: string[] = [];
   const a = supplyTotals(run.states[0] as GameState);
@@ -26,6 +46,7 @@ export function violations(run: Run): string[] {
     for (const d of Object.values(s.depots)) {
       if ([d.stock.food, d.stock.fodder, d.stock.ammo].some((v) => v < 0)) out.push(`${where}: negative stock at ${d.node}`);
     }
+    for (const v of contactViolations(s)) out.push(`${where}: ${v}`);
     for (const f of Object.values(s.forces)) {
       if ([f.men, f.horses, f.stock.food, f.stock.fodder, f.stock.ammo, f.fatigue, f.cohesion].some((v) => v < 0)) out.push(`${where}: negative value in ${f.id}`);
       const active = Object.values(s.battles).filter((b) => b.phase !== 'over' && (b.sides.fr.includes(f.id) || b.sides.ru.includes(f.id)));

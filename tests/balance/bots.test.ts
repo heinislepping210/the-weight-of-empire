@@ -19,9 +19,19 @@ describe('strategy bots (smoke test; the full batch runs with BALANCE=1)', () =>
     });
   }
 
-  it('the prudent halt declares its halt and never marches on', () => {
+  it('the prudent halt declares its halt and never advances: its groups move only when forced to fall back', () => {
     const run = play(ctx, 3, BOTS['prudent-halt']!(ctx));
     expect(run.final.halted).toBe(true);
-    expect(run.logs.flat().some((e) => e.kind === 'arrived' && run.final.forces[String(e.detail.force)]?.side === 'fr')).toBe(false);
+    const entries = run.logs.flat();
+    const french = (id: unknown) => run.final.forces[String(id)]?.side === 'fr';
+    // Places French groups were driven back to: after a battle, a skirmish or a withdrawal.
+    const fellBackTo = new Set(
+      entries.flatMap((e) =>
+        (e.kind === 'retreated' && french(e.detail.force)) || (e.kind === 'minorAction' && e.detail.retreated === 'fr') || (e.kind === 'withdrawal' && e.detail.side === 'fr' && e.detail.success)
+          ? [String(e.detail.to)]
+          : [],
+      ),
+    );
+    for (const e of entries.filter((x) => x.kind === 'arrived' && french(x.detail.force))) expect(fellBackTo.has(String(e.detail.node)), String(e.detail.node)).toBe(true);
   });
 });

@@ -5,12 +5,13 @@
 A browser-based historical strategy game about ambition, logistics and judgement. The first release is **The Vitebsk Decision**, a short command challenge set in August 1812: the Grande Armée stands at Vitebsk, and the united Russian armies hold Smolensk.
 
 **Status:** milestone M1, the fun prototype, is waiting for its play session. In place:
-- **The simulation** (rules 0.7.0):
+- **The simulation** (rules 0.8.0):
   - supply by weight, dispersal and gathering;
   - intelligence and a Russian command that sees only what it has scouted;
   - the halt for the season;
   - captured stores and forward depots;
-  - hunger calibrated on the historical record.
+  - hunger's effect set from the historical record (a judgment within a researched range);
+  - contacts: forces move hour by hour, reinforcements join battles, opposing columns cannot pass on a road, and retreats take time.
 - **The Vitebsk–Smolensk scenario.**
 - **Army directives with a staff planner:** every order is shown with its reasons before you commit.
 - **A provisional outcome evaluator.**

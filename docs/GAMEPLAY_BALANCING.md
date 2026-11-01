@@ -117,7 +117,7 @@ Full report: [balance/2026-10-31-rules-0.6.0.md](balance/2026-10-31-rules-0.6.0.
   - Bait and converge: 44% Collapse, 46% Repulse, 7% Limited Success, 2% Costly Victory.
   - F3 now means something. Bait and converge does best on 49% of seeds, just under the 50% line, mostly because it collapses less often. A Repulse ranks above a Collapse.
 - **The methodical approach improves.** It gets 33% Costly Victory and 40% Limited Success, and collapses in 19% of games (43% before). It reaches the first Decisive Successes (0.9%).
-- **Captured stores now matter.** The advancing bots take the Smolensk stores in 84–96% of games. But 50–90% has been burned by then: on average 650,000 rations go up in smoke in the concentrated push. Speed preserves more of the stores, as intended.
+- **Captured stores now matter.** The advancing bots take the Smolensk stores in 84–96% of games. But 50–90% has been burned by then: on average 650,000 rations go up in smoke in the concentrated push. *Corrected after the independent review:* the burned share is drawn at random for each capture and does not depend on how quickly the depot is reached, so speed does not preserve more of the stores under these rules. Only the stock the Russians had not yet drawn down can favour an early capture.
 - **Forward depots near the enemy are a liability.** The prudent halt founds depots where its dispersed troops stand. It loses 0.68 of them on average to the Russian strike, but little is burned.
 
 **What still fails, and why:**
@@ -169,6 +169,37 @@ To see the effect before adopting anything, the batch now takes rule overrides f
 3. **Later: returning stragglers during halts** (H-017), and a look at the Decisive Success threshold (G-004) against the historical Russian losses.
 
 **Decision:** 30 a day adopted as rules 0.7.0 (D-030). The batch on the adopted rules ([balance/2026-10-31-rules-0.7.0.md](balance/2026-10-31-rules-0.7.0.md)) is identical to the what-if run at 30. Steps 2 and 3 are still open.
+
+## Contacts corrected (rules 0.8.0, 31 October 2026)
+
+An independent review (docs/reviews/2026-10-31-independent-review.md) found contact defects that changed outcomes, independently of the placeholder battle maths:
+- forces arriving at a battle stayed outside it;
+- opposing columns could pass through each other on a road;
+- retreats were instant, even over 80–90 km;
+- a halt left standing marches running.
+
+Rules 0.8.0 corrects them (D-031, TECHNICAL_ARCHITECTURE §3.4a), with tests written to fail on the old rules. Full report: [balance/2026-10-31-rules-0.8.0.md](balance/2026-10-31-rules-0.8.0.md). No other rule changed, and nothing was tuned to compensate.
+
+**What changed, and why:**
+
+| | Battles per game (0.7.0 → 0.8.0) | Battles the French lost | Operational Collapse | Costly Victory or better |
+|---|---|---|---|---|
+| concentrated-push | 2.2 → 4.5 | 0.31 → 3.03 | 0.3% → 30.0% | 34.3% → 9.1% |
+| southern-envelopment | 1.7 → 2.2 | 0.50 → 0.74 | 0.7% → 0.4% | 11.2% → 27.8% |
+| bait-and-converge | 2.6 → 2.4 | 0.44 → 0.10 | 2.6% → 0.0% | 64.0% → 76.3% |
+| methodical | 1.8 → 2.4 | 0.46 → 0.91 | 0.0% → 0.2% | 48.8% → 38.9% |
+| rush | 3.2 → 4.2 | 0.76 → 1.87 | 5.8% → 15.7% | 25.7% → 43.4% |
+
+- **The direct push was flattered by the defect.** Traces of collapsing games (seeds 3 and 6) show the cause:
+  - Under 0.7.0, the Russian strike and the French columns often slipped past each other on the Rudnia road. Now they meet.
+  - The concentrated-push bot then sends its corps one or two at a time against the united Russian armies (about 115,000 men). They lose, fall back to Rudnia, and the bot sends them forward again the next turn.
+  - These piecemeal attacks are a weakness of the bot, which never waits to concentrate. They are also exactly the lesson the design means to teach.
+- **Bait and converge now works as designed:** the converging corps reach the fight and join it. It does best on 64% of seeds (F3 above its 50% line), and the French rarely lose its battles.
+- **The southern envelopment gains** (Decisive Success 1.8% → 7.5%). The **rush** wins more often but also collapses more; forced marches bring corps in faster but tired.
+- **Reinforcements are mostly French** (0.5–1.1 per game against 0.1–0.4 Russian). The Russian command moves its armies together, so it rarely arrives piecemeal.
+- **F1 rises to 9.3%; F4 stays poor** (strategy 13%, seed 15%).
+
+**Reading:** these distributions are more trustworthy than those of 0.7.0, because the defect is gone. But the bots that do not concentrate before attacking now understate what the same approach could do in a player's hands. Before drawing balance conclusions, **review stage F** (better bots, a measure that separates battle luck from the scenario, held-out seeds) matters more than any rule value.
 
 ## Acting on the results
 

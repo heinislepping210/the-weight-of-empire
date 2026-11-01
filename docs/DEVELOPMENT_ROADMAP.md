@@ -39,16 +39,17 @@ The first release is **The Vitebsk Decision only**, made genuinely excellent bef
 *M1 status (31 October 2026):*
 - **Done:** the full Challenge plays end to end on the prototype screen. Every order is visible with its reasons before committing. Two strategies on the same seed can be compared side by side (checked in the browser with "southern swing" against "hold dispersed").
 - **Done:** determinism, resumption and conservation tests, under random play with the real Russian command.
-- **Done:** the 1,000-seed batch with seven bots: zero invariant violations in 7,000 games; strategy explains far more of the outcome than the seed.
+- **Done:** the 1,000-seed batch with seven bots. It now fails on any invariant violation; there are none.
 - **Done (rules 0.6.0):** captured stores and forward depots, with a supply stance in the directive.
-- **Done (rules 0.7.0):** hunger's effect on cohesion calibrated on the historical record (D-030).
-- **Met:** "three approach families produce clearly different outcome distributions." On rules 0.7.0:
-  - bait and converge: mostly Costly Victory (62%);
-  - concentrated push: mostly Limited Success (64%);
-  - southern envelopment: spread over Limited Success, Inconclusive and Repulse.
+- **Done (rules 0.7.0):** hunger's effect on cohesion set from the historical record, a judgment within a researched range (D-030).
+- **Done (rules 0.8.0):** contacts corrected after the independent review (D-031): reinforcements join battles, opposing columns cannot pass each other, retreats take time on the road, and a halt stops every march.
+- **Met:** "three approach families produce clearly different outcome distributions." On rules 0.8.0:
+  - concentrated push: mostly Limited Success (58%), Operational Collapse in 30%;
+  - southern envelopment: spread from Decisive Success (8%) to Repulse (31%);
+  - bait and converge: mostly Costly Victory (75%).
 
-  Collapse is rare (GAMEPLAY_BALANCING.md, hunger research).
-- **Open:** strategy now explains less of the outcome than the seed (F4). The measure needs a best-response view and battle-dice re-rolls before it can be read.
+  (GAMEPLAY_BALANCING.md, contacts corrected.)
+- **Open:** the strategy explains less of the outcome than the seed (F4, 13% against 15%). Bait and converge does best on 64% of seeds (F3). Neither can be read until the bots and the measure are improved (review stage F).
 - **Still to do:** your play session.
 
 **M2 — The Living Map (Day ~13) — an explicit gate before battles, events and the report are polished**

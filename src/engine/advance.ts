@@ -7,7 +7,7 @@
 import { decideNightfall, decideRound } from './ai';
 import { updateIntel } from './intel';
 import { updatePressure } from './russian';
-import { resolveNightfall, resolveRound, retreatNodeFor } from './battle';
+import { fallBack, oncoming, resolveNightfall, resolveRound, retreatNodeFor } from './battle';
 import { edgeBetween, neighboursOf, roadDistance, shortestPath, type EdgeDef } from './graph';
 import { chance, drawBetween } from './rng';
 import type { Context } from './scenario';
@@ -33,7 +33,7 @@ import type {
   Status,
   Transit,
 } from './types';
-import { addInto, emptySupplies, enemyPresent, fatiguePermille, loseMen, must, note, otherSide, place, setPosture, sortedValues } from './util';
+import { addInto, emptySupplies, enemyPresent, fatiguePermille, loseMen, must, note, otherSide, setPosture, sortedValues } from './util';
 
 export type AdvanceResult =
   | { ok: true; state: GameState; status: Status; log: LogEntry[] }
@@ -194,6 +194,8 @@ function applyInput(s: GameState, input: Input, ctx: Context, log: LogEntry[]): 
     if (input.logistics) applyLogistics(s, input.logistics, log);
     if (input.halt && !s.halted) {
       s.halted = true;
+      // Final for every group, ordered this turn or not: those on the road finish only the stretch they are on.
+      for (const f of sortedValues(s.forces)) if (f.side === 'fr' && f.battle === null) f.route = f.transit ? [f.transit.to] : [];
       note(s, log, 'halt');
     }
     // The Russians re-plan only at the start of a turn, as the player does (§3.4).
@@ -262,15 +264,32 @@ function activityFor(ctx: Context, f: Force): Activity {
   return edge.crossing === 'ford' || edge.crossing === 'pontoon' ? 'cross' : 'march';
 }
 
+/** Hourly shares of a sub-step's march: forces move together, an hour at a time (§3.4a step 3). */
+const HOURS_PER_SLOT = 6;
+
 function stageMovement(s: GameState, ctx: Context, log: LogEntry[]): void {
-  for (const f of sortedValues(s.forces)) if (f.activity === 'march' || f.activity === 'cross') moveForce(s, ctx, f, log);
+  const movers = sortedValues(s.forces).filter((f) => f.activity === 'march' || f.activity === 'cross');
+  // The march budget is set by each force's condition at the start of the sub-step.
+  const budgets = movers.map((f) => Math.floor((ctx.rules.march.metresPerSlot[f.pace] * fatiguePermille(f.fatigue, ctx.rules)) / 1000));
+  for (let hour = 0; hour < HOURS_PER_SLOT; hour++) {
+    movers.forEach((f, i) => {
+      const total = budgets[i] as number;
+      const share = Math.floor((total * (hour + 1)) / HOURS_PER_SLOT) - Math.floor((total * hour) / HOURS_PER_SLOT);
+      if (moveForce(s, ctx, f, share, hour, log)) f.movedThisSlot = true;
+    });
+  }
+  // A column that could not move at all (held up on the road, or too exhausted) rests instead.
+  for (const f of movers) if (!f.movedThisSlot) f.activity = 'halt';
   for (const c of sortedValues(s.convoys)) moveConvoy(s, ctx, c, log);
   s.resolution.stage = 'contacts';
 }
 
 function stageContacts(s: GameState, ctx: Context, log: LogEntry[]): void {
   const res = s.resolution;
-  if (res.encounterQueue === null) res.encounterQueue = findEncounters(s);
+  if (res.encounterQueue === null) {
+    joinReinforcements(s, ctx, log);
+    res.encounterQueue = findEncounters(s);
+  }
   while (res.encounterQueue.length > 0) {
     const enc = res.encounterQueue.shift() as Encounter;
     if (resolveEncounter(s, ctx, enc, log)) return; // pause: the player deploys
@@ -449,6 +468,12 @@ interface Mover {
   route: NodeId[];
 }
 
+/** What else on the road limits a mover: whether it may set out along a road, and how far along it it may go. */
+interface Way {
+  mayEnter?: (from: NodeId, edge: EdgeDef) => boolean;
+  reachLimit?: (transit: Transit) => number;
+}
+
 function roadFactor(s: GameState, ctx: Context, edge: EdgeDef): number {
   const r = ctx.rules.march;
   let factor: number = r.roadPermille[edge.road];
@@ -459,10 +484,10 @@ function roadFactor(s: GameState, ctx: Context, edge: EdgeDef): number {
 
 /**
  * Moves along the route on a budget of "ideal" metres; each road converts it at its own speed.
- * Returns whether any distance was covered. Opposing columns on the same road do not yet meet
- * mid-road; contact happens at places.
+ * Returns whether any distance was covered. Contact happens at places, never on the road: `way`
+ * keeps opposing columns from passing each other (§3.4a step 3).
  */
-function travel(s: GameState, ctx: Context, m: Mover, budget: number, stopAt: (node: NodeId) => boolean, onArrive: (node: NodeId) => void): boolean {
+function travel(s: GameState, ctx: Context, m: Mover, budget: number, stopAt: (node: NodeId) => boolean, onArrive: (node: NodeId) => void, way: Way = {}): boolean {
   let moved = false;
   let left = budget;
   while (left > 0) {
@@ -470,16 +495,23 @@ function travel(s: GameState, ctx: Context, m: Mover, budget: number, stopAt: (n
       const to = m.route[0];
       if (to === undefined) break;
       const edge = must(edgeBetween(ctx.graph, m.at, to), `road ${m.at}–${to}`);
+      if (way.mayEnter && !way.mayEnter(m.at, edge)) break;
       m.transit = { edge: edge.id, to, metres: 0 };
     }
     const edge = must(ctx.graph.edges.get(m.transit.edge), m.transit.edge);
     const factor = roadFactor(s, ctx, edge);
-    const remaining = edge.metres - m.transit.metres;
+    const limit = Math.min(edge.metres, way.reachLimit ? way.reachLimit(m.transit) : edge.metres);
+    const remaining = limit - m.transit.metres;
     const reach = Math.floor((left * factor) / 1000);
-    if (reach <= 0) break;
+    if (reach <= 0 || remaining <= 0) break;
     moved = true;
     if (reach < remaining) {
       m.transit.metres += reach;
+      break;
+    }
+    if (limit < edge.metres) {
+      // Closed up behind an enemy column: it follows, but cannot pass.
+      m.transit.metres = limit;
       break;
     }
     left -= Math.ceil((remaining * 1000) / factor);
@@ -492,16 +524,37 @@ function travel(s: GameState, ctx: Context, m: Mover, budget: number, stopAt: (n
   return moved;
 }
 
-function moveForce(s: GameState, ctx: Context, f: Force, log: LogEntry[]): void {
-  const budget = Math.floor((ctx.rules.march.metresPerSlot[f.pace] * fatiguePermille(f.fatigue, ctx.rules)) / 1000);
+/** One hour's march for a force. Returns whether it covered any distance. */
+function moveForce(s: GameState, ctx: Context, f: Force, budget: number, hour: number, log: LogEntry[]): boolean {
+  const res = s.resolution;
+  const enemies = () => sortedValues(s.forces).filter((e) => e.side !== f.side && e.men > 0);
+  const mayEnter = (from: NodeId, edge: EdgeDef): boolean => {
+    const to = edge.a === from ? edge.b : edge.a;
+    // Standing where the enemy stands: the contact must be resolved first.
+    if (enemyPresent(s, f.side, from)) return false;
+    // An enemy column on this road coming the other way: hold this place and meet it here.
+    if (oncoming(s, f.side, edge.id, from)) return false;
+    // An enemy at the far end setting out towards us in the same hour: a draw decides who gets onto the road.
+    const rival = enemies().some(
+      (e) =>
+        e.transit === null && e.battle === null && e.at === to && e.route[0] === from && (e.activity === 'march' || e.activity === 'cross') && !enemyPresent(s, e.side, to),
+    );
+    if (!rival) return true;
+    const frenchFirst = chance(s.seed, ['road', res.turn, res.slot, hour, edge.id], 500);
+    return frenchFirst === (f.side === 'fr');
+  };
+  // No overtaking: an enemy column ahead on the same road, going the same way, caps how far the force can go.
+  const reachLimit = (t: Transit): number =>
+    Math.min(Infinity, ...enemies().flatMap((e) => (e.transit !== null && e.transit.edge === t.edge && e.transit.to === t.to && e.transit.metres > t.metres ? [e.transit.metres] : [])));
   // Marching into a place held by the enemy ends the march: that is contact (§3.4a step 4).
-  f.movedThisSlot = travel(
+  return travel(
     s,
     ctx,
     f,
     budget,
     (node) => enemyPresent(s, f.side, node),
     (node) => note(s, log, 'arrived', { force: f.id, node }),
+    { mayEnter, reachLimit },
   );
 }
 
@@ -579,6 +632,27 @@ function captureDepots(s: GameState, ctx: Context, log: LogEntry[]): void {
 
 // ------------------------------------------------------------------------------- contacts
 
+/**
+ * Reinforcements (§3.4a step 4): a force standing at an active battle's place joins its own side there,
+ * in force-ID order. Like a new battle it deploys at this boundary and fights from the next daylight sub-step.
+ */
+function joinReinforcements(s: GameState, ctx: Context, log: LogEntry[]): void {
+  const from = slotIndex(nextDaylight(s.resolution));
+  for (const b of sortedValues(s.battles)) {
+    if (b.phase === 'over') continue;
+    for (const f of sortedValues(s.forces)) {
+      if (f.battle !== null || f.transit !== null || f.men <= 0 || f.at !== b.node) continue;
+      f.battle = b.id;
+      f.route = [];
+      b.sides[f.side].push(f.id);
+      b.fightsFrom[f.id] = from;
+      if (f.posture === 'dispersed' && f.gathering === 0) f.gathering = ctx.rules.posture.gatherSlots;
+      if (f.side === 'ru' && f.men >= ctx.rules.russian.mainArmyMen) s.russianCommand.foughtThisTurn = true;
+      note(s, log, 'reinforced', { battle: b.id, force: f.id, side: f.side });
+    }
+  }
+}
+
 function findEncounters(s: GameState): Encounter[] {
   const byNode = new Map<NodeId, Encounter>();
   for (const f of sortedValues(s.forces)) {
@@ -644,6 +718,7 @@ function resolveEncounter(s: GameState, ctx: Context, enc: Encounter, log: LogEn
     sides,
     phase: 'deploy',
     startsAt: nextDaylight(res),
+    fightsFrom: {},
     roundsFought: 0,
     roundsThisSlot: 0,
     awaiting: 'deploy',
@@ -672,11 +747,11 @@ function tryWithdraw(s: GameState, ctx: Context, node: NodeId, side: Side, ids: 
   const permille = fatigue > e.withdrawMaxFatigue ? 0 : e.withdrawBasePermille - Math.floor(fatigue / 2);
   const res = s.resolution;
   const success = dest !== null && chance(s.seed, ['withdraw', res.turn, res.slot, node], permille);
-  note(s, log, 'withdrawal', { node, side, success });
+  note(s, log, 'withdrawal', { node, side, success, to: success ? dest : null });
   if (!success || dest === null) return false;
   for (const f of forces) {
     loseMen(s, f, Math.floor((f.men * e.withdrawalLossPermille) / 1000), 'withdrawal');
-    place(f, dest);
+    fallBack(ctx, f, dest);
   }
   return true;
 }
@@ -690,7 +765,7 @@ function minorAction(s: GameState, ctx: Context, node: NodeId, sides: Record<Sid
     const f = must(s.forces[id], id);
     const noise = drawBetween(s.seed, ['minor', res.turn, res.slot, node, id], 500, 1500);
     loseMen(s, f, Math.floor((Math.floor((f.men * rate) / 1000) * noise) / 1000), 'battle');
-    if (dest) place(f, dest);
+    if (dest) fallBack(ctx, f, dest);
   }
   note(s, log, 'minorAction', { node, retreated: weaker, to: dest });
 }
@@ -715,15 +790,17 @@ function consume(s: GameState, ctx: Context, f: Force, log: LogEntry[]): void {
   if (foodShort > 0) {
     loseMen(s, f, Math.floor((f.men * foodShort * attrition.stragglePermilleAtFullShortfall) / (foodNeed * 1000)), 'straggling');
     f.cohesion = Math.max(0, f.cohesion - Math.floor((foodShort * attrition.cohesionLossAtFullShortfall) / foodNeed));
-    note(s, log, 'shortfall', { force: f.id, food: foodShort, fodder: fodderShort });
   } else {
     f.cohesion = Math.min(1000, f.cohesion + attrition.cohesionRecoveryWhenFed);
   }
+  let horsesDied = 0;
   if (fodderShort > 0) {
-    const dead = Math.min(f.horses, Math.floor((f.horses * fodderShort * attrition.horseLossPermilleAtFullShortfall) / (fodderNeed * 1000)));
-    f.horses -= dead;
-    s.ledger.horsesLost += dead;
+    horsesDied = Math.min(f.horses, Math.floor((f.horses * fodderShort * attrition.horseLossPermilleAtFullShortfall) / (fodderNeed * 1000)));
+    f.horses -= horsesDied;
+    s.ledger.horsesLost += horsesDied;
   }
+  // Food and fodder shortfalls are reported separately: horses can starve while the men are fed.
+  if (foodShort > 0 || fodderShort > 0) note(s, log, 'shortfall', { force: f.id, food: foodShort, fodder: fodderShort, horsesDied });
   f.fatigue = Math.max(0, f.fatigue - (f.marchedToday ? fatigue.nightAfterMarch : fatigue.nightAfterRest));
   f.marchedToday = false;
 }

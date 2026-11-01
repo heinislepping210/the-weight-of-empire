@@ -74,6 +74,24 @@ describe('turn timeline (§3.4a)', () => {
     expect(after.cohesion).toBeLessThan(before.cohesion);
   });
 
+  it('T2b: a fodder shortfall alone is recorded too, with the horses it killed', () => {
+    const ctx = passiveContext(
+      testGround((s) => {
+        forceInit(s, 'fr-main').stock.fodder = 0;
+        s.convoys = [];
+        s.districts.B = { food: 40_000, fodder: 0 };
+      }),
+    );
+    const atNight = stepUntil(ordersOnly(newGame(ctx, 3), ctx, [{ force: 'fr-main', posture: 'concentrated' }]), ctx, (x) => x.resolution.stage === 'night');
+    const before = atNight.forces['fr-main']!;
+    expect(before.stock.food).toBeGreaterThanOrEqual(before.men);
+    const { state, log } = stepOnce(atNight, ctx);
+    const entry = log.find((e) => e.kind === 'shortfall' && e.detail.force === 'fr-main');
+    expect(entry?.detail).toMatchObject({ food: 0, fodder: before.horses });
+    expect(Number(entry?.detail.horsesDied)).toBe(before.horses - state.forces['fr-main']!.horses);
+    expect(Number(entry?.detail.horsesDied)).toBeGreaterThan(0);
+  });
+
   it('T3: a force in battle neither moves nor forages while the battle lasts', () => {
     const ctx = battleGround();
     let s = advanceUntil(newGame(ctx, 7), ctx, atStep('round'));
@@ -139,7 +157,9 @@ describe('turn timeline (§3.4a)', () => {
       expect(attempt?.detail).toMatchObject({ side: 'fr', node: 'B' });
       const escaped = attempt?.detail.success === true;
       outcomes.add(escaped);
-      expect(state.forces['fr-main']!.at).toBe(escaped ? 'A' : 'B');
+      // An escape takes the force off the field onto the road towards A (D-031); it arrives later.
+      expect(state.forces['fr-main']!.transit?.to ?? null).toBe(escaped ? 'A' : null);
+      expect(state.forces['fr-main']!.at).toBe('B');
       expect(Object.keys(state.battles)).toHaveLength(escaped ? 0 : 1);
     }
     expect(outcomes).toEqual(new Set([true, false]));
@@ -158,7 +178,7 @@ describe('turn timeline (§3.4a)', () => {
       const s = ordersOnly(newGame(ctx, seed), ctx, [{ force: 'fr-main', engagement: 'avoid' }]);
       const { state, log } = stepOnce(stepUntil(s, ctx, (x) => x.resolution.stage === 'contacts'), ctx);
       if (log.find((e) => e.kind === 'withdrawal')?.detail.success === true) {
-        expect(state.forces['fr-main']!.at).toBe('C');
+        expect(state.forces['fr-main']!.transit?.to).toBe('C');
         return;
       }
     }
