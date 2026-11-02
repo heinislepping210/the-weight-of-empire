@@ -175,7 +175,7 @@ it.skipIf(!enabled)('balance batch', () => {
   lines.push(
     `- **F4:** variance of the ending rank explained by the strategy ${pct(ssStrategy, ssTotal)}, by the seed ${pct(ssSeed, ssTotal)}, interaction and noise ${pct(ssTotal - ssStrategy - ssSeed, ssTotal)} (target: strategy above seed). Re-rolling battle dice alone is not yet possible.`,
   );
-  lines.push(`- **F5:** prudent halt endings: ${endings.filter((e) => halt.some((r) => r.ending === e)).map((e) => `${ENDING_NAMES[e]} ${pct(halt.filter((r) => r.ending === e).length, SEEDS)}`).join(', ')} (target: never Decisive Success).`);
+  lines.push(`- **F5:** the prudent halt, declared on the first turn before any victory, ends in: ${endings.filter((e) => halt.some((r) => r.ending === e)).map((e) => `${ENDING_NAMES[e]} ${pct(halt.filter((r) => r.ending === e).length, SEEDS)}`).join(', ')} (target: never Decisive Success; a victory won before a later halt stands, D-035).`);
   lines.push(`- **F6:** random play reaches Decisive Success on ${pct(random.filter((r) => r.ending === 'decisiveSuccess').length, SEEDS)} of seeds (target < 5%).`);
 
   console.log(['BALANCE-REPORT-START', ...lines, 'BALANCE-REPORT-END'].join('\n'));

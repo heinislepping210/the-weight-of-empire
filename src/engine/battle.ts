@@ -70,7 +70,12 @@ function spendAmmo(forces: Force[], need: number): number {
   return need - left;
 }
 
-function inflict(s: GameState, forces: Force[], total: number): void {
+/** Men lost in this battle are recorded per force: the outcome counts battle losses, not sickness (§2.13). */
+function recordLoss(b: BattleState, f: Force, lost: number): void {
+  if (lost > 0) b.losses[f.id] = (b.losses[f.id] ?? 0) + lost;
+}
+
+function inflict(s: GameState, b: BattleState, forces: Force[], total: number): void {
   const men = forces.reduce((n, f) => n + f.men, 0);
   if (men === 0 || total <= 0) return;
   const target = Math.min(total, men);
@@ -78,12 +83,15 @@ function inflict(s: GameState, forces: Force[], total: number): void {
   for (const f of forces) {
     const before = f.men;
     const lost = loseMen(s, f, Math.min(Math.floor((target * before) / men), left), 'battle');
+    recordLoss(b, f, lost);
     left -= lost;
     f.cohesion = Math.max(0, f.cohesion - Math.floor((lost * 2000) / Math.max(1, before)));
   }
   for (const f of forces) {
     if (left <= 0) break;
-    left -= loseMen(s, f, left, 'battle');
+    const lost = loseMen(s, f, left, 'battle');
+    recordLoss(b, f, lost);
+    left -= lost;
   }
 }
 
@@ -105,11 +113,11 @@ function withdrawSide(s: GameState, ctx: Context, b: BattleState, side: Side, lo
   for (const f of sideForces(s, b, side)) {
     const dest = retreatNodeFor(s, ctx, b.node, side);
     if (dest) {
-      loseMen(s, f, Math.floor((f.men * engagement.withdrawalLossPermille) / 1000), 'withdrawal');
+      recordLoss(b, f, loseMen(s, f, Math.floor((f.men * engagement.withdrawalLossPermille) / 1000), 'withdrawal'));
       fallBack(ctx, f, dest);
       note(s, log, 'retreated', { force: f.id, to: dest });
     } else {
-      loseMen(s, f, Math.floor((f.men * battle.trappedLossPermille) / 1000), 'battle');
+      recordLoss(b, f, loseMen(s, f, Math.floor((f.men * battle.trappedLossPermille) / 1000), 'battle'));
       note(s, log, 'trapped', { force: f.id, node: b.node });
     }
   }
@@ -163,7 +171,7 @@ export function resolveRound(s: GameState, ctx: Context, b: BattleState, acts: R
     let losses = Math.floor((power[enemy] * rate) / 1000);
     if (side !== b.attacker && acts[side] === 'hold') losses = Math.floor((losses * r.defenderHoldPermille) / 1000);
     losses = Math.floor((losses * drawBetween(s.seed, ['battle', b.id, b.roundsFought, side], 800, 1200)) / 1000);
-    inflict(s, activeForces(s, b, side, now), losses);
+    inflict(s, b, activeForces(s, b, side, now), losses);
   }
 
   for (const side of SIDES) for (const f of activeForces(s, b, side, now)) f.fatigue = Math.min(1000, f.fatigue + ctx.rules.fatigue.fightRound);

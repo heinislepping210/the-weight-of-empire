@@ -78,6 +78,9 @@ export function dispatches(entries: readonly LogEntry[], s: GameState, ctx: Cont
       case 'convoyShortfall':
         if (s.convoys[String(d.convoy)]?.side === 'fr' && Number(d.horsesDied) > 0) text = `A wagon train lost ${Number(d.horsesDied).toLocaleString('en-GB')} draught horses for want of fodder.`;
         break;
+      case 'cutOff':
+        text = 'The Russian line of retreat is cut: our troops have held the road long enough.';
+        break;
       case 'depotFounded':
         text = `A depot was founded at ${place(d.node)}.`;
         break;

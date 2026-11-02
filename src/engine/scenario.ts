@@ -61,8 +61,13 @@ export interface ScenarioDef {
   pressurePlaces?: NodeId[];
   /** Places that count as "taking the objective ground" in the outcome (§2.13). */
   keyPlaces?: NodeId[];
-  /** Ends of the Russian line of retreat: an army that cannot reach one is cut off (§2.13). */
+  /** Ends of the Russian line of retreat (§2.13). */
   exitPlaces?: NodeId[];
+  /**
+   * Places on the line of retreat east of the Russian army: held by a large enough French force, they cut
+   * the Russians off from the exits (§2.13).
+   */
+  cutOffPlaces?: NodeId[];
 }
 
 export type CommandFn = (s: GameState, ctx: Context, log: LogEntry[]) => void;
@@ -168,6 +173,7 @@ export function newGame(ctx: Context, seed: number): GameState {
       foughtThisTurn: false,
     },
     halted: false,
+    cutOff: { held: 0, achievedAt: null },
     ledger: {
       foraged: { food: 0, fodder: 0 },
       consumed: { food: 0, fodder: 0 },

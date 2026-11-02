@@ -9,6 +9,7 @@ import { updateIntel } from './intel';
 import { updatePressure } from './russian';
 import { fallBack, oncoming, resolveNightfall, resolveRound, retreatNodeFor } from './battle';
 import { capacityGrams, usableWagons, weightGrams, withinCapacity } from './carriage';
+import { lineOfRetreatBlocked, mainArmyIds } from './outcome';
 import { edgeBetween, neighboursOf, roadDistance, shortestPath, type EdgeDef } from './graph';
 import { chance, drawBetween } from './rng';
 import type { Context } from './scenario';
@@ -369,6 +370,7 @@ function stageAccrual(s: GameState, ctx: Context, log: LogEntry[]): void {
     note(s, log, 'loaded', { convoy: c.id, food: c.cargo.food, fodder: c.cargo.fodder, ammo: c.cargo.ammo });
   }
   captureDepots(s, ctx, log);
+  trackCutOff(s, ctx, log);
   const res = s.resolution;
   if (isAfternoon(res.slot)) res.stage = 'night';
   else {
@@ -621,6 +623,22 @@ function moveConvoy(s: GameState, ctx: Context, c: Convoy, log: LogEntry[]): voi
   }
 }
 
+/**
+ * The Russian line of retreat, sub-step by sub-step (§2.13): blocked for long enough once, the Russian
+ * main armies count as cut off, and that stands even if the block is later given up.
+ */
+function trackCutOff(s: GameState, ctx: Context, log: LogEntry[]): void {
+  if (!lineOfRetreatBlocked(s, ctx, mainArmyIds(s, ctx.rules))) {
+    s.cutOff.held = 0;
+    return;
+  }
+  s.cutOff.held += 1;
+  if (s.cutOff.achievedAt === null && s.cutOff.held >= ctx.rules.outcome.cutOffSlots) {
+    s.cutOff.achievedAt = { turn: s.resolution.turn, slot: s.resolution.slot };
+    note(s, log, 'cutOff');
+  }
+}
+
 /** A depot left to the enemy changes hands at the end of the sub-step, part of it burned first (§2.6). */
 function captureDepots(s: GameState, ctx: Context, log: LogEntry[]): void {
   const res = s.resolution;
@@ -744,6 +762,7 @@ function resolveEncounter(s: GameState, ctx: Context, enc: Encounter, log: LogEn
     phase: 'deploy',
     startsAt: nextDaylight(res),
     fightsFrom: {},
+    losses: {},
     roundsFought: 0,
     roundsThisSlot: 0,
     awaiting: 'deploy',

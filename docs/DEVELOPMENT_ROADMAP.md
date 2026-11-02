@@ -45,7 +45,8 @@ The first release is **The Vitebsk Decision only**, made genuinely excellent bef
 - **Done (rules 0.8.0):** contacts corrected after the independent review (D-031): reinforcements join battles, opposing columns cannot pass each other, retreats take time on the road, and a halt stops every march.
 - **Done (rules 0.9.0):** horses, carrying and foraging reach (D-032). The endings hardly depend on the new values within their researched ranges.
 - **Done (review stage C):** one plan for preview and commit, a kept route, and an army summary first (D-033). Keeping the route showed the southern-envelopment bot had been flattered before. The road is now chosen per group, own road by default on a long detour (D-034), and the southern envelopment is a real approach again (GAMEPLAY_BALANCING.md, the kept route).
-- **Met:** "three approach families produce clearly different outcome distributions." On rules 0.8.0, and nearly the same on 0.9.0:
+- **Done (rules 0.10.0, review stage D):** the outcome model as §2.13 defines it (D-035). Most earlier victories turned out to come from the old rules. Now only cutting the Moscow road at Valutino wins, no approach inflicts a decisive defeat in battle, and the halt-on-the-spot bot ends precarious because outlying corps starve. Better bots (stage F) come next.
+- **Met:** "three approach families produce clearly different outcome distributions" (even more so on 0.10.0). On rules 0.8.0, and nearly the same on 0.9.0:
   - concentrated push: mostly Limited Success (58%), Operational Collapse in 30%;
   - southern envelopment: spread from Decisive Success (8%) to Repulse (31%);
   - bait and converge: mostly Costly Victory (75%).

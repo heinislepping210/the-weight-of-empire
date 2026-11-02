@@ -1,5 +1,5 @@
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.9.0';
+export const RULES_VERSION = '0.10.0';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -89,6 +89,10 @@ export const RULES = {
     sustainableFoodDays: 2,
     collapseCohesion: 250,
     collapseLossPermille: 500,
+    /** Decisive defeat: battle losses counted over at most this many days (§2.13). */
+    decisiveWindowDays: 4,
+    /** Cut off: the line of retreat blocked for at least this many consecutive sub-steps (§2.13). */
+    cutOffSlots: 2,
   },
   /** The Russian command (§2.9). All values are game assumptions (G-014). */
   russian: {

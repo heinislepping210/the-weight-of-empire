@@ -36,6 +36,8 @@ const GOLDEN: Record<string, string> = {
   '0.8.0': '31fe2f88c0aa5ec3',
   // Horses, carrying and foraging reach (G-019): forces gain `draught`, convoys `horses`, the ledger `abandoned`.
   '0.9.0': '229a30ce286dce6b',
+  // The outcome model (D-035): battles record each force's losses; the state tracks how long the line of retreat is held.
+  '0.10.0': 'f2210a8dc39c26cc',
 };
 
 /**
@@ -46,6 +48,7 @@ const GOLDEN_VITEBSK: Record<string, string> = {
   '0.8.0': 'a4eba27f22269f08',
   // G-019, and the Russian armies' starting fodder trimmed to what they can carry.
   '0.9.0': 'fe2e22e26628a01e',
+  '0.10.0': '213ae2dc28f8cfca',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */

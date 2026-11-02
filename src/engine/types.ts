@@ -127,6 +127,8 @@ export interface BattleState {
   /** Day index of the last nightfall decision taken. */
   lastNight: number;
   winner: Side | null;
+  /** Men each force lost in this battle, its retreat included: killed, wounded and taken (§2.13). */
+  losses: Record<ForceId, number>;
 }
 
 export type Stage = 'orders' | 'activity' | 'movement' | 'contacts' | 'battleRounds' | 'accrual' | 'night' | 'endOfTurn';
@@ -204,6 +206,11 @@ export interface GameState {
   russianCommand: RussianCommand;
   /** The French have declared a halt for the season: final, and no further advance (§2.13). */
   halted: boolean;
+  /**
+   * How long the Russian main armies' line of retreat has been blocked, in consecutive sub-steps, and when
+   * it first counted as cut off (§2.13): held long enough once, it stands.
+   */
+  cutOff: { held: number; achievedAt: SlotRef | null };
   ledger: Ledger;
   ended: Ending | null;
 }

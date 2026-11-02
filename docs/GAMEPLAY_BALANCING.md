@@ -262,6 +262,41 @@ Report: [balance/2026-11-01-rules-0.9.0-own-road.md](balance/2026-11-01-rules-0.
 - **It now wins a quarter of its games by manoeuvre** (Operational Success: the Russians forced out without a decisive battle), where the old version mostly won costly victories.
 - **F3 and F4 return to where they were:** bait and converge is best on 62% of seeds, and the strategy explains 13% of the variance against 18% for the seed. Stage F's better measures are still needed.
 
+## The outcome model as designed (rules 0.10.0, 1 November 2026)
+
+Review stage D brought the evaluator in line with §2.13 (D-035). Report: [balance/2026-11-01-rules-0.10.0.md](balance/2026-11-01-rules-0.10.0.md). No movement, supply or battle rule changed; only how the end is judged.
+
+| Decisive Success or Costly Victory | rules 0.9.0 (own road) | rules 0.10.0 |
+|---|---|---|
+| concentrated-push | 9.1% | 0.0% |
+| southern-envelopment | 15.5% | 50.3% |
+| bait-and-converge | 74.5% | 0.0% |
+| methodical | 43.5% | 0.0% |
+| rush | 43.6% | 0.0% |
+| prudent-halt: Successful Consolidation | 99.5% | 0.0% (100% Precarious Halt) |
+
+**What it shows:**
+- **The earlier victories were mostly not victories.** Traces of 300 games found two causes:
+  - **Sickness counted as defeat.** Russian losses to sickness and straggling counted towards a decisive defeat whenever any battle had been won.
+  - **The suburb counted as a cut-off.** Tracked over time, 30,000 French in Smolensk's north-bank suburb counted as cutting off the Russians in the Old Town in 75–80% of games, even while those Russians were marching out to strike. The design names Valutino and Dorogobuzh on the Moscow road for that; the code now does too.
+- **Only cutting the Moscow road wins now.** The southern envelopment's second objective is Valutino. Holding it for two sub-steps behind the Russians gives Decisive Success in 13% of games and Costly Victory in 38%, so it is now the best family on 74% of seeds (F3).
+- **No approach inflicts a decisive defeat in battle.** The bar is 30% of the Russian main armies lost in battles won within 4 days, which matches battles like Austerlitz or Jena. The placeholder battle model never reaches it.
+
+  That is a finding about the battle model, which the sector battles of §2.10 replace. It is not a reason to lower the threshold, so G-004 stays.
+- **Bait and converge ends in Limited Success in 93% of games:** Smolensk taken, the Russian army not beaten. That is the historical par.
+- **The prudent halt now always ends precarious, and rightly.**
+  - The bot halts every group where it stands on the first turn. After 20 days the districts around them are stripped.
+  - Eugène's corps at Surazh and Poniatowski's at Mogilev end with no food, and in some games the vanguard too. Meanwhile the Guard sits at Vitebsk with eight days' food.
+  - The army's average (4–5 days) hid this until sustainability was judged group by group.
+  - A halt that works needs the outlying corps pulled back to their depots or supplied, and the bot does neither. F5 still holds: no halt reaches Decisive Success.
+- **F4: the strategy explains 21% of the variance, the seed 13%.**
+
+**Next (review stage F):** better bots matter more than any value now. Two would show what the approaches can really do:
+- a concentrated push that waits to concentrate before it attacks;
+- a halt that first secures supply for every group.
+
+The battle-loss bar for a decisive defeat should be revisited only with the sector battles, and against historical battle losses.
+
 ## Acting on the results
 
 1. **First ask whether the model is plausible and the result understandable.** A low decisive-success rate that follows from historically plausible rules is a finding, not a bug.

@@ -73,5 +73,7 @@ export function vitebskDecision(): ScenarioDef {
     keyPlaces: ['smolensk', 'smolensk-north'],
     // The Moscow road eastwards: the Russian line of retreat.
     exitPlaces: ['dorogobuzh'],
+    // §2.13: Valutino (Lubino) or Dorogobuzh on the Moscow road; to verify against the period road network.
+    cutOffPlaces: ['valutino', 'dorogobuzh'],
   };
 }

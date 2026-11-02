@@ -295,7 +295,12 @@ The engine evaluates three things separately, then combines them. Every threshol
 
 - **Inconclusive** (added in D-028): the objective not achieved, the army not seriously harmed, and no halt declared — time simply ran out. It ranks with a Precarious Halt.
 - **Capturing territory alone is never more than a Limited Success.**
-- *Implementation:* `src/engine/outcome.ts` (provisional). "Cut off" is judged on the final positions until the engine tracks how long a road was held.
+- *Implementation (rules 0.10.0, D-035):* `src/engine/outcome.ts`, with a table of campaign states in `tests/engine/outcome.test.ts` fixing what each ending means.
+  - **Decisively defeated** counts battle losses (killed, wounded, taken, including those in a beaten side's retreat) in battles the French won, over at most 4 days. Sickness and straggling never count.
+  - **Cut off** is tracked sub-step by sub-step: Valutino or Dorogobuzh held by at least 30,000 French while no Russian main army can reach Dorogobuzh past them, for 2 consecutive sub-steps. Once achieved, it stands. Holding Smolensk's north-bank suburb takes the objective but does not cut the Russians off.
+  - **Sustainable** is judged group by group: food carried, on its way by wagon, in its own depot where it stands, and what it can forage there over the next 2 days. The supply line's delivery rate (*T₁*) is not used yet.
+  - **Secure** does not yet include cut supply lines.
+  - **A victory won before a late halt stands** (your decision, D-035): the endings are checked from the top, so a decisive result comes before the halt endings.
 - The report presents every ending with its trade-offs. Rank order is used only for testing statistics: Decisive Success first; Costly Victory and Operational Success second, as different kinds of success; Limited Success and Successful Consolidation third; then Precarious Halt, Repulse and Collapse.
 
 *Calibrating to history as par is a design choice. It is not a claim about what Napoleon "should" have done.*
