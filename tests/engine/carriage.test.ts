@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { RULES, newGame, planDirective, submit } from '../../src/engine';
 import type { Context, GameState, GroupOrder, Supplies } from '../../src/engine';
+import { withinCapacity } from '../../src/engine/carriage';
 import { stepUntil } from '../fixtures/driver';
 import { forceInit, passiveContext, testGround } from '../fixtures/testGround';
 
@@ -117,7 +118,7 @@ describe('what a group can carry', () => {
     expect(flank.foodDaysOnArrival).toBeLessThan(4);
   });
 
-  it('at a depot, the staff draws only what the group can carry', () => {
+  it('at a depot, the staff draws only what the group could march with', () => {
     const ctx = passiveContext(
       testGround((s) => {
         const f = forceInit(s, 'fr-flank');
@@ -127,8 +128,11 @@ describe('what a group can carry', () => {
     );
     const s = stepUntil(ordered(newGame(ctx, 1), ctx, []), ctx, at(1, 'activity'));
     const f = s.forces['fr-flank']!;
-    expect(grams(f.stock)).toBeLessThanOrEqual(20_000 * RULES.carrying.manGrams);
-    expect(f.stock.food).toBeLessThan(20_000 * RULES.depotIssue.foodDays);
+    // It may hold more in camp (fodder it foraged), but setting out it would keep every ration it drew (D-040).
+    expect(withinCapacity(f.stock, 20_000 * RULES.carrying.manGrams, RULES).kept.food).toBe(f.stock.food);
+    expect(grams({ ...f.stock, fodder: 0 })).toBeLessThanOrEqual(20_000 * RULES.carrying.manGrams);
+    // …and it fills its packs with food.
+    expect(20_000 * RULES.carrying.manGrams - grams({ ...f.stock, fodder: 0 })).toBeLessThan(RULES.gramsPerUnit.food);
   });
 });
 

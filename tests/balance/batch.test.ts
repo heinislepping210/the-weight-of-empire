@@ -70,6 +70,8 @@ interface Result {
   roadCut: boolean;
   stillCutOff: boolean;
   costlyEscape: boolean;
+  /** One French group ends with at least 7.5 days of food in hand while another has under one (second review, B3). */
+  uneven: boolean;
 }
 
 it.skipIf(!enabled)('balance batch', () => {
@@ -112,6 +114,10 @@ it.skipIf(!enabled)('balance batch', () => {
         roadCut: o.roadCut,
         stillCutOff: o.stillCutOff,
         costlyEscape: o.roadCut && !o.stillCutOff && o.lostSinceCutPermille >= rules.outcome.damagedLossPermille,
+        uneven: (() => {
+          const days = Object.values(run.final.forces).filter((f) => f.side === 'fr' && f.men > 0).map((f) => f.stock.food / f.men);
+          return Math.max(...days) >= 7.5 && Math.min(...days) < 1;
+        })(),
       });
     }
   }
@@ -170,13 +176,13 @@ it.skipIf(!enabled)('balance batch', () => {
     '',
     '## Supply (means)',
     '',
-    '| Strategy | Depots founded | French depots lost | Took the Smolensk stores | Food moved up by line trains | Stores burned (food) | Left behind on the march (rations / fodder) | French wagon-train horses lost |',
-    '|---|---|---|---|---|---|---|---|',
+    '| Strategy | Depots founded | French depots lost | Took the Smolensk stores | Food moved up by line trains | Stores burned (food) | Left behind on the march (rations / fodder) | French wagon-train horses lost | Uneven stocks at the end |',
+    '|---|---|---|---|---|---|---|---|---|',
   );
   for (const name of names) {
     const rs = results[name]!;
     lines.push(
-      `| ${name} | ${mean(rs.map((r) => r.founded)).toFixed(2)} | ${mean(rs.map((r) => r.depotsLost)).toFixed(2)} | ${pct(rs.filter((r) => r.tookSmolensk).length, rs.length)} | ${Math.round(mean(rs.map((r) => r.lineFood))).toLocaleString('en-GB')} | ${Math.round(mean(rs.map((r) => r.burnedFood))).toLocaleString('en-GB')} | ${Math.round(mean(rs.map((r) => r.abandonedFood))).toLocaleString('en-GB')} / ${Math.round(mean(rs.map((r) => r.abandonedFodder))).toLocaleString('en-GB')} | ${(mean(rs.map((r) => r.trainHorsesLostPermille)) / 10).toFixed(1)}% |`,
+      `| ${name} | ${mean(rs.map((r) => r.founded)).toFixed(2)} | ${mean(rs.map((r) => r.depotsLost)).toFixed(2)} | ${pct(rs.filter((r) => r.tookSmolensk).length, rs.length)} | ${Math.round(mean(rs.map((r) => r.lineFood))).toLocaleString('en-GB')} | ${Math.round(mean(rs.map((r) => r.burnedFood))).toLocaleString('en-GB')} | ${Math.round(mean(rs.map((r) => r.abandonedFood))).toLocaleString('en-GB')} / ${Math.round(mean(rs.map((r) => r.abandonedFodder))).toLocaleString('en-GB')} | ${(mean(rs.map((r) => r.trainHorsesLostPermille)) / 10).toFixed(1)}% | ${pct(rs.filter((r) => r.uneven).length, rs.length)} |`,
     );
   }
 

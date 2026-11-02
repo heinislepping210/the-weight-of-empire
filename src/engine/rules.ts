@@ -7,7 +7,7 @@
 export type CutOffCredit = 'stands' | 'atEnd' | 'graded';
 
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.14.0';
+export const RULES_VERSION = '0.15.0';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -72,8 +72,11 @@ export const RULES = {
    * line trains sent no farther than a few days' haul (80 km is about 4½ days at 18 km/day).
    */
   logistics: { minDepotSpacingMetres: 40_000, maxLineHaulMetres: 80_000 },
-  /** A force at its own side's depot tops up to this much at the end of each sub-step. */
-  depotIssue: { foodDays: 4, fodderDays: 2, ammoPerThousandMen: 150 },
+  /**
+   * What a group is issued at its own side's depot, or from its wagon train: as much food as it can carry
+   * (D-040), and fodder and ammunition up to this much (G-020, placeholders).
+   */
+  depotIssue: { fodderDays: 2, ammoPerThousandMen: 150 },
   attrition: {
     sicknessPermillePerDay: 2,
     stragglePermilleAtFullShortfall: 20,

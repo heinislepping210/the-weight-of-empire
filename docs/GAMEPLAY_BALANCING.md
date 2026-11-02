@@ -432,3 +432,31 @@ The second review's finding D3: holding the Moscow road for two sub-steps counts
 - **Reading the situation:** the best fixed approach is now bait and converge; a scenario oracle would gain 0.18 ranks, and the adaptive policy still gains nothing.
 
 **What it asks for next:** not a looser rule, but bots (and, in time, players) that can do what the rule now demands: hold Valutino and feed the army there, or concentrate for a decisive battle. And the sector battles of §2.10, which replace the placeholder battle model that never produces a decisive defeat.
+
+## Supply issued by need, and forecasts that follow the rules (rules 0.15.0, 2 November 2026)
+
+The second review's supply findings (D-040). Wagon trains hand over what the group would draw at a depot; "sustainable" is judged day by day; the staff's arrival forecast runs the engine's own movement. Reports: [the batch, 1,000 scenarios × 3 sets of dice](balance/2026-11-02-rules-0.15.0.md), [the adaptive policy](balance/2026-11-02-adaptive-0.15.0.md), [the supply-stance probe](balance/2026-11-02-supply-stance-0.15.0.md). Zero invariant violations in 27,000 games.
+
+**A loophole, found on the way.** A corps standing at its depot drew four days' food from it, and its own wagon train then loaded more at the same depot and handed it over. That is how corps set out with full wagons, and how the Guard at Vitebsk could sit on eight days' food while Eugène's corps starved. Closing it with the four-day issue kept as it was (a placeholder never registered) tripled the marching armies' collapses; issuing as much food as a corps can carry, the researched carrying rule (G-019), did not. Measured on 300 seeds per bot (the 0.14.0 collapses from its batch):
+
+| Issue rule | Push collapse | Southern collapse | Rush collapse | Prudent halt with uneven stocks |
+|---|---|---|---|---|
+| 0.14.0 (the loophole) | 4% | 1% | 6% | 95% |
+| Four days' food, loophole closed | 15% | 14% | 16% | 0% |
+| **All the food it can carry (adopted, your decision)** | 0% | 1% | 0% | 27% |
+
+**On the adopted rules,** against 0.14.0, every game:
+
+| Strategy | Operational Collapse | Repulse | Limited Success | French men lost | Smolensk held |
+|---|---|---|---|---|---|
+| concentrated-push | 4.3% → 0.3% | 1.5% → 1.1% | 94.2% → 98.6% | 27.9% → 25.5% | 98% → 99% |
+| southern-envelopment | 1.3% → 0.1% | 26.7% → 27.3% | 45.8% → 46.2% | 21.7% → 19.7% | 48% → 46% |
+| bait-and-converge | 0.0% → 0.0% | 6.5% → 3.0% | 93.1% → 96.8% | 23.2% → 21.8% | 93% → 97% |
+| methodical | 0.3% → 0.0% | 30.2% → 2.6% | 69.3% → 97.3% | 23.6% → 13.7% | 69% → 97% |
+| concentrated-push-staged | 6.9% → 0.5% | 56.9% → 8.7% | 35.8% → 90.3% | 28.9% → 26.0% | 36% → 90% |
+
+- **Fed armies hold together.** Collapse all but disappears, and the slower approaches that used to be repulsed now take Smolensk. Little is left by the road: the push abandons 2,400 rations in a game instead of 95,000.
+- **Still no tested approach wins.** Every one ends, at best and most often, in Limited Success; the halts still end precarious. Feeding the army was not what stood between these bots and a victory.
+- **Uneven stocks remain where position makes them:** a corps beside a depot can fill its wagons while a distant one goes short (29% of prudent halts, 9% of concentrated pushes). That is a matter of where the corps stand, not an engine quirk, and it is now visible in the report.
+- **The experiment:** strategy 49% of the variance, scenario 4%, which strategy suits which scenario 27%, dice 20%; but 98% of scenarios now tie for the best approach, since nearly everything ends in Limited Success, so these shares say little. The adaptive policy and the oracles are within 0.04 ranks of the best fixed approach (now the rush).
+- **Forecasts:** the staff's arrival forecast now equals the engine's arrival when nothing intervenes (tested for a tired, dispersed corps and a forced march).

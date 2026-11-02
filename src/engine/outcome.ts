@@ -3,7 +3,7 @@
 // Thresholds are game assumptions (G-004). The meaning of each ending is fixed by a table of campaign
 // states in tests/engine/outcome.test.ts (D-035).
 
-import { usableWagons, withinCapacity } from './carriage';
+import { takenUp, usableWagons, withinCapacity } from './carriage';
 import { neighboursOf, roadDistance, shortestPath } from './graph';
 import type { Context } from './scenario';
 import { dayIndex, slotIndex } from './time';
@@ -145,49 +145,55 @@ export function evaluate(start: GameState, end: GameState, ctx: Context): Outcom
   const cohesion = frMen === 0 ? 0 : Math.floor(frEnd.reduce((n, f) => n + f.cohesion * f.men, 0) / frMen);
   const foodDays = frEnd.reduce((n, f) => n + f.stock.food, 0) / Math.max(1, frMen);
   const capable = frMen * 1000 >= men(frStart) * r.capableMenPermille && cohesion >= r.capableCohesion;
-  // Sustainable is judged group by group (§2.13), as a forecast at its final position over the coming days:
-  // food in hand; on its way by wagon, if the train has the horses to draw it and is near enough to arrive in
-  // time; in its own depot where it stands (shared by men among the groups there); and what it can forage,
-  // each district's food shared among the groups that reach it, so that no ration counts twice (D-037). The
-  // army's average must not hide a starving group.
+  // Sustainable is judged group by group (§2.13), as a forecast at its final position, day by day over the
+  // coming days: food in hand; in its own depot where it stands (shared by men among the groups there); what it
+  // can forage, each district's food shared among the groups that reach it, so that no ration counts twice; and
+  // what its wagon train brings, from the day it can arrive and only as much as the group can take (D-037,
+  // D-040). Every day must be covered: food arriving tomorrow does not feed today. A group in battle forages
+  // nothing. The army's average must not hide a starving group.
   const fr = ctx.rules.forage;
+  const days = r.sustainableFoodDays;
   const groups = frEnd.filter((f) => f.men > 0);
   const reachOf = (f: Force): NodeId[] => {
-    if (f.transit !== null) return [];
+    if (f.transit !== null || f.battle !== null) return [];
     if (f.posture !== 'dispersed') return [f.at];
     return [f.at, ...neighboursOf(ctx.graph, f.at).filter((n) => n.edge.metres <= 2 * fr.reachMetres && !enemyPresent(end, f.side, n.node)).map((n) => n.node)];
   };
-  const wantOf = (f: Force): number => {
-    if (f.transit !== null) return 0;
-    const daily = Math.floor((Math.floor((f.men * fr.food.halt) / 1000) * 2 * (f.posture === 'dispersed' ? fr.dispersedPermille : 1000)) / 1000);
-    return daily * r.sustainableFoodDays;
-  };
+  const dailyForage = (f: Force): number =>
+    reachOf(f).length === 0 ? 0 : Math.floor((Math.floor((f.men * fr.food.halt) / 1000) * 2 * (f.posture === 'dispersed' ? fr.dispersedPermille : 1000)) / 1000);
   const wantAt = new Map<NodeId, number>();
-  for (const g of groups) for (const node of reachOf(g)) wantAt.set(node, (wantAt.get(node) ?? 0) + wantOf(g));
-  const forageFor = (f: Force): number => {
-    const want = wantOf(f);
+  for (const g of groups) for (const node of reachOf(g)) wantAt.set(node, (wantAt.get(node) ?? 0) + dailyForage(g) * days);
+  /** Its share of the districts in reach, over the whole horizon. */
+  const forageShare = (f: Force): number => {
+    const want = dailyForage(f) * days;
     if (want === 0) return 0;
-    const share = reachOf(f).reduce((n, node) => n + Math.floor(((end.districts[node]?.food ?? 0) * want) / Math.max(1, wantAt.get(node) ?? 0)), 0);
-    return Math.min(want, share);
+    return Math.min(want, reachOf(f).reduce((n, node) => n + Math.floor(((end.districts[node]?.food ?? 0) * want) / Math.max(1, wantAt.get(node) ?? 0)), 0));
   };
-  const haul = ctx.rules.convoy.metresPerSlot * 2 * r.sustainableFoodDays;
-  const arrivesInTime = (c: Convoy, f: Force): boolean => {
+  /** Days until a wagon train can reach the group: 0 if it is there, Infinity if it has no horses to draw it. */
+  const daysAway = (c: Convoy, f: Force): number => {
+    if (usableWagons(c.wagons, c.horses, ctx.rules) === 0) return Infinity;
     const target = f.transit ? f.transit.to : f.at;
     const onRoad = c.transit ? (ctx.graph.edges.get(c.transit.edge)?.metres ?? 0) - c.transit.metres : 0;
-    return usableWagons(c.wagons, c.horses, ctx.rules) > 0 && onRoad + roadDistance(ctx.graph, c.transit ? c.transit.to : c.at, target) <= haul;
+    return Math.ceil((onRoad + roadDistance(ctx.graph, c.transit ? c.transit.to : c.at, target)) / (ctx.rules.convoy.metresPerSlot * 2));
   };
   const drawn = (c: Convoy): number =>
     withinCapacity(c.cargo, usableWagons(c.wagons, c.horses, ctx.rules) * ctx.rules.convoy.payloadGrams, ctx.rules).kept.food;
-  const supplyOf = (f: Force): number => {
-    const onTheWay = sortedValues(end.convoys)
-      .filter((c) => c.serves === f.id && c.leg === 'outbound' && arrivesInTime(c, f))
-      .reduce((n, c) => n + drawn(c), 0);
+  /** Whether the group has food for every one of the coming days. */
+  const suppliedEveryDay = (f: Force): boolean => {
     const depot = f.transit === null ? end.depots[f.at] : undefined;
     const sharers = depot && depot.side === f.side ? frEnd.filter((g) => g.men > 0 && g.transit === null && g.at === f.at) : [];
     const fromDepot = depot && sharers.length > 0 ? Math.floor((depot.stock.food * f.men) / Math.max(1, men(sharers))) : 0;
-    return f.stock.food + f.incoming.food + onTheWay + fromDepot + forageFor(f);
+    const share = forageShare(f);
+    const trains = sortedValues(end.convoys).filter((c) => c.serves === f.id && c.leg === 'outbound');
+    for (let d = 1; d <= days; d++) {
+      const arrived = trains.filter((c) => daysAway(c, f) <= d).reduce((n, c) => n + drawn(c), 0);
+      const taken = takenUp(f, { food: arrived, fodder: 0, ammo: 0 }, ctx.rules).food;
+      const foraged = Math.min(share, dailyForage(f) * d);
+      if (f.stock.food + f.incoming.food + fromDepot + foraged + taken < f.men * d) return false;
+    }
+    return true;
   };
-  const unsupplied = groups.filter((f) => supplyOf(f) < f.men * r.sustainableFoodDays);
+  const unsupplied = groups.filter((f) => !suppliedEveryDay(f));
   const sustainable = unsupplied.length === 0;
   const secure = frEnd.every((f) => f.battle === null) && frEnd.every((f) => f.transit !== null || holders('ru', f.at) === 0);
   const lostBattle = sortedValues(end.battles).some((b) => b.winner === 'ru');

@@ -46,6 +46,8 @@ const GOLDEN: Record<string, string> = {
   '0.13.0': '727f678929cb7de1',
   // What a cut road earns (D-039): only the judging of the end changes; the play is the same as 0.13.0.
   '0.14.0': 'ea8dd47e1440de46',
+  // Supply (D-040): food issued up to what a group can carry, by depot or train alike; held fodder never blocks food.
+  '0.15.0': 'c5e7de07094cf099',
 };
 
 /**
@@ -62,6 +64,7 @@ const GOLDEN_VITEBSK: Record<string, string> = {
   '0.12.0': '5cfa601d92d3f681',
   '0.13.0': '5c2bfdd2ba3e3f21',
   '0.14.0': 'e9543230ca011152',
+  '0.15.0': '4a00d5639b4bd561',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */

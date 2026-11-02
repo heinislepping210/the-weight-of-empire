@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { RULES, advance, createContext, newGame, planLogistics, submit } from '../../src/engine';
 import type { Context, Directive, GameState, Input, LogisticsOrders } from '../../src/engine';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
+import { capacityGrams, withinCapacity } from '../../src/engine/carriage';
 import { stepUntil } from '../fixtures/driver';
 import { forceInit, testGround, passiveContext } from '../fixtures/testGround';
 
@@ -34,7 +35,7 @@ describe('captured stores (§2.6)', () => {
   });
 
   it('the captors draw on what was saved from the fire', () => {
-    // Without fodder of its own the flank has room to carry four days' food (G-019).
+    // The flank draws what it can carry from what was saved (G-019, D-040).
     const ctx = passiveContext(
       testGround((s) => {
         forceInit(s, 'fr-flank').at = 'F';
@@ -42,7 +43,9 @@ describe('captured stores (§2.6)', () => {
       }),
     );
     const s = stepUntil(ordered(newGame(ctx, 3), ctx, {}), ctx, at(1, 'night'));
-    expect(s.forces['fr-flank']!.stock.food).toBe(20_000 * RULES.depotIssue.foodDays);
+    const f = s.forces['fr-flank']!;
+    expect(f.stock.food).toBeGreaterThan(60_000);
+    expect(withinCapacity(f.stock, capacityGrams(f, RULES), RULES).kept.food).toBe(f.stock.food);
   });
 
   it('the burned share is drawn from the seed: the same on replay', () => {

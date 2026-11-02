@@ -2,12 +2,13 @@
 // French group, each with a forecast and its reasons, using only what the French know. Planning never
 // changes the state: the player reviews the plan, may override any order, and only then commits.
 
+import { HOURS_PER_SLOT, hourlyShare, marchBudget, marchHour } from './advance';
 import { capacityGrams, weightGrams, withinCapacity } from './carriage';
-import { edgeBetween, pathMetres, roadDistance, shortestPath, type EdgeDef } from './graph';
+import { edgeBetween, pathMetres, roadDistance, shortestPath } from './graph';
 import type { Context } from './scenario';
 import { calendar, slotIndex, SLOTS_PER_TURN } from './time';
 import type { ConvoyOrder, Engagement, Force, ForceId, GameState, GroupOrder, LogisticsOrders, NodeId, Pace, Posture, Slot, SlotRef } from './types';
-import { enemyPresent, fatiguePermille, sortedValues } from './util';
+import { enemyPresent, sortedValues } from './util';
 
 export interface Axis {
   id: string;
@@ -165,55 +166,43 @@ export function when(ctx: Context, ref: SlotRef): string {
   return `${day} ${MONTHS[(month ?? 1) - 1]} ${hour < 12 ? 'morning' : 'afternoon'}`;
 }
 
-/** Daylight sub-steps needed to cover `route` (gathering included), with roads as they are now or in wet weather. */
+/**
+ * Daylight sub-steps a force needs to reach the end of `route` from now, marching alone at `pace` (D-040). It
+ * is projected through the engine's own hourly movement, with the same fatigue, rest at night and gathering,
+ * so the forecast is what the force will do if nothing intervenes: today's roads as they are, then dry roads
+ * (or, `wet`, mud on every road from tomorrow). Enemy columns, battles and the weather itself are not foreseen.
+ */
 function slotsToCover(s: GameState, ctx: Context, f: Force, route: NodeId[], pace: Pace, wet: boolean): number {
-  const r = ctx.rules.march;
-  const factorOf = (edge: EdgeDef) => {
-    let factor: number = r.roadPermille[edge.road];
-    if (s.roads[edge.id] === 'mud') factor = Math.floor((factor * r.mudPermille) / 1000);
-    else if (wet) factor = Math.floor((factor * (1000 + r.mudPermille)) / 2000);
-    if (edge.crossing === 'ford' || edge.crossing === 'pontoon') factor = Math.floor((factor * r.crossingPermille) / 1000);
-    return Math.max(1, factor);
-  };
-  const legs: { metres: number; factor: number }[] = [];
-  let at = f.at;
-  if (f.transit) {
-    const edge = ctx.graph.edges.get(f.transit.edge);
-    if (edge) legs.push({ metres: edge.metres - f.transit.metres, factor: factorOf(edge) });
-    at = f.transit.to;
-  }
-  for (const next of route.slice(f.transit ? 1 : 0)) {
-    const edge = edgeBetween(ctx.graph, at, next);
-    if (!edge) break;
-    legs.push({ metres: edge.metres, factor: factorOf(edge) });
-    at = next;
-  }
-
-  let slots = f.gathering > 0 ? f.gathering : f.posture === 'dispersed' ? ctx.rules.posture.gatherSlots : 0;
-  let fatigue = f.fatigue;
-  let leg = 0;
-  let left = legs[0]?.metres ?? 0;
-  while (leg < legs.length) {
-    if (slots > 200) return Infinity;
-    let budget = Math.floor((r.metresPerSlot[pace] * fatiguePermille(fatigue, ctx.rules)) / 1000);
-    if (budget <= 0) return Infinity;
-    while (budget > 0 && leg < legs.length) {
-      const factor = (legs[leg] as { factor: number }).factor;
-      const reach = Math.floor((budget * factor) / 1000);
-      if (reach >= left) {
-        budget -= Math.ceil((left * 1000) / factor);
-        leg++;
-        left = legs[leg]?.metres ?? 0;
-      } else {
-        left -= reach;
-        budget = 0;
-      }
+  const goal = route[route.length - 1];
+  if (goal === undefined) return 0;
+  const { fatigue, posture } = ctx.rules;
+  const g: Force = { ...structuredClone(f), route: [...route], pace, battle: null };
+  const alone = { ...s, forces: { [g.id]: g }, roads: { ...s.roads } } as GameState;
+  let gathering = f.gathering > 0 ? f.gathering : f.posture === 'dispersed' ? posture.gatherSlots : 0;
+  let marchedToday = f.marchedToday;
+  let slot: Slot = s.resolution.slot;
+  for (let n = 1; n <= 200; n++) {
+    if (gathering > 0) {
+      gathering--;
+      g.fatigue = Math.max(0, g.fatigue + fatigue.halt);
+    } else {
+      const before = JSON.stringify([g.at, g.transit]);
+      const total = marchBudget(g, ctx.rules);
+      for (let hour = 0; hour < HOURS_PER_SLOT; hour++) marchHour(alone, ctx, [g], [hourlyShare(total, hour)], hour, []);
+      const moved = JSON.stringify([g.at, g.transit]) !== before;
+      g.fatigue = Math.max(0, Math.min(1000, g.fatigue + (moved ? (pace === 'forced' ? fatigue.marchForced : fatigue.marchSteady) : fatigue.halt)));
+      marchedToday = marchedToday || moved;
+      if (!moved && total <= 0) return Infinity;
     }
-    slots++;
-    fatigue = Math.min(1000, fatigue + (pace === 'forced' ? ctx.rules.fatigue.marchForced : ctx.rules.fatigue.marchSteady));
-    if (slots % 2 === 0) fatigue = Math.max(0, fatigue - ctx.rules.fatigue.nightAfterMarch);
+    if (g.transit === null && g.at === goal) return n;
+    if (slot === 1 || slot === 3) {
+      g.fatigue = Math.max(0, g.fatigue - (marchedToday ? fatigue.nightAfterMarch : fatigue.nightAfterRest));
+      marchedToday = false;
+      for (const id of Object.keys(alone.roads)) alone.roads[id] = wet ? 'mud' : 'dry';
+    }
+    slot = ((slot + 1) % SLOTS_PER_TURN) as Slot;
   }
-  return slots;
+  return Infinity;
 }
 
 function engagementReason(e: Engagement): string {

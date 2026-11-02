@@ -36,3 +36,29 @@ export function withinCapacity(stock: Supplies, capacity: number, rules: Rules):
   }
   return { kept, dropped };
 }
+
+/** The stock a group is issued up to, from a depot or a wagon train: all the food it can carry (D-040), fodder and ammunition by `depotIssue`. */
+export function issueTarget(f: Force, supply: keyof Supplies, rules: Rules): number {
+  const { depotIssue, consumption } = rules;
+  if (supply === 'food') return Math.floor(capacityGrams(f, rules) / rules.gramsPerUnit.food);
+  if (supply === 'fodder') return (f.horses + f.draught) * consumption.fodderPerHorse * depotIssue.fodderDays;
+  return Math.floor((f.men * depotIssue.ammoPerThousandMen) / 1000);
+}
+
+/** Issue order: food first, then ammunition, then fodder. */
+export const ISSUE_ORDER = ['food', 'ammo', 'fodder'] as const;
+
+/**
+ * What a group takes when supplies are on offer, from a depot or a wagon train (G-019, D-040): up to the stock
+ * it is issued to, and only what it could still march with once it has them. Marching, a group leaves fodder
+ * behind first, then food, ammunition last, so the fodder it already holds never stops it taking food.
+ */
+export function takenUp(f: Force, offered: Supplies, rules: Rules): Supplies {
+  const held = { food: f.stock.food + f.incoming.food, fodder: f.stock.fodder + f.incoming.fodder, ammo: f.stock.ammo + f.incoming.ammo };
+  const wanted = emptySupplies();
+  for (const supply of ISSUE_ORDER) wanted[supply] = Math.min(offered[supply], Math.max(0, issueTarget(f, supply, rules) - held[supply]));
+  const { kept } = withinCapacity({ food: held.food + wanted.food, fodder: held.fodder + wanted.fodder, ammo: held.ammo + wanted.ammo }, capacityGrams(f, rules), rules);
+  const taken = emptySupplies();
+  for (const supply of ISSUE_ORDER) taken[supply] = Math.max(0, Math.min(wanted[supply], kept[supply] - held[supply]));
+  return taken;
+}

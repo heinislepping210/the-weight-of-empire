@@ -8,7 +8,7 @@ import { decideNightfall, decideRound } from './ai';
 import { updateIntel } from './intel';
 import { updatePressure } from './russian';
 import { fallBack, oncoming, resolveNightfall, resolveRound, retreatNodeFor } from './battle';
-import { capacityGrams, usableWagons, weightGrams, withinCapacity } from './carriage';
+import { ISSUE_ORDER, capacityGrams, issueTarget, takenUp, usableWagons, weightGrams, withinCapacity } from './carriage';
 import { lineOfRetreatBlocked } from './outcome';
 import { edgeBetween, neighboursOf, roadDistance, shortestPath, type EdgeDef } from './graph';
 import { chance, drawBetween } from './rng';
@@ -283,16 +283,23 @@ function activityFor(ctx: Context, f: Force): Activity {
 }
 
 /** Hourly shares of a sub-step's march: forces move together, an hour at a time (§3.4a step 3). */
-const HOURS_PER_SLOT = 6;
+export const HOURS_PER_SLOT = 6;
+
+/** A force's share of its sub-step's march budget in hour `hour`. */
+export function hourlyShare(total: number, hour: number): number {
+  return Math.floor((total * (hour + 1)) / HOURS_PER_SLOT) - Math.floor((total * hour) / HOURS_PER_SLOT);
+}
+
+/** A force's march budget for a sub-step, set by its pace and its fatigue at the start (§3.4a step 3). */
+export function marchBudget(f: Force, rules: Context['rules']): number {
+  return Math.floor((rules.march.metresPerSlot[f.pace] * fatiguePermille(f.fatigue, rules)) / 1000);
+}
 
 function stageMovement(s: GameState, ctx: Context, log: LogEntry[]): void {
   const movers = sortedValues(s.forces).filter((f) => f.activity === 'march' || f.activity === 'cross');
   // The march budget is set by each force's condition at the start of the sub-step.
-  const budgets = movers.map((f) => Math.floor((ctx.rules.march.metresPerSlot[f.pace] * fatiguePermille(f.fatigue, ctx.rules)) / 1000));
-  for (let hour = 0; hour < HOURS_PER_SLOT; hour++) {
-    const shares = budgets.map((total) => Math.floor((total * (hour + 1)) / HOURS_PER_SLOT) - Math.floor((total * hour) / HOURS_PER_SLOT));
-    marchHour(s, ctx, movers, shares, hour, log);
-  }
+  const budgets = movers.map((f) => marchBudget(f, ctx.rules));
+  for (let hour = 0; hour < HOURS_PER_SLOT; hour++) marchHour(s, ctx, movers, budgets.map((total) => hourlyShare(total, hour)), hour, log);
   // A column that could not move at all (held up on the road, or too exhausted) rests instead.
   for (const f of movers) if (!f.movedThisSlot) f.activity = 'halt';
   for (const c of sortedValues(s.convoys)) moveConvoy(s, ctx, c, log);
@@ -464,25 +471,18 @@ function forage(s: GameState, ctx: Context, f: Force): void {
 }
 
 /**
- * Forces standing at their own side's depot draw rations directly, without wagons, but only what they can
- * carry (G-019): food first, then ammunition, then fodder. When a depot cannot meet every want it shares
- * each kind in proportion to need, never in the order of the groups' names (D-036).
+ * Forces standing at their own side's depot draw rations directly, without wagons, but only what they could
+ * still march with (`takenUp`, G-019). When a depot cannot meet every want it shares each kind in proportion
+ * to need, never in the order of the groups' names (D-036).
  */
 function issueFromDepots(s: GameState, ctx: Context): void {
-  const { depotIssue, consumption, gramsPerUnit } = ctx.rules;
   for (const depot of sortedValues(s.depots)) {
     const here = sortedValues(s.forces).filter((f) => f.side === depot.side && f.at === depot.node && f.transit === null && f.men > 0);
     if (here.length === 0) continue;
-    const free = here.map((f) => Math.max(0, capacityGrams(f, ctx.rules) - weightGrams(f.stock, ctx.rules)));
-    for (const supply of ['food', 'ammo', 'fodder'] as const) {
-      const unit = gramsPerUnit[supply];
-      const target = (f: Force) =>
-        supply === 'food'
-          ? f.men * consumption.foodPerMan * depotIssue.foodDays
-          : supply === 'fodder'
-            ? (f.horses + f.draught) * consumption.fodderPerHorse * depotIssue.fodderDays
-            : Math.floor((f.men * depotIssue.ammoPerThousandMen) / 1000);
-      const wants = here.map((f, i) => Math.min(Math.max(0, target(f) - f.stock[supply]), Math.floor((free[i] as number) / unit)));
+    // What each would take if the depot had plenty; what it has is then shared in proportion to that.
+    const wanted = here.map((f) => takenUp(f, { food: Infinity, fodder: Infinity, ammo: Infinity }, ctx.rules));
+    for (const supply of ISSUE_ORDER) {
+      const wants = wanted.map((w) => w[supply]);
       const total = wants.reduce((a, b) => a + b, 0);
       if (total === 0) continue;
       const pool = Math.min(total, depot.stock[supply]);
@@ -499,7 +499,6 @@ function issueFromDepots(s: GameState, ctx: Context): void {
         const n = gives[i] as number;
         depot.stock[supply] -= n;
         f.stock[supply] += n;
-        free[i] = (free[i] as number) - n * unit;
       });
     }
   }
@@ -584,7 +583,7 @@ interface March {
  * ahead of it closes up and follows at its pace, and reaches the next place just after it. Nothing depends on
  * the order of the forces' names, except between forces of one side, which do not block each other.
  */
-function marchHour(s: GameState, ctx: Context, movers: Force[], shares: number[], hour: number, log: LogEntry[]): void {
+export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: number[], hour: number, log: LogEntry[]): void {
   const res = s.resolution;
   const lengthOf = (edgeId: string) => must(ctx.graph.edges.get(edgeId), edgeId).metres;
   const runs: March[] = movers.map((f, i) => {
@@ -777,13 +776,15 @@ function moveConvoy(s: GameState, ctx: Context, c: Convoy, log: LogEntry[]): voi
   if (c.transit || c.at !== target) return;
   if (c.leg === 'outbound' && delivery) {
     if (delivery.force && (delivery.force.transit !== null || delivery.force.at !== c.at)) return;
-    // The train keeps back the fodder its own horses need to get home (G-019); the rest is handed over.
+    // The train keeps back the fodder its own horses need to get home (G-019); the rest is offered.
     const daysHome = Math.max(1, Math.ceil(roadDistance(ctx.graph, c.at, c.home) / (ctx.rules.convoy.metresPerSlot * 2)));
     const keep = Math.min(c.cargo.fodder, c.horses * ctx.rules.consumption.fodderPerHorse * daysHome);
-    const handed = { ...c.cargo, fodder: c.cargo.fodder - keep };
+    const offered = { ...c.cargo, fodder: c.cargo.fodder - keep };
+    // A group takes only what it can carry, as from a depot (G-019, D-040); the rest stays on the train.
+    const handed = delivery.force ? takenUp(delivery.force, offered, ctx.rules) : offered;
     addInto(delivery.force ? delivery.force.incoming : must(delivery.depot, 'depot').incoming, handed);
     note(s, log, 'delivered', { convoy: c.id, force: delivery.force?.id ?? null, depot: delivery.depot?.node ?? null, food: handed.food, fodder: handed.fodder, ammo: handed.ammo });
-    c.cargo = { food: 0, fodder: keep, ammo: 0 };
+    c.cargo = { food: c.cargo.food - handed.food, fodder: c.cargo.fodder - handed.fodder, ammo: c.cargo.ammo - handed.ammo };
     c.leg = 'returning';
   } else {
     c.leg = 'loading';
