@@ -678,6 +678,7 @@ export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: n
       return;
     }
     // The end of the road: it arrives.
+    f.cameFrom = f.at;
     f.at = tr.to;
     f.transit = null;
     f.arrivedAt = hour * HOUR + now;
@@ -979,16 +980,19 @@ function tryWithdraw(s: GameState, ctx: Context, node: NodeId, side: Side, ids: 
 
 function minorAction(s: GameState, ctx: Context, node: NodeId, sides: Record<Side, ForceId[]>, men: Record<Side, number>, log: LogEntry[]): void {
   const weaker: Side = men.fr <= men.ru ? 'fr' : 'ru';
-  const dest = retreatNodeFor(s, ctx, node, weaker);
-  const rate = dest ? ctx.rules.engagement.minorLossPermille : ctx.rules.battle.trappedLossPermille;
+  // A weaker side that marched in falls back the way it came (D-042).
+  const marchedIn = attackerOf(s, node, sides) === weaker;
+  const dests = sides[weaker].map((id) => retreatNodeFor(s, ctx, node, weaker, marchedIn ? must(s.forces[id], id).cameFrom : null));
   const res = s.resolution;
-  for (const id of sides[weaker]) {
+  sides[weaker].forEach((id, i) => {
     const f = must(s.forces[id], id);
+    const dest = dests[i] ?? null;
+    const rate = dest ? ctx.rules.engagement.minorLossPermille : ctx.rules.battle.trappedLossPermille;
     const noise = drawBetween(s.dice, ['minor', res.turn, res.slot, node, id], 500, 1500);
     loseMen(s, f, Math.floor((Math.floor((f.men * rate) / 1000) * noise) / 1000), 'battle');
     if (dest) fallBack(s, ctx, f, dest);
-  }
-  note(s, log, 'minorAction', { node, retreated: weaker, to: dest });
+  });
+  note(s, log, 'minorAction', { node, retreated: weaker, to: dests[0] ?? null });
 }
 
 // ---------------------------------------------------------------------------------- night

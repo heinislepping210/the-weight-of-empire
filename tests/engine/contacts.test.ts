@@ -167,6 +167,35 @@ describe('retreats take time', () => {
   });
 });
 
+describe('a beaten attacker falls back the way it came (D-042)', () => {
+  /**
+   * The French hold B in strength; a Russian army marches from A through B towards C, D and its depot at F,
+   * as the Russians at Smolensk marched for the Moscow road past a French block. Beaten at B, it must fall
+   * back towards A, not on along the road to its depot through the French it attacked.
+   */
+  it('a Russian army repulsed by a French block does not escape through it', () => {
+    const ctx = withRussianRoutes(
+      testGround((s) => {
+        s.depots = s.depots.filter((d) => d.side === 'ru');
+        forceInit(s, 'fr-flank').at = 'B';
+        Object.assign(forceInit(s, 'ru-main'), { at: 'A', men: 40_000 });
+        s.convoys = [];
+      }),
+      { 1: { 'ru-main': ['B', 'C', 'D', 'F'] } },
+    );
+    const policy = holdAndStay();
+    let retreats = 0;
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const { log } = playUntil(ctx, newGame(ctx, seed), policy, (s) => s.ended !== null || Object.values(s.battles).some((b) => b.phase === 'over'));
+      const retreat = log.find((e) => e.kind === 'retreated' && e.detail.force === 'ru-main');
+      if (!retreat) continue;
+      retreats++;
+      expect(retreat.detail.to, `seed ${seed}`).toBe('A');
+    }
+    expect(retreats).toBeGreaterThan(0);
+  });
+});
+
 describe('the halt', () => {
   it('stops every standing march, including groups given no new orders', () => {
     const ctx = withRussianRoutes(testGround());

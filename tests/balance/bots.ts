@@ -105,6 +105,42 @@ const BASE_BOTS: Record<string, (ctx: Context) => Policy> = {
     };
   },
 
+  /**
+   * The southern envelopment that keeps the trap shut (after the second review, D3): the same corridor to
+   * the Old Town, but once Smolensk is taken or Valutino reached it commits to Valutino and holds it to the
+   * end, standing to fight there, instead of turning back whenever Smolensk is no longer held.
+   */
+  'southern-envelopment-hold': (ctx) => {
+    let corridor: Axis | null = null;
+    let committed = false;
+    return {
+      orders: (s) => {
+        if (frenchHold(s, 'smolensk') || frenchHold(s, 'smolensk-north') || frenchAt(s, 'valutino')) committed = true;
+        if (committed) return orders(s, ctx, { objective: 'valutino', engagement: 'accept' });
+        corridor ??= axisVia(s, ctx, 'smolensk', 'Rasasna');
+        return orders(s, ctx, { objective: 'smolensk', axis: corridor });
+      },
+      ...delegate,
+    };
+  },
+
+  /**
+   * A concentrated strike at the Russian army itself (after the second review): gather the army around
+   * Rudnia first, then march on the largest Russian army the scouts have seen in the last turn, wherever it
+   * stands, seeking battle; Smolensk's north bank if none is in sight.
+   */
+  'concentrated-strike': (ctx) => {
+    let gathered = false;
+    return {
+      orders: (s, turn) => {
+        if (!gathered && (turn > 4 || shareNear(s, ctx, 'rudnia', 30) >= 750)) gathered = true;
+        if (!gathered) return orders(s, ctx, { objective: 'rudnia', engagement: 'accept' });
+        return orders(s, ctx, { objective: largestArmySeen(s, 30_000) ?? 'smolensk-north' });
+      },
+      ...delegate,
+    };
+  },
+
   /** A halt prepared first: outlying groups move to depots for two turns, then the halt is declared. */
   'supplied-halt': (ctx) => ({
     orders: (s, turn) => (turn >= 3 || s.halted ? orders(s, ctx, { posture: 'dispersed', engagement: 'accept' }) : toStations(s, ctx)),
@@ -112,6 +148,16 @@ const BASE_BOTS: Record<string, (ctx: Context) => Policy> = {
     ...delegate,
   }),
 };
+
+/** French troops standing at a place, out of battle. */
+const frenchAt = (s: GameState, node: NodeId) => Object.values(s.forces).some((f) => f.side === 'fr' && f.men > 0 && f.transit === null && f.at === node);
+
+/** Where the largest Russian force seen in the last turn stands, if it has at least `men`: French intelligence only. */
+function largestArmySeen(s: GameState, men: number): NodeId | null {
+  const seen = Object.values(s.intel.fr).filter((x) => s.resolution.turn - x.turn <= 1 && x.men >= men);
+  seen.sort((a, b) => b.men - a.men || (a.at < b.at ? -1 : 1));
+  return seen[0]?.at ?? null;
+}
 
 /** Permille of the French army standing within `km` by road of a place. */
 function shareNear(s: GameState, ctx: Context, node: NodeId, km: number): number {

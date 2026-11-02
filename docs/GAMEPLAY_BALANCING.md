@@ -480,3 +480,25 @@ No rule changed; the same games are reported more carefully (D-041). The [batch]
 - **Choosing on the first roll costs 0.12 ranks** on average on the other rolls (regret).
 - **Reading the scenario is worth almost nothing among these bots.** An oracle that chooses each scenario's approach on its other rolls, so it never sees the dice it is scored on, beats the best fixed approach (now the rush) by 0.01 ranks (−0.03 to +0.01); one that also knows the dice, by 0.04 (0.03 to 0.06). The earlier oracle, scored on the rolls it chose on, was optimistic.
 - **Not yet done:** nested resampling of the adaptive policy's learning, and a per-turn adaptive policy with the full French observations (the review's suggested next experiment).
+
+## Better bots, and a retreat through the block (rules 0.16.0, 2 November 2026)
+
+Two competent variants, built after the second review: a **southern envelopment that holds** Valutino to the end once Smolensk is taken or Valutino reached, standing to fight there; and a **concentrated strike** that gathers the army around Rudnia, then marches on the largest Russian army its scouts have seen. Reports: [the batch, 1,000 scenarios × 3 sets of dice](balance/2026-11-02-rules-0.16.0.md), [the adaptive policy](balance/2026-11-02-adaptive-0.16.0.md), [the supply-stance probe](balance/2026-11-02-supply-stance-0.16.0.md). Zero invariant violations in 33,000 games.
+
+**Why the trap never held, found by building the bot:**
+- **The original bot turned back.** It made for Valutino only while it held Smolensk; once its corps left Smolensk for Valutino it no longer held it, and turned the army round. That is the reviewer's seed 7.
+- **And the rules let the Russians through (D-042).** Committing to Valutino alone changed nothing: in twelve traced games the whole French army stood at Valutino at the end, and both Russian armies were marching away east beyond it. They had attacked the block, lost, and fallen back towards their depot at Dorogobuzh, which is to say through the block. A beaten attacker now falls back the way it came.
+
+**Results:**
+
+| Strategy, every game | Costly Victory | Limited Success | Inconclusive | Repulse | Road cut | Still cut off at the end |
+|---|---|---|---|---|---|---|
+| southern-envelopment (0.15.0 → 0.16.0) | 1.6% → 9.2% | 46.2% → 51.0% | 24.6% → 16.4% | 27.3% → 22.8% | 83% → 84% | 1.7% → 9.3% |
+| **southern-envelopment-hold** (new) | 35.1% | 2.0% | 29.7% | 32.8% | 86% | 35.2% |
+| concentrated-strike (new) | 0.0% | 71.2% | 11.9% | 16.9% | — | — |
+
+- **Holding the trap now wins a third of the time.** The holding envelopment is the first bot that wins regularly. Its wins are costly, not decisive (Decisive Success 0.1%): the army at Valutino cannot be fed there.
+- **Why it cannot be fed:** the stores sit far behind. The staff's forward depot at Liozno ends with 640,000–820,000 rations while Smolensk's captured depot is empty and Valutino stripped, because no line train can carry them forward: Liozno to Smolensk is 106 km by road, and the one road from Rudnia to Smolensk's north bank 81 km, both beyond the 80 km a line train may haul (G-016, a placeholder). A relay needs a depot on the way, and the staff founds depots only where troops stand. That is a question for the supply design, not for a bot.
+- **A decisive battle stays out of reach.** The concentrated strike fights far fewer battles than the staged push (about 1.2 a game against 2.7, on 300 seeds), but the Russian main armies never break: their marshal withdraws in good order once cohesion falls below 350, and an army breaks only below 250. The routs in the batch are of small detachments. This is the placeholder battle model again (§2.10).
+- **Choosing by scenario now matters.** With one approach that sometimes wins and sometimes fails badly, an oracle that chooses per scenario on its other rolls would gain 0.26 ranks over the best fixed approach (0.21 to 0.31); the two-figure adaptive policy gains nothing. The interaction share is 43% noise-adjusted (41–44).
+- **The original families stay balanced** (F3: push 37%, bait and converge 36%, southern envelopment 27%); the new bots are competent variants, outside the families, as the staged push and the supplied halt are.

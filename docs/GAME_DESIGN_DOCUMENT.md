@@ -147,7 +147,7 @@ The simulation underneath is identical; only the way you give orders changes.
 - **Spreading out.** A halted force that is *dispersed* spreads its foragers evenly over its own and the neighbouring districts, never where the enemy stands, and gathers far more than a concentrated one.
 - **The price of dispersal.** A dispersed force needs about a day to gather before it can march, and fights below strength if caught while gathering.
 - **Depots.** A force standing at its own depot draws supplies directly, without wagons.
-- **Retreat.** A beaten force falls back towards its own depots.
+- **Retreat.** A beaten force falls back towards its own depots; but a force that marched into the place falls back the way it came, if that road is open, never on through the enemy it attacked (D-042). An army repulsed by a block on its line of retreat cannot escape through the block.
 
 **Horses, carrying and foraging reach (rules 0.9.0, G-019):**
 - **Draught horses.** Every wagon needs draught horses, in the wagon trains and in each group's own baggage. A wagon without its horses stays behind: fewer horses mean smaller loads, never faster or slower wagons. A wagon train that loses horses on the way unloads what it can no longer draw, into its depot or by the road; with no horses it cannot move (D-037).

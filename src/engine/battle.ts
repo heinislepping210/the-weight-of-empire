@@ -40,11 +40,14 @@ export function oncoming(s: GameState, side: Side, edgeId: string, node: NodeId)
 /**
  * The neighbouring place, free of the enemy, that lies nearest to one of the side's own depots: beaten
  * forces fall back towards home. A road with an enemy column coming the other way is no line of retreat.
+ * A force that marched into the place falls back the way it came (`back`) if that road is open, never on
+ * through the enemy it attacked (D-042).
  */
-export function retreatNodeFor(s: GameState, ctx: Context, node: NodeId, side: Side): NodeId | null {
+export function retreatNodeFor(s: GameState, ctx: Context, node: NodeId, side: Side, back: NodeId | null = null): NodeId | null {
   const options = neighboursOf(ctx.graph, node)
     .filter((n) => !enemyPresent(s, side, n.node) && !oncoming(s, side, n.edge.id, node))
     .map((n) => n.node);
+  if (back !== null && options.includes(back)) return back;
   const homes = sortedValues(s.depots)
     .filter((d) => d.side === side)
     .map((d) => d.node);
@@ -112,7 +115,7 @@ export function fallBack(s: GameState, ctx: Context, f: Force, dest: NodeId): vo
 function withdrawSide(s: GameState, ctx: Context, b: BattleState, side: Side, log: LogEntry[]): void {
   const { engagement, battle } = ctx.rules;
   for (const f of sideForces(s, b, side)) {
-    const dest = retreatNodeFor(s, ctx, b.node, side);
+    const dest = retreatNodeFor(s, ctx, b.node, side, side === b.attacker ? f.cameFrom : null);
     if (dest) {
       recordLoss(b, f, loseMen(s, f, Math.floor((f.men * engagement.withdrawalLossPermille) / 1000), 'withdrawal'));
       fallBack(s, ctx, f, dest);

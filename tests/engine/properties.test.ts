@@ -48,6 +48,8 @@ const GOLDEN: Record<string, string> = {
   '0.14.0': 'ea8dd47e1440de46',
   // Supply (D-040): food issued up to what a group can carry, by depot or train alike; held fodder never blocks food.
   '0.15.0': 'c5e7de07094cf099',
+  // A beaten attacker falls back the way it came (D-042); forces gain `cameFrom`.
+  '0.16.0': 'd98588357012dc03',
 };
 
 /**
@@ -65,6 +67,7 @@ const GOLDEN_VITEBSK: Record<string, string> = {
   '0.13.0': '5c2bfdd2ba3e3f21',
   '0.14.0': 'e9543230ca011152',
   '0.15.0': '4a00d5639b4bd561',
+  '0.16.0': '78b60ad66e0f73a5',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */

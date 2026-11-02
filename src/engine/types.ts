@@ -72,6 +72,8 @@ export interface Force {
   movedThisSlot: boolean;
   /** Seconds into the current sub-step at which it reached the place where it stands; null if it was there already (D-038). */
   arrivedAt: number | null;
+  /** The place it last arrived from: beaten after marching in, it falls back that way (D-042). */
+  cameFrom: NodeId | null;
 }
 
 export type ConvoyLeg = 'loading' | 'outbound' | 'returning';

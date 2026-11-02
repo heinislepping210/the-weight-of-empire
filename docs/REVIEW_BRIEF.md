@@ -1,6 +1,6 @@
 # Review Brief
 
-For an outside reviewer, human or AI, asked to give feedback on the project as it stands (2 November 2026, rules 0.15.0, milestone M1). It says what exists, what changed since the first independent review, where to look, and what is already known, so a review can go beyond it. The detailed instructions for a second review are in [reviews/SECOND_REVIEW_PROMPT.md](reviews/SECOND_REVIEW_PROMPT.md).
+For an outside reviewer, human or AI, asked to give feedback on the project as it stands (2 November 2026, rules 0.16.0, milestone M1). It says what exists, what changed since the first independent review, where to look, and what is already known, so a review can go beyond it. The detailed instructions for a second review are in [reviews/SECOND_REVIEW_PROMPT.md](reviews/SECOND_REVIEW_PROMPT.md).
 
 ## What the project is
 
@@ -31,7 +31,7 @@ For an outside reviewer, human or AI, asked to give feedback on the project as i
   - supply judged group by group;
   - a table of campaign states fixing what each ending means.
 - **Balance tooling:**
-  - nine bots and a 1,000-seed batch that fails on any invariant violation;
+  - eleven bots and a 1,000-seed batch that fails on any invariant violation;
   - replays with fresh dice and a split of the ending's variance;
   - a paired supply-stance probe, and an adaptive policy judged on held-out seeds;
   - what-if runs with rule overrides.
@@ -53,6 +53,7 @@ The first review's findings and their status are in [reviews/2026-10-31-independ
 | Second review, D3 | A cut road counts only if the Russians are still cut off at the end (graded) | 0.14.0 | D-039 |
 | Second review, supply | Trains issue like depots (all the food a corps can carry); "sustainable" day by day; forecasts run the movement rules | 0.15.0 | D-040 |
 | Second review, reporting | Dice labelled as resolution randomness; noise-adjusted variance split; regret; scenario-clustered intervals; a cross-fitted oracle | — | D-041 |
+| Competent bots | A southern envelopment that holds Valutino, a concentrated strike; a beaten attacker falls back the way it came | 0.16.0 | D-042 |
 
 Each change was written test-first: tests that failed on the previous rules.
 
@@ -61,9 +62,9 @@ Each change was written test-first: tests that failed on the previous rules.
 1. This brief, then [PROJECT_VISION](PROJECT_VISION.md) for the goals and the scope limits.
 2. [GAME_DESIGN_DOCUMENT](GAME_DESIGN_DOCUMENT.md) §2: §2.4b directives, §2.6 logistics, §2.12 variation, §2.13 outcomes.
 3. [TECHNICAL_ARCHITECTURE](TECHNICAL_ARCHITECTURE.md) §3.4a: the turn timeline and the contact rule.
-4. [GAMEPLAY_BALANCING](GAMEPLAY_BALANCING.md), from "Contacts corrected" to the end, with the reports in [balance/](balance/). The latest are [rules 0.15.0](balance/2026-11-02-rules-0.15.0.md), [the adaptive policy](balance/2026-11-02-adaptive-0.15.0.md), and the what-ifs on [the cut road](balance/2026-11-01-whatif-cutoff.md) and [the foraging reach](balance/2026-11-01-whatif-reach.md).
+4. [GAMEPLAY_BALANCING](GAMEPLAY_BALANCING.md), from "Contacts corrected" to the end, with the reports in [balance/](balance/). The latest are [rules 0.16.0](balance/2026-11-02-rules-0.16.0.md), [the adaptive policy](balance/2026-11-02-adaptive-0.16.0.md), and the what-ifs on [the cut road](balance/2026-11-01-whatif-cutoff.md) and [the foraging reach](balance/2026-11-01-whatif-reach.md).
 5. [HISTORICAL_RESEARCH](HISTORICAL_RESEARCH.md) and [HISTORICAL_ASSUMPTIONS](HISTORICAL_ASSUMPTIONS.md): sources, and the status of every claim (H-, L- and G- entries).
-6. [DECISIONS](DECISIONS.md) D-029 to D-041.
+6. [DECISIONS](DECISIONS.md) D-029 to D-042.
 7. Code:
    - `src/engine/advance.ts`: turn resolution, about 900 lines.
    - `battle.ts`, `carriage.ts`, `directive.ts` (the staff planner), `outcome.ts` and `rules.ts` (every rule value).
@@ -81,7 +82,7 @@ Each change was written test-first: tests that failed on the previous rules.
   - raids on convoys, and a cost (garrison) for founding a depot;
   - the supply line's delivery rate in "sustainable" (*T₁*), and cut supply lines in "secure".
 - **Balance findings among the tested bots, documented in GAMEPLAY_BALANCING (rules 0.15.0):**
-  - No tested approach wins: every one ends, at best and most often, in Limited Success, though collapses all but disappeared once corps could draw all the food they can carry. Until 0.13.0 the southern envelopment won 82% of its games by cutting the Moscow road, but the Russians were still cut off at the end in under 2%; since 0.14.0 a cut counts only if it lasts (D-039).
+  - Only holding the Moscow road at Valutino to the end wins: the holding southern envelopment wins 35% of its games, all costly, because its army cannot be fed there (the stores cannot be hauled past Liozno). Every other approach ends, at best, in Limited Success. Until 0.13.0 the southern envelopment won 82% of its games by cutting the Moscow road, but the Russians were still cut off at the end in under 2%; since 0.14.0 a cut counts only if it lasts (D-039).
   - No tested approach inflicts a decisive defeat in battle under the placeholder battle model (counted directly since 0.14.0).
   - No halt consolidates, at any foraging reach tested, because the placeholder depot stocks cannot feed the army for 20 days. Research on the 1812 magazines is pending.
   - The adaptive policy gains nothing over the best fixed approach.
