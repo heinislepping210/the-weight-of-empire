@@ -383,3 +383,23 @@ The second review found five defects, a missing control and a misread source (D-
 - **No tested halt consolidates**, at any foraging reach from 7.5 to 22 km.
 
 **The foraging reach is now 11 km** (G-019; your decision, "Adopt 11 km"). Read correctly, the source gives 7.5–15 km; 11 km is half the width of its square for extended operations, the case first chosen. The what-if runs over 7.5–22 km came first. No approach family's ending moves by as much as half a point across that range, because their groups march concentrated. Against 22 km, the methodical bot is repulsed more often (35% against 30%). The halts lose more horses (the prudent halt 9.4% against 4.7%) and end with less food (2.7 days against 4.1).
+
+## Movement in time order (rules 0.13.0, 1 November 2026)
+
+The second review's recommended next phase (D-038). Within each hour, forces now arrive and set out in time order across both sides, instead of one after another in the order of their names; a column that catches an enemy column follows at its pace; and a tied attacker is drawn instead of always being French. Reports: [the batch, 1,000 scenarios × 3 sets of dice](balance/2026-11-01-rules-0.13.0.md), [the adaptive policy](balance/2026-11-01-adaptive-0.13.0.md), [the supply-stance probe](balance/2026-11-01-supply-stance-0.13.0.md). Integrity holds: zero invariant violations in 27,000 games, now including the road-order check. No rule value changed.
+
+| Strategy, every game | Won, 0.12.0 → 0.13.0 | Operational Collapse | Repulse | Battles a game |
+|---|---|---|---|---|
+| concentrated-push | 0.0% → 0.0% | 7.1% → 4.3% | 1.4% → 1.5% | 4.3 → 3.4 |
+| southern-envelopment | 82.2% → 83.1% | 1.5% → 1.3% | 6.8% → 7.4% | 2.1 → 2.0 |
+| bait-and-converge | 0.0% → 0.0% | 0.0% → 0.0% | 6.3% → 6.5% | 2.3 → 2.5 |
+| methodical | 0.0% → 0.2% | 0.3% → 0.3% | 35.3% → 30.2% | 2.3 → 2.4 |
+| rush | 0.0% → 0.0% | 9.4% → 6.1% | 0.7% → 0.8% | 3.4 → 3.1 |
+
+**Where the changes come from**, traced on 300 seeds with the attacker rule alone reverted:
+- **The attacker rule.** The French now attack in 48% of the concentrated push's battles instead of 62%, and in 46% of the rush's instead of 64%; the old rule handed them every tie. With the old rule the push collapses in 22 of 300 games, with the new one in 16.
+- **The time order.** The push fights fewer battles (3.4 a game against 4.3), and French corps join battles under way about half as often (0.8 a game against 1.4). That part does not depend on the attacker rule. Why the hour-by-hour sweep produced more battles has not been traced.
+
+**The experiment:** strategy 42% of the variance, scenario 4%, which strategy suits which scenario 42%, dice 12% (with the ranks spread out: 53% / 3% / 34% / 10%). The best approach on a scenario's first roll is the best on its other two on 99.4% of 784 untied scenarios; 22% of scenarios have a tie. The southern envelopment is still best on 85% of seeds, and the adaptive policy still picks it everywhere; a scenario oracle would gain 0.12 ranks.
+
+**Cost:** the batch takes about 1.7 times as long (808 s against 484 s for 27,000 games, run alongside two other probes). One game in the browser is unaffected in practice.

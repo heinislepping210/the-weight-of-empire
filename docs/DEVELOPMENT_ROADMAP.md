@@ -53,6 +53,7 @@ The first release is **The Vitebsk Decision only**, made genuinely excellent bef
 - **Done (rules 0.12.0, the second independent review):** five defects fixed, the rout rule added, the experiment's measures and claims corrected (D-037).
   - Fixing the road order cut the concentrated push's collapses from 33% to 7%. Fixing the route into the objective lets the southern envelopment hold Valutino: it now wins 82% of its games, mostly as Costly Victories, and is best on 85% of seeds among the tested bots.
   - The foraging reach is now 11 km, from the source read correctly, instead of 22 km. Across that range only the methodical bot and the halts were affected.
+- **Done (rules 0.13.0):** movement in time order, the second review's recommended next phase (D-038). A junction meeting no longer depends on which force's name sorts first, and a tied attacker is drawn instead of always French. The push's collapses fall from 7% to 4%; the southern envelopment is unchanged.
 - **Met:** "three approach families produce clearly different outcome distributions" (even more so on 0.10.0). On rules 0.8.0, and nearly the same on 0.9.0:
   - concentrated push: mostly Limited Success (58%), Operational Collapse in 30%;
   - southern envelopment: spread from Decisive Success (8%) to Repulse (31%);

@@ -242,6 +242,7 @@ function stageActivity(s: GameState, ctx: Context, log: LogEntry[]): void {
   for (const b of sortedValues(s.battles)) b.roundsThisSlot = 0;
   for (const f of sortedValues(s.forces)) {
     f.movedThisSlot = false;
+    f.arrivedAt = null;
     // A dispersed force must assemble before it can march (§2.4b).
     if (f.posture === 'dispersed' && f.gathering === 0 && f.battle === null && f.pace !== 'rest' && nextEdgeOf(ctx, f)) {
       f.gathering = ctx.rules.posture.gatherSlots;
@@ -289,11 +290,8 @@ function stageMovement(s: GameState, ctx: Context, log: LogEntry[]): void {
   // The march budget is set by each force's condition at the start of the sub-step.
   const budgets = movers.map((f) => Math.floor((ctx.rules.march.metresPerSlot[f.pace] * fatiguePermille(f.fatigue, ctx.rules)) / 1000));
   for (let hour = 0; hour < HOURS_PER_SLOT; hour++) {
-    movers.forEach((f, i) => {
-      const total = budgets[i] as number;
-      const share = Math.floor((total * (hour + 1)) / HOURS_PER_SLOT) - Math.floor((total * hour) / HOURS_PER_SLOT);
-      if (moveForce(s, ctx, f, share, hour, log)) f.movedThisSlot = true;
-    });
+    const shares = budgets.map((total) => Math.floor((total * (hour + 1)) / HOURS_PER_SLOT) - Math.floor((total * hour) / HOURS_PER_SLOT));
+    marchHour(s, ctx, movers, shares, hour, log);
   }
   // A column that could not move at all (held up on the road, or too exhausted) rests instead.
   for (const f of movers) if (!f.movedThisSlot) f.activity = 'halt';
@@ -516,11 +514,6 @@ interface Mover {
 }
 
 /** What else on the road limits a mover: whether it may set out along a road, and how far along it it may go. */
-interface Way {
-  mayEnter?: (from: NodeId, edge: EdgeDef) => boolean;
-  reachLimit?: (transit: Transit) => number;
-}
-
 function roadFactor(s: GameState, ctx: Context, edge: EdgeDef): number {
   const r = ctx.rules.march;
   let factor: number = r.roadPermille[edge.road];
@@ -530,11 +523,10 @@ function roadFactor(s: GameState, ctx: Context, edge: EdgeDef): number {
 }
 
 /**
- * Moves along the route on a budget of "ideal" metres; each road converts it at its own speed.
- * Returns whether any distance was covered. Contact happens at places, never on the road: `way`
- * keeps opposing columns from passing each other (§3.4a step 3).
+ * Moves a wagon train along its route on a budget of "ideal" metres; each road converts it at its own speed.
+ * Returns whether any distance was covered. Forces march in time order instead (`marchHour`).
  */
-function travel(s: GameState, ctx: Context, m: Mover, budget: number, stopAt: (node: NodeId) => boolean, onArrive: (node: NodeId) => void, way: Way = {}): boolean {
+function travel(s: GameState, ctx: Context, m: Mover, budget: number, stopAt: (node: NodeId) => boolean, onArrive: (node: NodeId) => void): boolean {
   let moved = false;
   let left = budget;
   while (left > 0) {
@@ -542,23 +534,16 @@ function travel(s: GameState, ctx: Context, m: Mover, budget: number, stopAt: (n
       const to = m.route[0];
       if (to === undefined) break;
       const edge = must(edgeBetween(ctx.graph, m.at, to), `road ${m.at}–${to}`);
-      if (way.mayEnter && !way.mayEnter(m.at, edge)) break;
       m.transit = { edge: edge.id, to, metres: 0, seq: s.roadSeq++ };
     }
     const edge = must(ctx.graph.edges.get(m.transit.edge), m.transit.edge);
     const factor = roadFactor(s, ctx, edge);
-    const limit = Math.min(edge.metres, way.reachLimit ? way.reachLimit(m.transit) : edge.metres);
-    const remaining = limit - m.transit.metres;
+    const remaining = edge.metres - m.transit.metres;
     const reach = Math.floor((left * factor) / 1000);
     if (reach <= 0 || remaining <= 0) break;
     moved = true;
     if (reach < remaining) {
       m.transit.metres += reach;
-      break;
-    }
-    if (limit < edge.metres) {
-      // Closed up behind an enemy column: it follows, but cannot pass.
-      m.transit.metres = limit;
       break;
     }
     left -= Math.ceil((remaining * 1000) / factor);
@@ -571,39 +556,184 @@ function travel(s: GameState, ctx: Context, m: Mover, budget: number, stopAt: (n
   return moved;
 }
 
-/** One hour's march for a force. Returns whether it covered any distance. */
-function moveForce(s: GameState, ctx: Context, f: Force, budget: number, hour: number, log: LogEntry[]): boolean {
+/** Seconds in an hour: within an hour, arrivals and settings-out are timed to the second (D-038). */
+const HOUR = 3_600;
+/** Converts a rate (hourly share × road factor) and seconds into metres. */
+const PER_HOUR = 1_000 * HOUR;
+
+/** One force's march through one hour. */
+interface March {
+  f: Force;
+  share: number;
+  /** Hourly share × road factor on its current road: metres per hour, × 1000. */
+  rate: number;
+  /** The moment (seconds into the hour) and distance from which it moves at `rate`; for a force standing at a place, when it may set out. */
+  t0: number;
+  m0: number;
+  /** The enemy column it has closed up behind on this road: it moves at that column's pace. */
+  behind: Force | null;
+  /** Holds its place, or the road, for the rest of the hour. */
+  done: boolean;
+}
+
+/**
+ * One hour's march for every marching force, taken in time order across both sides (§3.4a step 3, D-038).
+ * Each force moves at a steady speed set by its hourly share and the road, so its arrivals at places and its
+ * settings-out happen at definite moments. At each moment every arrival is placed before anyone sets out
+ * again, so forces reaching a place together meet there. A column that catches up with an enemy column
+ * ahead of it closes up and follows at its pace, and reaches the next place just after it. Nothing depends on
+ * the order of the forces' names, except between forces of one side, which do not block each other.
+ */
+function marchHour(s: GameState, ctx: Context, movers: Force[], shares: number[], hour: number, log: LogEntry[]): void {
   const res = s.resolution;
-  const enemies = () => sortedValues(s.forces).filter((e) => e.side !== f.side && e.men > 0);
-  const mayEnter = (from: NodeId, edge: EdgeDef): boolean => {
-    const to = edge.a === from ? edge.b : edge.a;
-    // Standing where the enemy stands: the contact must be resolved first.
-    if (enemyPresent(s, f.side, from)) return false;
-    // An enemy column on this road coming the other way: hold this place and meet it here.
-    if (oncoming(s, f.side, edge.id, from)) return false;
-    // An enemy at the far end setting out towards us in the same hour: a draw decides who gets onto the road.
-    const rival = enemies().some(
-      (e) =>
-        e.transit === null && e.battle === null && e.at === to && e.route[0] === from && (e.activity === 'march' || e.activity === 'cross') && !enemyPresent(s, e.side, to),
-    );
-    if (!rival) return true;
-    const frenchFirst = chance(s.dice, ['road', res.turn, res.slot, hour, edge.id], 500);
-    return frenchFirst === (f.side === 'fr');
+  const lengthOf = (edgeId: string) => must(ctx.graph.edges.get(edgeId), edgeId).metres;
+  const runs: March[] = movers.map((f, i) => {
+    const share = shares[i] as number;
+    const edge = f.transit ? must(ctx.graph.edges.get(f.transit.edge), f.transit.edge) : undefined;
+    return { f, share, rate: edge ? share * roadFactor(s, ctx, edge) : 0, t0: 0, m0: f.transit?.metres ?? 0, behind: null, done: share <= 0 };
+  });
+  const runOf = new Map(runs.map((r) => [r.f.id, r]));
+  const start = new Map(movers.map((f) => [f.id, { at: f.at, edge: f.transit?.edge ?? null, metres: f.transit?.metres ?? 0 }]));
+
+  /** Whether `lead` is still on the same road as `f`, going the same way. */
+  const sameRoad = (f: Force, lead: Force) => f.transit !== null && lead.transit !== null && lead.transit.edge === f.transit.edge && lead.transit.to === f.transit.to;
+  /**
+   * Of two columns on one road, whether `a` set out before `b`, and so is ahead of it (D-037). Set-out
+   * numbers are unique in play; a hand-built state may repeat one, and then the name decides.
+   */
+  const earlier = (a: Force, b: Force) => {
+    const [x, y] = [must(a.transit, a.id), must(b.transit, b.id)];
+    return x.seq < y.seq || (x.seq === y.seq && a.id < b.id);
   };
-  // No overtaking: an enemy column ahead on the same road, going the same way, caps how far the force can go.
-  // Level columns keep the order in which they set out: the one already on the road stays ahead (D-037).
-  const ahead = (t: Transit, e: Transit) => e.edge === t.edge && e.to === t.to && (e.metres > t.metres || (e.metres === t.metres && e.seq < t.seq));
-  const reachLimit = (t: Transit): number => Math.min(Infinity, ...enemies().flatMap((e) => (e.transit !== null && ahead(t, e.transit) ? [e.transit.metres] : [])));
-  // Marching into a place held by the enemy ends the march: that is contact (§3.4a step 4).
-  return travel(
-    s,
-    ctx,
-    f,
-    budget,
-    (node) => enemyPresent(s, f.side, node),
-    (node) => note(s, log, 'arrived', { force: f.id, node }),
-    { mayEnter, reachLimit },
-  );
+  /** The enemy columns ahead of a force on its road, going the same way: those that set out before it. */
+  const enemiesAhead = (f: Force): Force[] => sortedValues(s.forces).filter((e) => e.side !== f.side && e.men > 0 && sameRoad(f, e) && earlier(e, f));
+  /** How far along its road a force is at moment `t`: never past an enemy column that set out before it. */
+  const pos = (f: Force, t: number): number => {
+    if (!f.transit) return 0;
+    const length = lengthOf(f.transit.edge);
+    const r = runOf.get(f.id);
+    if (!r || r.done) return f.transit.metres;
+    // Closed up: at the tail of the column ahead, or at the end of the road once that column has left it.
+    if (r.behind) return sameRoad(f, r.behind) ? Math.min(pos(r.behind, t), length) : length;
+    return enemiesAhead(f).reduce((m, e) => Math.min(m, pos(e, t)), Math.min(length, r.m0 + Math.floor((r.rate * (t - r.t0)) / PER_HOUR)));
+  };
+  /** The pace at which a force on the road is moving now: never faster than its own. */
+  const rateOf = (f: Force): number => {
+    const r = runOf.get(f.id);
+    if (!r || r.done || !f.transit) return 0;
+    return r.behind && sameRoad(f, r.behind) ? Math.min(r.rate, rateOf(r.behind)) : r.rate;
+  };
+  /** The nearest enemy column ahead on the same road, going the same way. */
+  const aheadOf = (f: Force, t: number): Force | null =>
+    enemiesAhead(f).reduce<Force | null>((best, e) => (best === null || pos(e, t) < pos(best, t) ? e : best), null);
+
+  /** The moment of a force's next event, or Infinity: setting out, reaching the end of its road, or closing up. */
+  const nextEvent = (r: March, now: number): number => {
+    if (r.done) return Infinity;
+    const tr = r.f.transit;
+    if (!tr) return r.t0;
+    if (r.behind) {
+      const lead = r.behind;
+      // Still on this road ahead of it: it follows, unless the column ahead now pulls away faster than it can
+      // march. Once the column ahead has left the road and gone on (or stopped for good), it reaches the end of
+      // the road too, just after it.
+      if (sameRoad(r.f, lead)) return rateOf(lead) > r.rate ? now : Infinity;
+      const leadRun = runOf.get(lead.id);
+      if (leadRun && !leadRun.done && !lead.transit && leadRun.t0 === now) return Infinity;
+      return now;
+    }
+    const length = lengthOf(tr.edge);
+    const here = pos(r.f, now);
+    let t = r.rate > 0 ? Math.max(now, r.t0 + Math.ceil(((length - r.m0) * PER_HOUR) / r.rate)) : Infinity;
+    const lead = aheadOf(r.f, now);
+    if (lead) {
+      const gap = pos(lead, now) - here;
+      const closing = r.rate - rateOf(lead);
+      if (closing > 0) t = Math.min(t, gap <= 0 ? now : now + Math.ceil((gap * PER_HOUR) / closing));
+    }
+    return t;
+  };
+
+  /** Reaching the end of its road, or closing up behind the column ahead. */
+  const onTheRoad = (r: March, now: number) => {
+    const f = r.f;
+    const tr = must(f.transit, f.id);
+    const here = pos(f, now);
+    if (r.behind && sameRoad(f, r.behind)) {
+      // The column ahead pulls away: it goes on at its own pace from where it is.
+      Object.assign(r, { behind: null, t0: now, m0: here });
+      tr.metres = here;
+      return;
+    }
+    if (!r.behind && here < lengthOf(tr.edge)) {
+      const lead = aheadOf(f, now);
+      if (lead) {
+        // Closed up: from now on it moves at the pace of the column ahead.
+        tr.metres = Math.min(here, pos(lead, now));
+        r.behind = lead;
+      } else {
+        // The column it was closing on has just reached the end of the road: it goes on at its own pace.
+        Object.assign(r, { t0: now, m0: here });
+        tr.metres = here;
+      }
+      return;
+    }
+    // The end of the road: it arrives.
+    f.at = tr.to;
+    f.transit = null;
+    f.arrivedAt = hour * HOUR + now;
+    if (f.route[0] === f.at) f.route.shift();
+    note(s, log, 'arrived', { force: f.id, node: f.at });
+    r.behind = null;
+    r.t0 = now;
+    // Marching into a place held by the enemy ends the march: that is contact (§3.4a step 4).
+    if (enemyPresent(s, f.side, f.at) || f.route.length === 0) r.done = true;
+  };
+
+  /** Setting out along the next road of its route, if nothing bars the way. */
+  const setOut = (r: March, now: number) => {
+    const f = r.f;
+    const to = f.route[0];
+    const edge = to === undefined ? undefined : must(edgeBetween(ctx.graph, f.at, to), `road ${f.at}–${to}`);
+    r.done = true;
+    if (!edge || to === undefined) return;
+    // Standing where the enemy stands: the contact must be resolved first.
+    if (enemyPresent(s, f.side, f.at)) return;
+    // An enemy column on this road coming the other way: hold this place and meet it here.
+    if (oncoming(s, f.side, edge.id, f.at)) return;
+    // An enemy at the far end setting out towards us at this same moment: a draw decides who gets onto the road.
+    const rival = runs.some(
+      (e) => !e.done && e.f.side !== f.side && e.f.transit === null && e.f.at === to && e.f.route[0] === f.at && e.t0 === now && !enemyPresent(s, e.f.side, to),
+    );
+    if (rival && chance(s.dice, ['road', res.turn, res.slot, hour, edge.id], 500) !== (f.side === 'fr')) return;
+    f.transit = { edge: edge.id, to, metres: 0, seq: s.roadSeq++ };
+    f.arrivedAt = null;
+    Object.assign(r, { done: false, behind: null, t0: now, m0: 0, rate: r.share * roadFactor(s, ctx, edge) });
+  };
+
+  let now = 0;
+  for (;;) {
+    const at = Math.min(Infinity, ...runs.map((r) => nextEvent(r, now)));
+    if (at > HOUR) break;
+    now = at;
+    // Everything due at this moment: arrivals and closings first, then settings-out; repeat until none is due.
+    for (;;) {
+      const due = runs.filter((r) => nextEvent(r, now) === now);
+      if (due.length === 0) break;
+      const onRoad = due.filter((r) => r.f.transit !== null);
+      if (onRoad.length > 0) for (const r of onRoad) onTheRoad(r, now);
+      else for (const r of due) setOut(r, now);
+    }
+  }
+
+  // The end of the hour: columns still on the road stand where they have got to.
+  const onRoad = runs.filter((r) => r.f.transit !== null && !r.done);
+  const reached = new Map(onRoad.map((r) => [r.f.id, pos(r.f, HOUR)]));
+  for (const r of onRoad) must(r.f.transit, r.f.id).metres = reached.get(r.f.id) as number;
+  for (const r of runs) {
+    const was = must(start.get(r.f.id), r.f.id);
+    if (r.f.at !== was.at || (r.f.transit?.edge ?? null) !== was.edge || (r.f.transit?.metres ?? 0) > was.metres) r.f.movedThisSlot = true;
+  }
 }
 
 /** Where a wagon train delivers: its force, or the depot it stocks. Null when it stands idle or its target is gone. */
@@ -758,14 +888,21 @@ function leadOf(s: GameState, ids: ForceId[]): Force {
   return ids.map((id) => must(s.forces[id], id)).reduce((a, b) => (b.men > a.men ? b : a));
 }
 
-/** The side that marched in attacks; failing that, the side seeking battle; failing that, whoever is not avoiding it. */
-function attackerOf(s: GameState, sides: Record<Side, ForceId[]>): Side {
+/**
+ * The side that marched into a place the enemy already held attacks; of two sides that both arrived during the
+ * sub-step, the later. Arriving at the same moment, or neither having marched in, the side seeking battle
+ * attacks, then the side not avoiding it; failing that, a draw for the place and sub-step: never a fixed side,
+ * never the forces' names (D-038).
+ */
+function attackerOf(s: GameState, node: NodeId, sides: Record<Side, ForceId[]>): Side {
+  const first = (side: Side) => Math.min(...sides[side].map((id) => must(s.forces[id], id).arrivedAt ?? -1));
+  if (first('fr') !== first('ru')) return first('fr') > first('ru') ? 'fr' : 'ru';
   const any = (side: Side, test: (f: Force) => boolean) => sides[side].some((id) => test(must(s.forces[id], id)));
-  for (const test of [(f: Force) => f.movedThisSlot, (f: Force) => f.engagement === 'seek', (f: Force) => f.engagement !== 'avoid']) {
+  for (const test of [(f: Force) => f.engagement === 'seek', (f: Force) => f.engagement !== 'avoid']) {
     const fr = any('fr', test);
     if (fr !== any('ru', test)) return fr ? 'fr' : 'ru';
   }
-  return 'fr';
+  return chance(s.dice, ['attacker', s.resolution.turn, s.resolution.slot, node], 500) ? 'fr' : 'ru';
 }
 
 /** Returns true when a major battle was created and resolution must pause for deployment. */
@@ -785,7 +922,7 @@ function resolveEncounter(s: GameState, ctx: Context, enc: Encounter, log: LogEn
     return false;
   }
 
-  const attacker = attackerOf(s, sides);
+  const attacker = attackerOf(s, enc.node, sides);
   const defender = otherSide(attacker);
   if (leadOf(s, sides[defender]).engagement === 'avoid' && tryWithdraw(s, ctx, enc.node, defender, sides[defender], log)) return false;
 

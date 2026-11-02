@@ -120,6 +120,7 @@ export function newGame(ctx: Context, seed: number, dice: number = seed): GameSt
       incoming: emptySupplies(),
       marchedToday: false,
       movedThisSlot: false,
+      arrivedAt: null,
     };
   }
 

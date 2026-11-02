@@ -42,6 +42,8 @@ const GOLDEN: Record<string, string> = {
   '0.11.0': '070285ad72acd22c',
   // The second review (D-037): road order, traction, fixed main armies, the rout rule; state gains `roadSeq` and `mainArmies`.
   '0.12.0': '471df355d10627e6',
+  // Movement in time order (D-038): forces gain `arrivedAt`; a tied attacker is drawn instead of always French.
+  '0.13.0': '727f678929cb7de1',
 };
 
 /**
@@ -56,6 +58,7 @@ const GOLDEN_VITEBSK: Record<string, string> = {
   '0.11.0': '4ceff6b3eb9f0efc',
   // Also the foraging reach at 11 km (G-019, D-037).
   '0.12.0': '5cfa601d92d3f681',
+  '0.13.0': '5c2bfdd2ba3e3f21',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */

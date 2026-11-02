@@ -21,6 +21,15 @@ export function contactViolations(s: GameState): string[] {
       if (e.side === 'ru' && e.transit !== null && e.transit.edge === f.transit.edge && e.transit.to !== f.transit.to) out.push(`${f.id} and ${e.id} are on road ${f.transit.edge} heading towards each other`);
     }
   }
+  // No passing on the road (D-037, D-038): of two enemy columns heading the same way, the one that set out
+  // later is never further along.
+  for (const f of forces) {
+    for (const e of forces) {
+      const [ft, et] = [f.transit, e.transit];
+      if (f.side === e.side || !ft || !et || ft.edge !== et.edge || ft.to !== et.to) continue;
+      if (ft.seq > et.seq && ft.metres > et.metres) out.push(`${f.id} set out along road ${ft.edge} after ${e.id} but is further along it`);
+    }
+  }
   return out;
 }
 

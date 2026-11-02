@@ -70,6 +70,8 @@ export interface Force {
   incoming: Supplies;
   marchedToday: boolean;
   movedThisSlot: boolean;
+  /** Seconds into the current sub-step at which it reached the place where it stands; null if it was there already (D-038). */
+  arrivedAt: number | null;
 }
 
 export type ConvoyLeg = 'loading' | 'outbound' | 'returning';

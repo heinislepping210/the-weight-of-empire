@@ -138,6 +138,7 @@ describe('opposing columns on one road', () => {
       { 1: { 'ru-post': ['C'] } },
     );
     const start = newGame(ctx, 3);
+    start.roadSeq = 1; // the Russian column below set out first
     Object.assign(start.forces['ru-post']!, { at: 'B', transit: { edge: 'B-C', to: 'C', metres: 2_000, seq: 0 } });
     Object.assign(start.forces['fr-flank']!, { at: 'B' });
     const s = stepUntil(ordered(start, ctx, [{ force: 'fr-flank', route: ['C'], pace: 'forced' }]), ctx, (x) => x.resolution.slot === 0 && x.resolution.stage === 'contacts');

@@ -102,6 +102,7 @@ function inflict(s: GameState, b: BattleState, forces: Force[], total: number): 
 export function fallBack(s: GameState, ctx: Context, f: Force, dest: NodeId): void {
   const edge = must(edgeBetween(ctx.graph, f.at, dest), `road ${f.at}–${dest}`);
   f.transit = { edge: edge.id, to: dest, metres: 0, seq: s.roadSeq++ };
+  f.arrivedAt = null;
   f.route = [dest];
   f.posture = 'concentrated';
   f.gathering = 0;
