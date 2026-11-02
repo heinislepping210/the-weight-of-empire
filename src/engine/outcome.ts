@@ -6,7 +6,7 @@
 import { usableWagons, withinCapacity } from './carriage';
 import { neighboursOf, roadDistance, shortestPath } from './graph';
 import type { Context } from './scenario';
-import { dayIndex } from './time';
+import { dayIndex, slotIndex } from './time';
 import type { Convoy, Force, GameState, NodeId, Side } from './types';
 import { enemyPresent, sortedValues } from './util';
 
@@ -58,6 +58,10 @@ export interface Outcome {
   frenchMenLostPermille: number;
   frenchHorsesLostPermille: number;
   russianMainLostPermille: number;
+  /** The line of retreat was cut at some point; whether it was still cut at the end; and what the main armies lost in battle after it was cut (permille of their starting strength). */
+  roadCut: boolean;
+  stillCutOff: boolean;
+  lostSinceCutPermille: number;
   /** French army at the end: men-weighted cohesion (0–1000) and days of food in hand. */
   frenchCohesion: number;
   frenchFoodDays: number;
@@ -116,8 +120,16 @@ export function evaluate(start: GameState, end: GameState, ctx: Context): Outcom
   const worstWindow = won.reduce((best, w) => Math.max(best, won.filter((x) => x.day >= w.day && x.day < w.day + r.decisiveWindowDays).reduce((n, x) => n + x.lost, 0)), 0);
   const battleLossPermille = mainStart === 0 ? 0 : Math.floor((worstWindow * 1000) / mainStart);
 
-  // Cut off: the line of retreat was blocked for long enough at some point; once achieved, it stands.
-  const cutOff = end.cutOff.achievedAt !== null;
+  // Cut off: the line of retreat was blocked for long enough at some point. What that earns depends on
+  // whether they were still cut off at the end, and what breaking out cost them in battle (`cutOffCredit`).
+  const cutAt = end.cutOff.achievedAt;
+  const roadCut = cutAt !== null;
+  const stillCutOff = roadCut && lineOfRetreatBlocked(end, ctx, mainIds);
+  const lostSinceCut = cutAt === null ? 0 : sortedValues(end.battles).filter((b) => slotIndex(b.startsAt) >= slotIndex(cutAt)).reduce((n, b) => n + mainIds.reduce((m, id) => m + (b.losses[id] ?? 0), 0), 0);
+  const lostSinceCutPermille = mainStart === 0 ? 0 : Math.floor((lostSinceCut * 1000) / mainStart);
+  const costlyEscape = roadCut && !stillCutOff && lostSinceCutPermille >= r.damagedLossPermille;
+  const cutOff = r.cutOffCredit === 'stands' ? roadCut : stillCutOff;
+  const forcedOutByCut = r.cutOffCredit === 'graded' && costlyEscape;
 
   const russianHoldsKey = keyPlaces.some((p) => holders('ru', p) > 0);
   const holdsKeyGround = keyPlaces.some((p) => holders('fr', p) > 0 && holders('ru', p) === 0);
@@ -125,7 +137,7 @@ export function evaluate(start: GameState, end: GameState, ctx: Context): Outcom
   let russian: RussianResult;
   if (battleLossPermille >= r.decisiveLossPermille) russian = 'decisivelyDefeated';
   else if (cutOff) russian = 'cutOff';
-  else if (keyPlaces.length > 0 && !russianHoldsKey && russianMainLostPermille >= r.damagedLossPermille) russian = 'forcedOut';
+  else if (forcedOutByCut || (keyPlaces.length > 0 && !russianHoldsKey && russianMainLostPermille >= r.damagedLossPermille)) russian = 'forcedOut';
   else if (russianMainLostPermille >= r.damagedLossPermille) russian = 'damaged';
   else russian = 'intact';
 
@@ -194,7 +206,13 @@ export function evaluate(start: GameState, end: GameState, ctx: Context): Outcom
     russian === 'decisivelyDefeated'
       ? `In battles in which they broke, within ${r.decisiveWindowDays} days, the Russian main armies lost ${pct(battleLossPermille)} of their strength; over the whole campaign ${pct(russianMainLostPermille)}.`
       : `The Russian main armies lost ${pct(russianMainLostPermille)} of their strength over the campaign; in battles in which they broke, within ${r.decisiveWindowDays} days, ${pct(battleLossPermille)}.`,
-    cutOff ? 'Their line of retreat was blocked long enough to cut them off.' : 'Their line of retreat stayed open.',
+    !roadCut
+      ? 'Their line of retreat stayed open.'
+      : stillCutOff
+        ? 'Their line of retreat was cut, and they were still cut off when the campaign ended.'
+        : costlyEscape
+          ? `Their line of retreat was cut, but they broke out, losing ${pct(lostSinceCutPermille)} of their strength in battle after it was cut.`
+          : 'Their line of retreat was cut for a time, but they got away without heavy loss.',
     holdsKeyGround ? 'French troops hold the objective ground.' : 'The objective ground is not in French hands.',
     `The French army lost ${pct(frenchMenLostPermille)} of its men and ${pct(frenchHorsesLostPermille)} of its horses; it has ${foodDays.toFixed(1)} days' food in hand.`,
     `${capable ? 'It remains capable of further operations' : 'It is too weakened for further operations'}, ${sustainable ? 'its supply is sustainable' : 'its supply is not sustainable'}, and ${secure ? 'it is secure' : 'it is not secure'}.`,
@@ -211,6 +229,9 @@ export function evaluate(start: GameState, end: GameState, ctx: Context): Outcom
     frenchMenLostPermille,
     frenchHorsesLostPermille,
     russianMainLostPermille,
+    roadCut,
+    stillCutOff,
+    lostSinceCutPermille,
     frenchCohesion: cohesion,
     frenchFoodDays: Math.round(foodDays * 10) / 10,
     reasons,

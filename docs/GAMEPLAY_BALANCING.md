@@ -403,3 +403,32 @@ The second review's recommended next phase (D-038). Within each hour, forces now
 **The experiment:** strategy 42% of the variance, scenario 4%, which strategy suits which scenario 42%, dice 12% (with the ranks spread out: 53% / 3% / 34% / 10%). The best approach on a scenario's first roll is the best on its other two on 99.4% of 784 untied scenarios; 22% of scenarios have a tie. The southern envelopment is still best on 85% of seeds, and the adaptive policy still picks it everywhere; a scenario oracle would gain 0.12 ranks.
 
 **Cost:** the batch takes about 1.7 times as long (808 s against 484 s for 27,000 games, run alongside two other probes). One game in the browser is unaffected in practice.
+
+## What a cut road earns (rules 0.14.0, adopted: graded, 1 November 2026)
+
+The second review's finding D3: holding the Moscow road for two sub-steps counts as cutting the Russians off for good, even if they then get away. Three options were measured as what-ifs on rules 0.13.0 ([report](balance/2026-11-01-whatif-cutoff.md)): *stands* (the rule now), *at the end* (cut off only if still cut off when the campaign ends), and *graded* (that, plus "forced out" for a break-out at a heavy cost in battle, and a mention for a cheap escape). The batch now also reports what happened to the Russian main armies, and how often their road was cut.
+
+- **The cut rarely lasts.** The southern envelopment cuts the road in 82% of its games; the Russians are still cut off at the end in 1.2%. They break out at a heavy cost in 25% and get away cheaply in 57%.
+- **No tested approach inflicts a decisive defeat in battle**, under any option (now counted directly).
+- **Under "at the end" or "graded", no tested approach wins.** The southern envelopment falls from 82% Costly Victory to Limited Success (47%), Inconclusive (24%) and Repulse (26%), and no family dominates any more (F3: push 42%, bait and converge 40%, southern envelopment 19%).
+- **The two give the same endings with these bots,** because a "forced out" becomes an Operational Success only if the French army is also capable, fed and secure, which this bot's army never is.
+- **History:** at Valutino (19 August 1812) the French threatened the road, but Barclay's army slipped away east and the day was indecisive (H-019). That is the case the game is modelling, and it argues against a lasting victory for a brief interruption.
+
+**Decided (D-039): graded.** Still cut off at the end: cut off. Broken out at a heavy cost in battle: forced out, which is an Operational Success if the French army is capable, fed and secure. Got away cheaply: a line in the report. Reports on the adopted rules: [the batch, 1,000 scenarios × 3 sets of dice](balance/2026-11-01-rules-0.14.0.md), [the adaptive policy](balance/2026-11-01-adaptive-0.14.0.md), [the supply-stance probe](balance/2026-11-01-supply-stance-0.14.0.md). Zero invariant violations in 27,000 games.
+
+| Southern envelopment, every game | rules 0.13.0 | rules 0.14.0 |
+|---|---|---|
+| Decisive Success or Costly Victory | 82.7% | 1.6% |
+| Operational Success | 0.4% | 1.5% |
+| Limited Success | 7.1% | 45.8% |
+| Inconclusive | 1.0% | 23.0% |
+| Repulse | 7.4% | 26.7% |
+
+**What it means, among the tested bots:**
+- **No tested approach wins.** Every one now ends, at best and most often, in Limited Success (the push 94%, bait and converge 93%, the methodical bot 69%, the southern envelopment 46%). A win needs the trap kept shut to the end, a costly break-out with the army in order, or a real decisive battle, and these bots manage none of them more than once or twice in a hundred games.
+- **No family dominates any more** (F3: the push best on 42% of seeds, bait and converge 40%, the southern envelopment 19%). But that is a balance among approaches that do not win, not the fairness F3 is meant to show.
+- **Most scenarios now have a tie for best** (94%), since most approaches end in Limited Success; the stability measure is little use until endings spread again.
+- **The variance split moves back** to strategy 27%, scenario 6%, which strategy suits which scenario 48%, dice 19%.
+- **Reading the situation:** the best fixed approach is now bait and converge; a scenario oracle would gain 0.18 ranks, and the adaptive policy still gains nothing.
+
+**What it asks for next:** not a looser rule, but bots (and, in time, players) that can do what the rule now demands: hold Valutino and feed the army there, or concentrate for a decisive battle. And the sector battles of §2.10, which replace the placeholder battle model that never produces a decisive defeat.

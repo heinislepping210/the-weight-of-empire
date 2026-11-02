@@ -1,6 +1,6 @@
 # Review Brief
 
-For an outside reviewer, human or AI, asked to give feedback on the project as it stands (1 November 2026, rules 0.13.0, milestone M1). It says what exists, what changed since the first independent review, where to look, and what is already known, so a review can go beyond it. The detailed instructions for a second review are in [reviews/SECOND_REVIEW_PROMPT.md](reviews/SECOND_REVIEW_PROMPT.md).
+For an outside reviewer, human or AI, asked to give feedback on the project as it stands (1 November 2026, rules 0.14.0, milestone M1). It says what exists, what changed since the first independent review, where to look, and what is already known, so a review can go beyond it. The detailed instructions for a second review are in [reviews/SECOND_REVIEW_PROMPT.md](reviews/SECOND_REVIEW_PROMPT.md).
 
 ## What the project is
 
@@ -50,6 +50,7 @@ The first review's findings and their status are in [reviews/2026-10-31-independ
 | F | Scenario and dice apart; variance split with fresh dice; adaptive policy on held-out seeds; depot shared by need | 0.11.0 | D-036 |
 | Second review | Road order, traction, fixed main armies, the rout rule, sustainability counted once; the experiment's measures and claims corrected | 0.12.0 | D-037 |
 | Second review, next phase | Movement in time order within each hour; the attacker drawn on a tie | 0.13.0 | D-038 |
+| Second review, D3 | A cut road counts only if the Russians are still cut off at the end (graded) | 0.14.0 | D-039 |
 
 Each change was written test-first: tests that failed on the previous rules.
 
@@ -58,9 +59,9 @@ Each change was written test-first: tests that failed on the previous rules.
 1. This brief, then [PROJECT_VISION](PROJECT_VISION.md) for the goals and the scope limits.
 2. [GAME_DESIGN_DOCUMENT](GAME_DESIGN_DOCUMENT.md) §2: §2.4b directives, §2.6 logistics, §2.12 variation, §2.13 outcomes.
 3. [TECHNICAL_ARCHITECTURE](TECHNICAL_ARCHITECTURE.md) §3.4a: the turn timeline and the contact rule.
-4. [GAMEPLAY_BALANCING](GAMEPLAY_BALANCING.md), from "Contacts corrected" to the end, with the reports in [balance/](balance/). The latest are [rules 0.13.0](balance/2026-11-01-rules-0.13.0.md), [the adaptive policy](balance/2026-11-01-adaptive-0.13.0.md) and [the foraging-reach what-ifs](balance/2026-11-01-whatif-reach.md).
+4. [GAMEPLAY_BALANCING](GAMEPLAY_BALANCING.md), from "Contacts corrected" to the end, with the reports in [balance/](balance/). The latest are [rules 0.14.0](balance/2026-11-01-rules-0.14.0.md), [the adaptive policy](balance/2026-11-01-adaptive-0.14.0.md), and the what-ifs on [the cut road](balance/2026-11-01-whatif-cutoff.md) and [the foraging reach](balance/2026-11-01-whatif-reach.md).
 5. [HISTORICAL_RESEARCH](HISTORICAL_RESEARCH.md) and [HISTORICAL_ASSUMPTIONS](HISTORICAL_ASSUMPTIONS.md): sources, and the status of every claim (H-, L- and G- entries).
-6. [DECISIONS](DECISIONS.md) D-029 to D-038.
+6. [DECISIONS](DECISIONS.md) D-029 to D-039.
 7. Code:
    - `src/engine/advance.ts`: turn resolution, about 900 lines.
    - `battle.ts`, `carriage.ts`, `directive.ts` (the staff planner), `outcome.ts` and `rules.ts` (every rule value).
@@ -77,11 +78,11 @@ Each change was written test-first: tests that failed on the previous rules.
   - road capacity and column length;
   - raids on convoys, and a cost (garrison) for founding a depot;
   - the supply line's delivery rate in "sustainable" (*T₁*), and cut supply lines in "secure".
-- **Balance findings among the tested bots, documented in GAMEPLAY_BALANCING (rules 0.13.0):**
-  - Only cutting the Moscow road at Valutino wins: the southern envelopment wins 83% of its games, mostly as Costly Victories, and is best on 85% of seeds.
-  - No tested approach reached a decisive defeat in battle under the placeholder battle model on 0.11.0; 0.12.0 also requires a rout.
+- **Balance findings among the tested bots, documented in GAMEPLAY_BALANCING (rules 0.14.0):**
+  - No tested approach wins: every one ends, at best and most often, in Limited Success. Until 0.13.0 the southern envelopment won 82% of its games by cutting the Moscow road, but the Russians were still cut off at the end in under 2%; since 0.14.0 a cut counts only if it lasts (D-039).
+  - No tested approach inflicts a decisive defeat in battle under the placeholder battle model (counted directly since 0.14.0).
   - No halt consolidates, at any foraging reach tested, because the placeholder depot stocks cannot feed the army for 20 days. Research on the 1812 magazines is pending.
-  - The adaptive policy gains nothing: it learns to pick the southern envelopment everywhere.
+  - The adaptive policy gains nothing over the best fixed approach.
   - Two of the "competent" bot variants are not yet competent.
 - **The foraging reach was corrected** to 11 km (G-019, D-037), after the source turned out to give the widths of foraging squares, not radii.
 - **Open measures:** F3 by openings (branch the first two directives with a shared continuation); an adaptive policy that re-decides every turn; confidence intervals on the batch figures.

@@ -44,6 +44,8 @@ const GOLDEN: Record<string, string> = {
   '0.12.0': '471df355d10627e6',
   // Movement in time order (D-038): forces gain `arrivedAt`; a tied attacker is drawn instead of always French.
   '0.13.0': '727f678929cb7de1',
+  // What a cut road earns (D-039): only the judging of the end changes; the play is the same as 0.13.0.
+  '0.14.0': 'ea8dd47e1440de46',
 };
 
 /**
@@ -59,6 +61,7 @@ const GOLDEN_VITEBSK: Record<string, string> = {
   // Also the foraging reach at 11 km (G-019, D-037).
   '0.12.0': '5cfa601d92d3f681',
   '0.13.0': '5c2bfdd2ba3e3f21',
+  '0.14.0': 'e9543230ca011152',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */

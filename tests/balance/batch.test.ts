@@ -11,7 +11,7 @@
 
 import { expect, it } from 'vitest';
 import { ENDING_NAMES, ENDING_RANK, RULES, RULES_VERSION, createContext, evaluate } from '../../src/engine';
-import type { EndingId, GameState, Rules } from '../../src/engine';
+import type { EndingId, GameState, Rules, RussianResult } from '../../src/engine';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
 import { keyHash } from '../../src/engine/rng';
 import { play } from '../fixtures/driver';
@@ -66,6 +66,10 @@ interface Result {
   abandonedFood: number;
   abandonedFodder: number;
   trainHorsesLostPermille: number;
+  russian: RussianResult;
+  roadCut: boolean;
+  stillCutOff: boolean;
+  costlyEscape: boolean;
 }
 
 it.skipIf(!enabled)('balance batch', () => {
@@ -104,6 +108,10 @@ it.skipIf(!enabled)('balance batch', () => {
         frLostBattles: Object.values(run.final.battles).filter((b) => b.winner === 'ru').length,
         cohesion: o.frenchCohesion,
         foodDays: o.frenchFoodDays,
+        russian: o.russian,
+        roadCut: o.roadCut,
+        stillCutOff: o.stillCutOff,
+        costlyEscape: o.roadCut && !o.stillCutOff && o.lostSinceCutPermille >= rules.outcome.damagedLossPermille,
       });
     }
   }
@@ -137,6 +145,24 @@ it.skipIf(!enabled)('balance batch', () => {
     const rs = results[name]!;
     lines.push(
       `| ${name} | ${mean(rs.map((r) => r.battles)).toFixed(1)} | ${mean(rs.map((r) => r.rounds)).toFixed(1)} | ${mean(rs.map((r) => r.frJoins)).toFixed(2)} | ${mean(rs.map((r) => r.ruJoins)).toFixed(2)} | ${mean(rs.map((r) => r.frLostBattles)).toFixed(2)} |`,
+    );
+  }
+
+  // What happened to the Russian main armies, and how often their road was cut (§2.13; the second review's D3).
+  lines.push(
+    '',
+    '## The Russian main armies (share of games)',
+    '',
+    `Cut-off credit: \`${rules.outcome.cutOffCredit}\`. "Road cut" counts games in which the line of retreat was held long enough at some point; of those, still cut off at the end, or broken out after losing at least ${rules.outcome.damagedLossPermille / 10}% of their strength in battle after the cut.`,
+    '',
+    '| Strategy | Decisively defeated | Cut off | Forced out | Damaged | Intact | Road cut | Still cut off at the end | Broke out at a heavy cost |',
+    '|---|---|---|---|---|---|---|---|---|',
+  );
+  for (const name of names) {
+    const rs = results[name]!;
+    const share = (test: (r: Result) => boolean) => pct(rs.filter(test).length, rs.length);
+    lines.push(
+      `| ${name} | ${(['decisivelyDefeated', 'cutOff', 'forcedOut', 'damaged', 'intact'] as const).map((x) => share((r) => r.russian === x)).join(' | ')} | ${share((r) => r.roadCut)} | ${share((r) => r.stillCutOff)} | ${share((r) => r.costlyEscape)} |`,
     );
   }
 

@@ -1,5 +1,13 @@
+/**
+ * What cutting the Russian line of retreat earns (§2.13; D-039, `graded` adopted): `stands`, once held long
+ * enough it counts for good (rules 0.10.0–0.13.0); `atEnd`, only if they are still cut off when the campaign
+ * ends; `graded`, full credit if still cut off, a lesser one (forced out) if they broke out at a heavy cost
+ * in battle, none if they got away cheaply.
+ */
+export type CutOffCredit = 'stands' | 'atEnd' | 'graded';
+
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.13.0';
+export const RULES_VERSION = '0.14.0';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -94,6 +102,8 @@ export const RULES = {
     decisiveWindowDays: 4,
     /** Cut off: the line of retreat blocked for at least this many consecutive sub-steps (§2.13). */
     cutOffSlots: 2,
+    /** D-039: see `CutOffCredit`. */
+    cutOffCredit: 'graded' as CutOffCredit,
   },
   /** The Russian command (§2.9). All values are game assumptions (G-014). */
   russian: {

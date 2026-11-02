@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { RULES, createContext, evaluate, newGame, submit } from '../../src/engine';
+import type { CutOffCredit } from '../../src/engine/rules';
 import type { BattleState, GameState } from '../../src/engine';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
 import { lineOfRetreatBlocked } from '../../src/engine/outcome';
@@ -103,6 +104,45 @@ describe('what happened to the Russian main army (§2.13 A)', () => {
       s.cutOff = { held: 2, achievedAt: { turn: 10, slot: 3 } };
     }), ctx);
     expect(held.russian).toBe('cutOff');
+  });
+});
+
+describe('what a cut road earns (cutOffCredit; the second review, D3)', () => {
+  const credited = (credit: CutOffCredit) => createContext(vitebskDecision(), { ...RULES, outcome: { ...RULES.outcome, cutOffCredit: credit } });
+  /** The road was cut on turn 6; then, at the end, the Russians are still cut off, escaped cheaply, or broke out at a heavy cost. */
+  const cases = {
+    stillCut: endState((s) => {
+      s.cutOff = { held: 9, achievedAt: { turn: 6, slot: 0 } };
+      Object.assign(s.forces['fr-right']!, { at: 'valutino', transit: null });
+    }),
+    escapedCheaply: endState((s) => (s.cutOff = { held: 0, achievedAt: { turn: 6, slot: 0 } })),
+    brokeOut: endState((s) => {
+      s.cutOff = { held: 0, achievedAt: { turn: 6, slot: 0 } };
+      battle(s, '7.2.0', 13, 150, 'fr'); // a battle after the cut, costing the main armies 15%
+    }),
+  };
+  const judged = (credit: CutOffCredit) => Object.fromEntries(Object.entries(cases).map(([k, s]) => [k, evaluate(start, s, credited(credit))]));
+
+  it('stands (now): once cut, cut off for good', () => {
+    const o = judged('stands');
+    for (const k of Object.keys(cases)) expect(o[k]!.russian, k).toBe('cutOff');
+  });
+
+  it('at the end: cut off only if still cut off when the campaign ends', () => {
+    const o = judged('atEnd');
+    expect(o.stillCut!.russian).toBe('cutOff');
+    expect(o.escapedCheaply!.russian).toBe('intact');
+    expect(o.brokeOut!.russian).toBe('damaged');
+  });
+
+  it('graded: full credit if still cut off, forced out after a costly break-out, nothing for a cheap escape', () => {
+    const o = judged('graded');
+    expect(o.stillCut!.russian).toBe('cutOff');
+    expect(o.brokeOut!.russian).toBe('forcedOut');
+    expect(o.escapedCheaply!.russian).toBe('intact');
+    expect(o.escapedCheaply!.reasons).toContain('Their line of retreat was cut for a time, but they got away without heavy loss.');
+    expect(o.brokeOut).toMatchObject({ roadCut: true, stillCutOff: false });
+    expect(Math.abs(o.brokeOut!.lostSinceCutPermille - 150)).toBeLessThanOrEqual(1);
   });
 });
 
