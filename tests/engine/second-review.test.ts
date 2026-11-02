@@ -7,7 +7,7 @@ import type { Axis, BattleState, GameState } from '../../src/engine';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
 import { lineOfRetreatBlocked } from '../../src/engine/outcome';
 import { stepUntil } from '../fixtures/driver';
-import { forceInit, holdStill, passiveContext, testGround } from '../fixtures/testGround';
+import { forceInit, holdStill, idleField, passiveContext, testGround } from '../fixtures/testGround';
 
 const afterMovement = (s: GameState) => s.resolution.stage === 'contacts' && s.resolution.slot === 0;
 
@@ -147,7 +147,7 @@ describe('6. a decisive defeat means the Russians broke, not that they withdrew 
     const b: BattleState = {
       id: '8.0.0', node: 'smolensk-north', attacker: 'fr', sides: { fr: ['fr-vanguard'], ru: ['ru-1st', 'ru-2nd'] }, phase: 'over',
       startsAt: { turn: 8, slot: 0 }, fightsFrom: {}, roundsFought: 9, roundsThisSlot: 0, awaiting: null, hidden: null, lastNight: 14,
-      winner: 'fr', losses: { 'ru-1st': lost }, routed,
+      winner: 'fr', losses: { 'ru-1st': lost }, routed, field: idleField(),
     };
     s.battles[b.id] = b;
     return evaluate(start, s, ctx);

@@ -7,7 +7,7 @@
 export type CutOffCredit = 'stands' | 'atEnd' | 'graded';
 
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.16.0';
+export const RULES_VERSION = '0.17.0';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -142,14 +142,66 @@ export const RULES = {
     withdrawalLossPermille: 5,
     minorLossPermille: 20,
   },
+  /**
+   * Sector battles (§2.10, TECHNICAL_ARCHITECTURE §3.4b). Every value is a placeholder (G-006, G-022); the
+   * contracts they serve are fixed. Rates are per 2-hour round.
+   */
   battle: {
-    casualtyPermille: { press: 30, hold: 15, withdraw: 0 },
-    pressExposurePermille: 10,
-    defenderHoldPermille: 800,
-    ammoPerThousandMen: { press: 20, hold: 10, withdraw: 0 },
+    /** Horses a gun takes from the saddle horses: its team and the caisson with it (L-012, G-021; plausible 10–14). */
+    horsesPerGun: 12,
+    /** Fire a gun adds, in men's worth. */
+    gunValue: 40,
+    /** A side's power in a sector, by its order. */
+    orderPowerPermille: { assault: 1300, press: 1000, hold: 850, fallBack: 500 },
+    /** Casualties a side inflicts per 1,000 of its power, by its order. */
+    hitPermille: { assault: 30, press: 20, hold: 12, fallBack: 4 },
+    /** How exposed a side is to the casualties inflicted on it, by its own order. */
+    exposurePermille: { assault: 1300, press: 1100, hold: 800, fallBack: 900 },
+    ammoPerThousandMen: { assault: 25, press: 20, hold: 10, fallBack: 4 },
+    ammoPerGun: 2,
+    /** Power left to a sector without ammunition. */
     noAmmoPowerPermille: 600,
+    /** Cohesion lost per man lost, permille of the force's strength: losing a tenth costs 200. */
+    cohesionPerLossPermille: 2000,
+    /**
+     * A side attacking in a sector gains a step on its control track with a chance that grows from nothing at the
+     * first power ratio to certainty at the second; an assault at or beyond the second gains two steps.
+     */
+    advanceFromPermille: 1200,
+    advanceSurePermille: 3000,
+    /** Cohesion shock to a side when it loses a sector, and when it loses the position (two sectors). */
+    sectorLossShock: 40,
+    positionLossShock: 80,
+    /** Share of the guns in a sector that falls taken by the enemy. */
+    gunsCapturedPermille: 300,
+    /** A side whose cohesion falls below this routs (contract C). */
     breakCohesion: 250,
+    /** Losses to the rearguard of a side breaking off, by its exit (contract D); at night, this share of it. */
+    rearguardPermille: { open: 10, contested: 30 },
+    nightWithdrawalPermille: 500,
+    /** Men lost per 1,000 fresh, mounted pursuing cavalry beyond the screen; a rout suffers more. */
+    pursuitPermille: 100,
+    routPursuitPermille: 300,
+    /** Pursuit never takes more than this share of the pursued side's men. */
+    maxPursuitPermille: 150,
+    /** How much a cavalryman of the withdrawing side counts in its screen, by its exit. */
+    screenPermille: { open: 1000, contested: 1500 },
     trappedLossPermille: 300,
+    /** Share of a routed side's guns left behind; a trapped side leaves them all. */
+    routGunsAbandonedPermille: 500,
+    /** An enemy force this close by road to a side's retreat place contests it (contract D). */
+    contestMetres: 15_000,
+    /** The staff's reserve, as a share of each force's infantry and cavalry. */
+    reservePermille: 250,
+    /** The marshal breaks off below this cohesion, or withdraws at nightfall below the second. */
+    withdrawCohesion: 350,
+    nightWithdrawCohesion: 450,
+    /** Outnumbered by more than this ratio of strength at dawn, the marshal withdraws at nightfall. */
+    nightOddsPermille: 800,
+    /** A strength ratio at which the marshal presses everywhere, and below which an attacker holds. */
+    pressOddsPermille: 1300,
+    /** What leaving a battle to the marshal costs: nothing in v1 (your decision, after the review). */
+    delegatePenaltyPermille: 0,
   },
 } as const;
 

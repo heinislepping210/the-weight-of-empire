@@ -22,6 +22,9 @@ export interface SavedRun {
   ended: boolean;
   series: RunPoint[];
   battles: string[];
+  /** Battle decisions the player took, apart from the rounds fought: what playing a battle costs in clicks (§3.4b). Absent in older saves. */
+  battleDecisions?: number;
+  battleRounds?: number;
   /** Hidden information, revealed only for a finished campaign: null while it is still being played. */
   russianPlans: string[] | null;
   finalPositions: string[] | null;
@@ -58,6 +61,8 @@ export function summarize(states: readonly GameState[], logs: readonly LogEntry[
     ended,
     series,
     battles: entries.filter((e) => e.kind === 'battleJoined').map((e) => `${place(e.detail.node)} (${when(ctx, e)})`),
+    battleDecisions: Object.values(final.battles).reduce((n, b) => n + b.field.decisions, 0),
+    battleRounds: Object.values(final.battles).reduce((n, b) => n + b.roundsFought, 0),
     russianPlans: !ended ? null : entries.filter((e) => e.kind === 'russianPlan').map((e) => `${when(ctx, e)}: ${e.detail.plan}${e.detail.target ? ` → ${place(e.detail.target)}` : ''}`),
     finalPositions: !ended ? null : Object.values(final.forces).map((f) => `${f.name}: ${place(f.at)}`),
   };

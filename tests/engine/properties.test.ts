@@ -50,6 +50,8 @@ const GOLDEN: Record<string, string> = {
   '0.15.0': 'c5e7de07094cf099',
   // A beaten attacker falls back the way it came (D-042); forces gain `cameFrom`.
   '0.16.0': 'd98588357012dc03',
+  // Sector battles (§2.10, D-043): three sectors and a reserve, cavalry and guns, graded exits, pursuit.
+  '0.17.0': 'ab33d4c557f65a1f',
 };
 
 /**
@@ -68,6 +70,7 @@ const GOLDEN_VITEBSK: Record<string, string> = {
   '0.14.0': 'e9543230ca011152',
   '0.15.0': '4a00d5639b4bd561',
   '0.16.0': '78b60ad66e0f73a5',
+  '0.17.0': '4e36c8f97b470641',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */

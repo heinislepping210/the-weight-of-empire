@@ -15,6 +15,12 @@ export interface ForceInit {
   name: string;
   at: NodeId;
   men: Strength;
+  /** Cavalry, counted within the men; 'all' for a force of horsemen (G-021). By default none. */
+  cavalry?: Strength | 'all';
+  /** Field guns (G-021). By default none. */
+  guns?: Strength;
+  /** Fighting quality, permille (G-021): 1000, the default, for the line. */
+  quality?: number;
   /** Saddle and artillery horses. */
   horses: Strength;
   wagons: number;
@@ -97,6 +103,7 @@ export function newGame(ctx: Context, seed: number, dice: number = seed): GameSt
   const forces: Record<ForceId, Force> = {};
   for (const f of scenario.forces) {
     if (!graph.nodes.has(f.at)) throw new Error(`force ${f.id} starts at unknown node ${f.at}`);
+    const men = resolveStrength(seed, f.id, 'men', f.men);
     forces[f.id] = {
       id: f.id,
       side: f.side,
@@ -110,7 +117,10 @@ export function newGame(ctx: Context, seed: number, dice: number = seed): GameSt
       posture: f.posture ?? 'concentrated',
       gathering: 0,
       battle: null,
-      men: resolveStrength(seed, f.id, 'men', f.men),
+      men,
+      cavalry: f.cavalry === 'all' ? men : Math.min(men, resolveStrength(seed, f.id, 'cavalry', f.cavalry ?? 0)),
+      guns: resolveStrength(seed, f.id, 'guns', f.guns ?? 0),
+      quality: f.quality ?? 1000,
       horses: resolveStrength(seed, f.id, 'horses', f.horses),
       wagons: f.wagons,
       draught: f.draught ?? f.wagons * rules.draught.horsesPerWagon,
@@ -195,6 +205,7 @@ export function newGame(ctx: Context, seed: number, dice: number = seed): GameSt
       abandoned: emptySupplies(),
       menLost: { battle: 0, sickness: 0, straggling: 0, withdrawal: 0 },
       horsesLost: 0,
+      gunsLost: { captured: 0, abandoned: 0 },
     },
     ended: null,
   };

@@ -154,3 +154,21 @@ Not yet checked by us; recorded so that the next research pass starts from them.
 - **Starting positions.** The Fondation Napoléon chronology places Junot at Orsha and Poniatowski at Mogilev around 4 August; the scenario's southern group at Mogilev merges them (G-010, G-011 stay provisional).
 - **The Moscow road.** Clausewitz describes Barclay leaving by the Porechye road and regaining the Moscow road near Lubino by a side road, a vulnerable flank march. That supports Valutino and Lubino as a place for an interception; whether they are the only places that cut the line of retreat is not established.
 - **Decisive defeat.** Austerlitz cost the Allies about a third (Chandler, via Fox 2017; strength estimates differ); Jena–Auerstedt must be separated from the pursuit that followed (Bowman, *Army History* 29, 1994); Borodino is the negative control (H-018). No new threshold follows from these few cases.
+
+## Battles and the arms of the armies (2 November 2026)
+
+Researched for the sector battles (§2.10; TECHNICAL_ARCHITECTURE §3.4b). Register entries H-020, H-021, L-012 and G-021.
+
+**What the summer's battles cost (H-020).** These figures are context, not calibration targets. The battles differ in kind: a rearguard fight at Krasnyi, the storm of a walled city at Smolensk, a rearguard action at Valutino, a pitched battle at Borodino. Their losses are shares of the troops engaged, not of the armies.
+- **Krasnyi, 14 August:** Neverovsky's 6,000–7,000 (up to 1,500 of them cavalry, 14 guns) lost about 1,500 men and 7 guns to about 20,000 French (Murat's 15,000 cavalry and 5,000 of Ney's infantry), who lost about 500 (Bodart 1908; Riehn 1990). Most of the division got away.
+- **Smolensk, 16–18 August:** about 45,000 of 180,000 French and 30,000 of 120,000 Russians engaged; losses 9,000–10,000 French and 6,000–14,000 Russian, the authors differing widely (Bodart; Chandler; Mikaberidze). Barclay left the city, destroying stores and bridges, and covered the retreat with a rearguard on the far bank.
+- **Valutino, 19 August:** about 35,000 French against 25,000 Russians; losses 7,000–8,800 French and about 6,000 Russian (Bodart; Palmer 2003). Most of Barclay's army had already got away.
+- **Borodino, 7 September:** about 110,000–128,000 French and 122,000–155,000 Russians engaged; losses 30,000–42,000 French and 40,000–53,000 Russian. The Russian army left the next day in two columns (Riehn; Zamoyski 2004; Mikaberidze 2007). This is the negative control: heavy losses and lost ground, yet an orderly withdrawal.
+
+**Artillery and cavalry (H-021, L-012).** At Borodino the French had 587 guns and 317 squadrons among about 128,000 men; the Guard alone 109 guns and 27 squadrons among about 18,500 (Riehn; Mikaberidze). The Russians had 637 guns, 164 squadrons and 20 Cossack regiments. In June 1812 the 1st Western Army counted 104,250 men and 7,000 Cossacks with 558 guns, the 2nd 33,000 and 4,000 Cossacks with 216 guns (Smith 1998). A gun team took 6–8 horses, and a French gun moved with about one caisson of its 2–5, at 4–6 horses each.
+
+**What the game takes from this (G-021).** Cavalry and gun ranges for each group, anchored on these figures where they exist (Murat's cavalry, the Guard's and Bagration's guns, Neverovsky's division) and otherwise set by the armies' ratios of guns to men. The cavalry of the infantry corps and the Guard's quality are our estimates.
+
+**Not obtained.** Nafziger's dated unit returns for 1 and 15 August 1812 (812HAB, 812HDA) refused automated access. They are the next step for the composition, unit by unit.
+
+Sources consulted: Wikipedia, "First Battle of Krasnoi", "Battle of Smolensk (1812)", "Battle of Valutino", "Battle of Borodino", "Second Western Army", "Order of battle of the French invasion of Russia", "Russian Army order of battle (1812)", "Horses in the Napoleonic Wars", and the works they cite (Bodart 1908; Riehn 1990; Chandler 1996; Smith 1998; Palmer 2003; Zamoyski 2004; Mikaberidze 2007; Clodfelter 2017). Secondary throughout; the counts are disputed, so the game uses ranges.

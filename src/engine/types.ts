@@ -56,6 +56,12 @@ export interface Force {
   gathering: number;
   battle: BattleId | null;
   men: number;
+  /** Cavalry, counted within `men` (§2.10, G-021). */
+  cavalry: number;
+  /** Field guns (G-021). */
+  guns: number;
+  /** Fighting quality, permille: 1000 for the line, more for élite troops such as the Guard (G-021). */
+  quality: number;
   /** Saddle and artillery horses. */
   horses: number;
   wagons: number;
@@ -111,9 +117,66 @@ export interface District {
 }
 
 export type BattlePhase = 'deploy' | 'rounds' | 'over';
+/** The old army-wide round orders, still accepted: press everywhere, hold everywhere, break off. */
 export type RoundAction = 'press' | 'hold' | 'withdraw';
 export type NightChoice = 'stay' | 'withdraw';
 export type BattleStep = 'deploy' | 'round' | 'nightfall';
+
+/** A sector of the battlefield, 0–2 (TECHNICAL_ARCHITECTURE §3.4b). */
+export type SectorIndex = 0 | 1 | 2;
+export type SectorOrder = 'assault' | 'press' | 'hold' | 'fallBack';
+
+/** Infantry and cavalry in men, and guns. */
+export interface Troops {
+  inf: number;
+  cav: number;
+  guns: number;
+}
+
+/** Where a force's troops stand in a battle: every man and gun in exactly one sector or the reserve (contract A). */
+export interface Allocation {
+  sectors: [Troops, Troops, Troops];
+  reserve: Troops;
+}
+
+/** The one key decision a side takes in a round (§2.10, Challenge mode). */
+export type KeyDecision =
+  | { kind: 'continue' }
+  | { kind: 'commitReserve'; sector: SectorIndex }
+  | { kind: 'pressAll' }
+  | { kind: 'holdAll' }
+  | { kind: 'breakOff' };
+
+/** How a side can leave the field (contract D). */
+export type ExitState = 'open' | 'contested' | 'blocked';
+
+/** How a side left the field (contract C); a lost position is recorded apart, in `positionLost`. */
+export type FieldResult = 'withdrew' | 'routed' | 'trapped';
+
+/** Where a player sends one of their forces at deployment: a sector, the reserve, or as the staff planned. */
+export type Placement = SectorIndex | 'reserve' | 'staff';
+
+export type FieldTemplateId = 'open';
+
+export interface BattleField {
+  template: FieldTemplateId;
+  /** Per sector, −2…+2: +2 the French have taken it, −2 the Russians have (contract C). */
+  control: [number, number, number];
+  alloc: Record<ForceId, Allocation>;
+  /** Each side's standing order in each sector. */
+  orders: Record<Side, [SectorOrder, SectorOrder, SectorOrder]>;
+  /** The side's main effort: the sector the staff attacks in, or null for a defence. */
+  mainEffort: Record<Side, SectorIndex | null>;
+  /** Sides that have lost two of the three sectors: a tactical defeat, not a rout. */
+  positionLost: Side[];
+  /** Pursuit has been resolved: it happens once per battle (contract B). */
+  pursued: boolean;
+  result: Record<Side, FieldResult | null>;
+  /** The French battle is left to the marshal until the player takes command at a pause. */
+  delegated: boolean;
+  /** Decisions the player took in this battle, apart from the rounds fought. */
+  decisions: number;
+}
 
 export interface BattleState {
   id: BattleId;
@@ -129,7 +192,7 @@ export interface BattleState {
   roundsThisSlot: number;
   awaiting: BattleStep | null;
   /** The Russian decision, fixed at the pause and never shown to the player. */
-  hidden: RoundAction | NightChoice | null;
+  hidden: KeyDecision | NightChoice | null;
   /** Day index of the last nightfall decision taken. */
   lastNight: number;
   winner: Side | null;
@@ -137,6 +200,8 @@ export interface BattleState {
   losses: Record<ForceId, number>;
   /** Sides that broke in the field or were trapped with no road out; an orderly withdrawal is no rout (§2.13). */
   routed: Side[];
+  /** The sectors, the troops in them and the reserve (§2.10). */
+  field: BattleField;
 }
 
 export type Stage = 'orders' | 'activity' | 'movement' | 'contacts' | 'battleRounds' | 'accrual' | 'night' | 'endOfTurn';
@@ -171,6 +236,8 @@ export interface Ledger {
   abandoned: Supplies;
   menLost: Record<LossCause, number>;
   horsesLost: number;
+  /** Guns taken by the enemy in a sector that fell, or left behind in a rout or a trap (contract A). */
+  gunsLost: { captured: number; abandoned: number };
 }
 
 /** What one side last saw of an enemy force: where, an estimate of its strength, and when (§2.8). */
@@ -260,11 +327,15 @@ export interface LogisticsOrders {
   convoys?: ConvoyOrder[];
 }
 
+/**
+ * A battle decision. `delegateBattle` leaves the rest of the battle to the marshal (true) or takes command
+ * back (false); the marshal's rounds then resolve without stopping until the next nightfall (§3.4b).
+ */
 export type BattleDecision =
-  | { kind: 'deploy' }
-  | { kind: 'round'; action: RoundAction }
-  | { kind: 'nightfall'; choice: NightChoice }
-  | { kind: 'delegate' };
+  | { kind: 'deploy'; placements?: Record<ForceId, Placement>; delegateBattle?: boolean }
+  | { kind: 'round'; action?: RoundAction; key?: KeyDecision; delegateBattle?: boolean }
+  | { kind: 'nightfall'; choice: NightChoice; delegateBattle?: boolean }
+  | { kind: 'delegate'; delegateBattle?: boolean };
 
 export type Input =
   | { kind: 'orders'; turn: number; orders: GroupOrder[]; halt?: boolean; logistics?: LogisticsOrders }

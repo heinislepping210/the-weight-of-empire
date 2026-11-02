@@ -1,5 +1,9 @@
 import { RULES, createContext } from '../../src/engine';
-import type { Context, GameState, ScenarioDef } from '../../src/engine';
+import type { BattleField, Context, GameState, ScenarioDef } from '../../src/engine';
+import { newField } from '../../src/engine/battle';
+
+/** The field of a battle written by hand, for tests about how battles end, not how they are fought. */
+export const idleField = (): BattleField => newField('open', { fr: { alloc: {}, orders: ['hold', 'hold', 'hold'], mainEffort: null }, ru: { alloc: {}, orders: ['hold', 'hold', 'hold'], mainEffort: null } });
 
 /** Russians who hold still and accept battle, so mechanics tests are not about AI choices. */
 export function holdStill(s: GameState): void {

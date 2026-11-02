@@ -6,6 +6,7 @@
 // - The split of those totals across force groups is a game assumption (G-010), pending orders of battle.
 // - Start positions are working assumptions from the chronology (G-011, H-001 to H-003).
 // - Carried supplies, depot stocks and countryside yields are placeholders (G-012).
+// - Cavalry, guns and the Guard's quality are game assumptions guided by the sources in H-021 (G-021).
 
 import type { DepotInit, ConvoyInit, ForceInit, ScenarioDef } from '../../engine/scenario';
 import type { District } from '../../engine/types';
@@ -16,18 +17,18 @@ const days = (people: number, n: number) => people * n;
 
 const FORCES: ForceInit[] = [
   // French: dispersed in cantonments to feed and rest after the advance to Vitebsk
-  { id: 'fr-guard', side: 'fr', name: 'Imperial Guard and Headquarters', at: 'vitebsk', men: [28_000, 36_000], horses: [6_000, 8_000], posture: 'dispersed', wagons: 300, stock: { food: days(32_000, 4), fodder: days(7_000, 1), ammo: 6_000 } },
-  { id: 'fr-vanguard', side: 'fr', name: "Vanguard: Murat's cavalry and Ney's corps", at: 'liozno', men: [38_000, 50_000], horses: [14_000, 20_000], posture: 'dispersed', wagons: 250, stock: { food: days(44_000, 3), fodder: days(17_000, 1), ammo: 8_000 } },
-  { id: 'fr-left', side: 'fr', name: "Left wing: Eugène's corps", at: 'surazh', men: [28_000, 36_000], horses: [6_000, 8_000], posture: 'dispersed', wagons: 200, stock: { food: days(32_000, 3), fodder: days(7_000, 1), ammo: 6_000 } },
-  { id: 'fr-right', side: 'fr', name: "Right wing: Davout's corps", at: 'dubrovna', men: [42_000, 55_000], horses: [8_000, 11_000], posture: 'dispersed', wagons: 300, stock: { food: days(48_000, 3), fodder: days(9_500, 1), ammo: 9_000 } },
-  { id: 'fr-south', side: 'fr', name: 'Southern group: Poniatowski and Junot', at: 'mogilev', men: [26_000, 36_000], horses: [6_000, 8_000], posture: 'dispersed', wagons: 200, stock: { food: days(31_000, 3), fodder: days(7_000, 1), ammo: 6_000 } },
+  { id: 'fr-guard', side: 'fr', name: 'Imperial Guard and Headquarters', at: 'vitebsk', men: [28_000, 36_000], cavalry: [4_000, 6_000], guns: [100, 112], quality: 1200, horses: [6_000, 8_000], posture: 'dispersed', wagons: 300, stock: { food: days(32_000, 4), fodder: days(7_000, 1), ammo: 6_000 } },
+  { id: 'fr-vanguard', side: 'fr', name: "Vanguard: Murat's cavalry and Ney's corps", at: 'liozno', men: [38_000, 50_000], cavalry: [13_000, 17_000], guns: [130, 190], horses: [14_000, 20_000], posture: 'dispersed', wagons: 250, stock: { food: days(44_000, 3), fodder: days(17_000, 1), ammo: 8_000 } },
+  { id: 'fr-left', side: 'fr', name: "Left wing: Eugène's corps", at: 'surazh', men: [28_000, 36_000], cavalry: [3_000, 5_000], guns: [130, 165], horses: [6_000, 8_000], posture: 'dispersed', wagons: 200, stock: { food: days(32_000, 3), fodder: days(7_000, 1), ammo: 6_000 } },
+  { id: 'fr-right', side: 'fr', name: "Right wing: Davout's corps", at: 'dubrovna', men: [42_000, 55_000], cavalry: [2_500, 4_500], guns: [190, 250], horses: [8_000, 11_000], posture: 'dispersed', wagons: 300, stock: { food: days(48_000, 3), fodder: days(9_500, 1), ammo: 9_000 } },
+  { id: 'fr-south', side: 'fr', name: 'Southern group: Poniatowski and Junot', at: 'mogilev', men: [26_000, 36_000], cavalry: [4_000, 6_000], guns: [120, 165], horses: [6_000, 8_000], posture: 'dispersed', wagons: 200, stock: { food: days(31_000, 3), fodder: days(7_000, 1), ammo: 6_000 } },
 
   // Russians: united at Smolensk under political pressure to stop retreating
   // Starting stocks fit what each group can carry (G-019): a day of fodder for the armies, and Cossack horses living mostly off the grass.
-  { id: 'ru-1st', side: 'ru', name: '1st Western Army (Barclay de Tolly)', at: 'smolensk-north', men: [70_000, 80_000], horses: [14_000, 18_000], posture: 'dispersed', wagons: 400, stock: { food: days(75_000, 6), fodder: days(16_000, 1), ammo: 15_000 } },
-  { id: 'ru-2nd', side: 'ru', name: '2nd Western Army (Bagration)', at: 'smolensk', men: [38_000, 46_000], horses: [8_000, 10_000], posture: 'dispersed', wagons: 250, stock: { food: days(42_000, 6), fodder: days(9_000, 1), ammo: 8_000 } },
-  { id: 'ru-cossacks', side: 'ru', name: "Platov's Cossacks", at: 'rudnia', men: [7_000, 10_000], horses: [9_000, 12_000], posture: 'dispersed', wagons: 30, stock: { food: days(8_500, 3), fodder: 2_500, ammo: 500 } },
-  { id: 'ru-neverovsky', side: 'ru', name: "Neverovsky's division", at: 'krasnyi', men: [6_000, 8_000], horses: [1_000, 1_500], posture: 'dispersed', wagons: 40, stock: { food: days(7_000, 5), fodder: days(1_200, 2), ammo: 1_500 } },
+  { id: 'ru-1st', side: 'ru', name: '1st Western Army (Barclay de Tolly)', at: 'smolensk-north', men: [70_000, 80_000], cavalry: [10_000, 13_000], guns: [330, 400], horses: [14_000, 18_000], posture: 'dispersed', wagons: 400, stock: { food: days(75_000, 6), fodder: days(16_000, 1), ammo: 15_000 } },
+  { id: 'ru-2nd', side: 'ru', name: '2nd Western Army (Bagration)', at: 'smolensk', men: [38_000, 46_000], cavalry: [5_500, 7_500], guns: [190, 216], horses: [8_000, 10_000], posture: 'dispersed', wagons: 250, stock: { food: days(42_000, 6), fodder: days(9_000, 1), ammo: 8_000 } },
+  { id: 'ru-cossacks', side: 'ru', name: "Platov's Cossacks", at: 'rudnia', men: [7_000, 10_000], cavalry: 'all', guns: [0, 12], horses: [9_000, 12_000], posture: 'dispersed', wagons: 30, stock: { food: days(8_500, 3), fodder: 2_500, ammo: 500 } },
+  { id: 'ru-neverovsky', side: 'ru', name: "Neverovsky's division", at: 'krasnyi', men: [6_000, 8_000], cavalry: [1_000, 1_500], guns: 14, horses: [1_000, 1_500], posture: 'dispersed', wagons: 40, stock: { food: days(7_000, 5), fodder: days(1_200, 2), ammo: 1_500 } },
 ];
 
 const DEPOTS: DepotInit[] = [

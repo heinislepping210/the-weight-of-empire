@@ -138,6 +138,54 @@ A turn is 2 days: **four daylight sub-steps** of 6 hours (06:00–12:00 and 12:0
 
 **Conservation and exclusivity.** Men, horses, wagons, food, fodder and ammunition are conserved: every unit is in exactly one place — with a force, in a depot or on a convoy — or lost with a recorded cause. Each force has one activity per sub-step and belongs to at most one encounter in it.
 
+## 3.4b Sector battles: the contracts (§2.10; from rules 0.17.0)
+
+These contracts were fixed before the sector battles were built, and every one has a test in `tests/engine/battle-sectors.test.ts`. The combat values are placeholders (G-006); the contracts are not.
+
+**A. Allocation: every soldier and gun counted once.**
+- A force has `cavalry` (men, counted within `men`) and `guns`.
+- In battle its troops are allocated numerically to the three sectors and the reserve (`BattleField.alloc`). At every pause, summed over the sectors and the reserve: infantry = men − cavalry, cavalry = the force's cavalry, guns = its guns.
+- Losses outside the fighting (hunger, sickness, straggling) come off every arm in proportion. The allocation is rescaled to the new totals at once, by a largest-remainder rule (`loseMen`).
+- Casualties in a sector come out of the infantry and cavalry allocated to that sector, and out of the force's totals.
+- Cavalry fights only as far as it has mounts: its effective strength is capped by the saddle horses left after the gun teams. A cavalryman lost in battle costs a horse, recorded in `ledger.horsesLost`.
+- Guns are allocated once. They leave the books only as captured (a share of the guns in a sector that falls) or abandoned (in a rout or when trapped), recorded in `ledger.gunsLost`.
+- A reinforcement enters the reserve and keeps its deployment delay (`fightsFrom`) and gathering penalty. Its troops cannot be committed before it has deployed.
+
+**B. A round resolves simultaneously.**
+- Every sector's power and casualties are computed from one snapshot of the field, then applied together. Neither side gains by being applied first.
+- No marshal reads the other side's current decision. The Russian decision is fixed at the pause (`b.hidden`) from the state before the French decide. The French marshal decides from that same state and never reads `b.hidden`.
+- Ammunition is a side's real stock. Each sector's need is drawn from the forces allocated there, and no more is spent than they carry. A sector short of ammunition fights at reduced power.
+- Pursuit happens once per battle (`field.pursued`). Saving and resuming at any pause gives the same totals.
+- Pursuit power is fresh, mounted cavalry: the pursuer's effective cavalry, discounted for fatigue and cohesion.
+- Integers stay safe. Every product is divided down step by step, so no intermediate value leaves `Number.isSafeInteger` at the largest strengths the scenario allows.
+
+**C. Four results, kept apart.**
+
+| Result | Cause | Consequence |
+|---|---|---|
+| Position lost | a side loses two of the three sectors (a sector is lost when its control reaches that side's end of the five-step track) | a cohesion shock; the side then decides whether to withdraw or fight on with its reserve. No rout. |
+| Orderly withdrawal | the side breaks off with a usable exit and its cohesion holds | it leaves under control (`field.result = 'withdrew'`); never counted towards a decisive defeat |
+| Rout | its cohesion falls below `breakCohesion`, from the fighting, a shock or pursuit | command breaks down: `field.result = 'routed'`, listed in `b.routed` |
+| Trapped | it must leave and has no usable exit | heavy losses, guns abandoned: `field.result = 'trapped'`, listed in `b.routed` |
+
+Borodino (H-018) is the negative control. A cohesive army that has lost two sectors but keeps a reserve and an open road withdraws in order and is not marked routed.
+
+**D. Escape follows the operational situation** (`exitStateFor`).
+
+| Exit | When | Effect |
+|---|---|---|
+| Open | the side's retreat road (D-042) has no enemy on or nearing it, no river crossing, and was not the road an enemy in this battle came along | it can break off at the start of a round: a rearguard loss, and pursuit by the enemy's fresh cavalry less its own cavalry screen |
+| Contested | the retreat road crosses a river; an enemy force stands within `contestMetres` of the retreat place or marches towards it; or an enemy in this battle came along that road | breaking off takes a disengagement round: the side falls back in every sector for that round, then leaves at its end with a larger rearguard loss, its cavalry screen counting for more |
+| Blocked | no neighbouring place is free of the enemy and of enemy columns coming the other way | no orderly withdrawal: it fights on, and if it breaks or breaks off it is trapped |
+
+- Several approach roads block nothing by themselves (the flank effect comes later, in step 5 of the plan).
+- Political pressure changes only the Russian marshal's willingness to withdraw. It never closes a road.
+
+**Decisions.**
+- The marshal (`decideRound`, `decideNightfall`, `src/engine/ai.ts`) answers for the Russians and for any French decision left to it. It reads only the state, never `b.hidden`.
+- A player may leave the whole battle to the marshal (`delegateBattle`). The rounds then resolve without stopping, and the next pause, at nightfall, offers command back.
+- The old `{ kind: 'round', action }` input stays valid: press maps to press everywhere, hold to hold everywhere, withdraw to break off.
+
 ## 3.5 Persistence
 *Status (31 October 2026): designed, not built.* The engine can resume from any saved state, and the tests check this. But the browser does not yet save a campaign: "Save for comparison" in the prototype stores only a summary for the comparison screen. Real saves are an M3 criterion (DEVELOPMENT_ROADMAP.md).
 

@@ -2,6 +2,7 @@
 // intentions, supplies and movements out of contact never appear here (§2.8).
 
 import type { Context, GameState, LogEntry } from '../engine';
+import { FIELD_TEMPLATES } from '../engine/battle';
 
 export interface Dispatch {
   key: string;
@@ -17,6 +18,13 @@ export function dispatches(entries: readonly LogEntry[], s: GameState, ctx: Cont
   const force = (id: unknown) => s.forces[String(id)]?.name ?? String(id);
   const french = (id: unknown) => s.forces[String(id)]?.side === 'fr';
   const sideName = (side: unknown) => (side === 'fr' ? 'French' : 'Russian');
+  const sector = (battle: unknown, i: unknown) => FIELD_TEMPLATES[s.battles[String(battle)]?.field.template ?? 'open'].sectors[Number(i)]?.name ?? `sector ${Number(i) + 1}`;
+  // The French decision of a round, in words; the Russian one stays hidden (§2.8).
+  const decision = (battle: unknown, label: unknown) => {
+    const [kind, at] = String(label).split(':');
+    return kind === 'commitReserve' ? `sent the reserve to ${sector(battle, at)}` : kind === 'pressAll' ? 'pressed everywhere' : kind === 'holdAll' ? 'held everywhere' : kind === 'breakOff' ? 'broke off the fight' : 'kept to the plan';
+  };
+  const about = (n: unknown) => (Number(n) < 100 ? 'few' : `about ${(Math.round(Number(n) / 100) * 100).toLocaleString('en-GB')}`);
   const out: Dispatch[] = [];
   entries.forEach((e, i) => {
     const d = e.detail;
@@ -47,7 +55,24 @@ export function dispatches(entries: readonly LogEntry[], s: GameState, ctx: Cont
         text = `Battle joined at ${place(d.node)}.`;
         break;
       case 'round':
-        text = `Round ${d.round}: we ${d.fr === 'press' ? 'pressed the attack' : d.fr === 'hold' ? 'held our ground' : 'withdrew'}.`;
+        text = `Round ${d.round}: ${d.frBy === 'marshal' ? 'the marshal' : 'we'} ${decision(d.battle, d.fr)}.`;
+        break;
+      case 'sectors':
+        text = `The fighting cost us ${Number(d.frLost).toLocaleString('en-GB')} men, the enemy ${about(d.ruLost)}.`;
+        break;
+      case 'sectorLost':
+        text = d.side === 'fr' ? `We lost ${sector(d.battle, d.sector)}.` : `We took ${sector(d.battle, d.sector)}.`;
+        break;
+      case 'positionLost':
+        text = d.side === 'fr' ? 'Our position is lost: two sectors are in enemy hands.' : 'The enemy has lost the position: two sectors are ours.';
+        break;
+      case 'fieldResult': {
+        const how = d.result === 'withdrew' ? 'withdrew in order' : d.result === 'routed' ? 'broke and fled' : 'was trapped with no road out';
+        text = d.side === 'fr' ? `Our army ${how}.` : `The enemy ${how}.`;
+        break;
+      }
+      case 'pursuit':
+        if (Number(d.men) > 0) text = d.by === 'fr' ? `Our cavalry pursued: the enemy lost ${about(d.men)} more.` : `Their cavalry pursued us: we lost ${Number(d.men).toLocaleString('en-GB')} more.`;
         break;
       case 'nightfall':
         text = `Nightfall on the field: we chose to ${d.fr === 'stay' ? 'stay' : 'withdraw'}; the enemy ${d.ru === 'stay' ? 'stayed' : 'withdrew'}.`;

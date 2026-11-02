@@ -57,10 +57,26 @@ export function violations(run: Run): string[] {
       if ([d.stock.food, d.stock.fodder, d.stock.ammo].some((v) => v < 0)) out.push(`${where}: negative stock at ${d.node}`);
     }
     for (const v of contactViolations(s)) out.push(`${where}: ${v}`);
+    // Guns leave the books only as captured or abandoned (contract A, §3.4b).
+    const guns = (x: GameState) => Object.values(x.forces).reduce((n, f) => n + f.guns, 0);
+    if (guns(s) + s.ledger.gunsLost.captured + s.ledger.gunsLost.abandoned !== guns(run.states[0] as GameState)) out.push(`${where}: guns not conserved`);
     for (const f of Object.values(s.forces)) {
-      if ([f.men, f.horses, f.stock.food, f.stock.fodder, f.stock.ammo, f.fatigue, f.cohesion].some((v) => v < 0)) out.push(`${where}: negative value in ${f.id}`);
+      if ([f.men, f.cavalry, f.guns, f.horses, f.stock.food, f.stock.fodder, f.stock.ammo, f.fatigue, f.cohesion].some((v) => v < 0)) out.push(`${where}: negative value in ${f.id}`);
+      if (f.cavalry > f.men) out.push(`${where}: ${f.id} has more cavalry than men`);
       const active = Object.values(s.battles).filter((b) => b.phase !== 'over' && (b.sides.fr.includes(f.id) || b.sides.ru.includes(f.id)));
       if (active.length > 1 || f.battle !== (active[0]?.id ?? null)) out.push(`${where}: ${f.id} battle bookkeeping`);
+      // Every man and gun of a force in battle stands in exactly one sector or the reserve (contract A).
+      const a = active[0]?.field.alloc[f.id];
+      if (active[0] && !a) out.push(`${where}: ${f.id} has no place on the field`);
+      if (a) {
+        const places = [...a.sectors, a.reserve];
+        const sum = (k: 'inf' | 'cav' | 'guns') => places.reduce((n, t) => n + t[k], 0);
+        if (places.some((t) => t.inf < 0 || t.cav < 0 || t.guns < 0)) out.push(`${where}: negative allocation for ${f.id}`);
+        if (sum('inf') !== f.men - f.cavalry || sum('cav') !== f.cavalry || sum('guns') !== f.guns) out.push(`${where}: ${f.id} allocation does not match its strength`);
+      }
+    }
+    for (const b of Object.values(s.battles)) {
+      for (const side of b.routed) if (b.field.result[side] !== 'routed' && b.field.result[side] !== 'trapped') out.push(`${where}: battle ${b.id} lists ${side} as routed without a rout or a trap`);
     }
   });
   const seen = new Map<number, Set<string>>();

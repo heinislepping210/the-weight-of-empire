@@ -111,6 +111,11 @@ export function Compare({ runs, onDelete, onClose }: Props) {
                   <p>
                     <strong>Battles:</strong> {r.battles.length ? r.battles.join('; ') : 'none'}
                   </p>
+                  {r.battleRounds !== undefined && (
+                    <p>
+                      <strong>In battle:</strong> {r.battleDecisions ?? 0} decisions of yours, {r.battleRounds} rounds fought
+                    </p>
+                  )}
                   <p>
                     <strong>What the Russian command intended:</strong> {r.ended && r.russianPlans ? r.russianPlans.join('; ') : HIDDEN}
                   </p>

@@ -9,7 +9,7 @@ import type { BattleState, GameState } from '../../src/engine';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
 import { lineOfRetreatBlocked } from '../../src/engine/outcome';
 import { stepUntil } from '../fixtures/driver';
-import { holdStill } from '../fixtures/testGround';
+import { holdStill, idleField } from '../fixtures/testGround';
 
 const ctx = createContext(vitebskDecision());
 const start = newGame(ctx, 1812);
@@ -47,6 +47,7 @@ function battle(s: GameState, id: string, day: number, lossPermille: number, win
     losses,
     // The Russians broke: an orderly withdrawal is no decisive defeat (D-037, tested in second-review.test.ts).
     routed: winner === 'fr' ? ['ru'] : [],
+    field: idleField(),
   };
   s.battles[id] = b;
 }

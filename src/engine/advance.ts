@@ -4,10 +4,10 @@
 // stages until the next point that needs the player. Nothing here waits on the UI or keeps hidden
 // state outside the GameState, so a saved pause can be resumed exactly.
 
-import { decideNightfall, decideRound } from './ai';
+import { decideNightfall, decideRound, deploymentFor } from './ai';
 import { updateIntel } from './intel';
 import { updatePressure } from './russian';
-import { fallBack, oncoming, resolveNightfall, resolveRound, retreatNodeFor } from './battle';
+import { SECTORS, allInReserve, applyPlacements, fallBack, keyFromAction, newField, oncoming, resolveNightfall, resolveRound, retreatNodeFor } from './battle';
 import { ISSUE_ORDER, capacityGrams, issueTarget, takenUp, usableWagons, weightGrams, withinCapacity } from './carriage';
 import { lineOfRetreatBlocked } from './outcome';
 import { edgeBetween, neighboursOf, roadDistance, shortestPath, type EdgeDef } from './graph';
@@ -24,11 +24,11 @@ import type {
   ForceId,
   GameState,
   Input,
+  KeyDecision,
   LogEntry,
   LogisticsOrders,
   NightChoice,
   NodeId,
-  RoundAction,
   Side,
   Slot,
   Stage,
@@ -48,6 +48,8 @@ const ENGAGEMENTS = ['seek', 'accept', 'avoid'];
 const POSTURES = ['dispersed', 'concentrated'];
 const ROUND_ACTIONS = ['press', 'hold', 'withdraw'];
 const NIGHT_CHOICES = ['stay', 'withdraw'];
+const KEY_KINDS = ['continue', 'commitReserve', 'pressAll', 'holdAll', 'breakOff'];
+const PLACEMENTS: unknown[] = [0, 1, 2, 'reserve', 'staff'];
 
 // ---------------------------------------------------------------------------------------- API
 
@@ -140,7 +142,20 @@ function validate(s: GameState, input: Input, ctx: Context): string | null {
   if (input.battleId !== status.battleId || input.round !== status.round) return 'this decision is for a different battle or round';
   const d = input.decision;
   if (d.kind !== 'delegate' && d.kind !== status.step) return `a ${status.step} decision is expected`;
-  if (d.kind === 'round' && !ROUND_ACTIONS.includes(d.action)) return `unknown battle action ${d.action}`;
+  if (d.delegateBattle !== undefined && typeof d.delegateBattle !== 'boolean') return 'delegateBattle must be true or false';
+  if (d.kind === 'round') {
+    if (d.action === undefined && d.key === undefined) return 'a round decision needs an action or a key decision';
+    if (d.action !== undefined && !ROUND_ACTIONS.includes(d.action)) return `unknown battle action ${d.action}`;
+    if (d.key !== undefined && !KEY_KINDS.includes(d.key.kind)) return `unknown key decision ${d.key.kind}`;
+    if (d.key?.kind === 'commitReserve' && !(SECTORS as readonly number[]).includes(d.key.sector)) return `unknown sector ${d.key.sector}`;
+  }
+  if (d.kind === 'deploy' && d.placements) {
+    const b = must(s.battles[input.battleId], input.battleId);
+    for (const [id, where] of Object.entries(d.placements)) {
+      if (!b.sides.fr.includes(id)) return `${id} is not a French force in this battle`;
+      if (!PLACEMENTS.includes(where)) return `unknown placement ${String(where)}`;
+    }
+  }
   if (d.kind === 'nightfall' && !NIGHT_CHOICES.includes(d.choice)) return `unknown nightfall choice ${d.choice}`;
   return null;
 }
@@ -211,18 +226,27 @@ function applyInput(s: GameState, input: Input, ctx: Context, log: LogEntry[]): 
   const step = b.awaiting;
   b.awaiting = null;
   const d = input.decision;
+  // Whole-battle delegation takes effect before anything else resolves (§3.4b).
+  if (d.delegateBattle !== undefined) b.field.delegated = d.delegateBattle;
   if (step === 'deploy') {
     // Rounds begin at the next daylight sub-step; the deployment happens at this boundary (§3.4a step 4).
+    if (d.kind === 'deploy' && d.placements && Object.values(d.placements).some((p) => p !== 'staff')) {
+      applyPlacements(s, b, d.placements);
+      b.field.decisions += 1;
+    }
     b.phase = 'rounds';
     b.startsAt = nextDaylight(s.resolution);
     note(s, log, 'deployed', { battle: b.id });
   } else if (step === 'round') {
-    const fr: RoundAction = d.kind === 'round' ? d.action : decideRound(s, b, 'fr');
-    const ru = b.hidden as RoundAction;
+    // The French marshal decides from the state alone, never from the hidden Russian decision (contract B).
+    const fr: KeyDecision = d.kind === 'round' ? (d.key ?? keyFromAction(d.action ?? 'hold')) : decideRound(s, ctx, b, 'fr');
+    if (d.kind === 'round') b.field.decisions += 1;
+    const ru = b.hidden as KeyDecision;
     b.hidden = null;
-    resolveRound(s, ctx, b, { fr, ru }, log);
+    resolveRound(s, ctx, b, { fr, ru }, log, { fr: d.kind !== 'round', ru: true });
   } else if (step === 'nightfall') {
-    const fr: NightChoice = d.kind === 'nightfall' ? d.choice : decideNightfall(s, b, 'fr');
+    const fr: NightChoice = d.kind === 'nightfall' ? d.choice : decideNightfall(s, ctx, b, 'fr');
+    if (d.kind === 'nightfall') b.field.decisions += 1;
     const ru = b.hidden as NightChoice;
     b.hidden = null;
     resolveNightfall(s, ctx, b, { fr, ru }, log);
@@ -320,12 +344,18 @@ function stageContacts(s: GameState, ctx: Context, log: LogEntry[]): void {
   res.stage = 'battleRounds';
 }
 
-function stageBattleRounds(s: GameState, _ctx: Context, _log: LogEntry[]): void {
+function stageBattleRounds(s: GameState, ctx: Context, log: LogEntry[]): void {
   const now = slotIndex(s.resolution);
   for (const b of sortedValues(s.battles)) {
     if (b.phase !== 'rounds' || slotIndex(b.startsAt) > now || b.roundsThisSlot >= ROUNDS_PER_SLOT) continue;
+    const ru = decideRound(s, ctx, b, 'ru');
+    if (b.field.delegated) {
+      // Left to the marshal: the round resolves without stopping (§3.4b).
+      resolveRound(s, ctx, b, { fr: decideRound(s, ctx, b, 'fr'), ru }, log, { fr: true, ru: true });
+      return;
+    }
     b.awaiting = 'round';
-    b.hidden = decideRound(s, b, 'ru');
+    b.hidden = ru;
     return; // pause: the player decides this round
   }
   s.resolution.stage = 'accrual';
@@ -390,7 +420,7 @@ function stageNight(s: GameState, ctx: Context, log: LogEntry[]): void {
   for (const b of sortedValues(s.battles)) {
     if (b.phase === 'rounds' && b.roundsFought > 0 && b.lastNight !== day) {
       b.awaiting = 'nightfall';
-      b.hidden = decideNightfall(s, b, 'ru');
+      b.hidden = decideNightfall(s, ctx, b, 'ru');
       return; // pause: stay or withdraw (§3.4a night step 4)
     }
   }
@@ -859,6 +889,8 @@ function joinReinforcements(s: GameState, ctx: Context, log: LogEntry[]): void {
       f.route = [];
       b.sides[f.side].push(f.id);
       b.fightsFrom[f.id] = from;
+      // It enters the reserve, and fights only once it has deployed (contract A).
+      b.field.alloc[f.id] = allInReserve(f);
       if (f.posture === 'dispersed' && f.gathering === 0) f.gathering = ctx.rules.posture.gatherSlots;
       if (f.side === 'ru' && f.men >= ctx.rules.russian.mainArmyMen) s.russianCommand.foughtThisTurn = true;
       note(s, log, 'reinforced', { battle: b.id, force: f.id, side: f.side });
@@ -931,11 +963,14 @@ function resolveEncounter(s: GameState, ctx: Context, enc: Encounter, log: LogEn
   const res = s.resolution;
   const id = `${res.turn}.${res.slot}.${res.battleSeq}`;
   res.battleSeq += 1;
+  // The staff of each side deploys on the field: the open-field template for now (§2.10).
+  const field = newField('open', { fr: deploymentFor(s, ctx, { sides, attacker }, 'fr', 'open'), ru: deploymentFor(s, ctx, { sides, attacker }, 'ru', 'open') });
   s.battles[id] = {
     id,
     node: enc.node,
     attacker,
     sides,
+    field,
     phase: 'deploy',
     startsAt: nextDaylight(res),
     fightsFrom: {},
