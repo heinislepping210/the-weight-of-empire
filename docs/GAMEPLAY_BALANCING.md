@@ -220,6 +220,8 @@ Stage B of the independent review: connect horses to transport, make carrying fi
   - at 15 km, the prudent halt consolidates successfully in 91% of games instead of 99.5%;
   - at 30 km, the methodical approach wins less often (39% instead of 44%). Why has not been traced yet.
 
+  *Corrected after the second review:* Davie's 15, 22 and 30 km are the widths of foraging squares, not radii (L-011). The reach of 22 km was therefore about twice the source's normal case. Rules 0.12.0 set it to 11 km (see "The second independent review" below).
+
 **The paired supply-stance probe** (same bots and seeds, depots brought forward or kept):
 - **Forward supply helps a little and almost never hurts.**
   - Most approaches reach the same ending in 88–98% of games either way.
@@ -279,8 +281,8 @@ Review stage D brought the evaluator in line with §2.13 (D-035). Report: [balan
 - **The earlier victories were mostly not victories.** Traces of 300 games found two causes:
   - **Sickness counted as defeat.** Russian losses to sickness and straggling counted towards a decisive defeat whenever any battle had been won.
   - **The suburb counted as a cut-off.** Tracked over time, 30,000 French in Smolensk's north-bank suburb counted as cutting off the Russians in the Old Town in 75–80% of games, even while those Russians were marching out to strike. The design names Valutino and Dorogobuzh on the Moscow road for that; the code now does too.
-- **Only cutting the Moscow road wins now.** The southern envelopment's second objective is Valutino. Holding it for two sub-steps behind the Russians gives Decisive Success in 13% of games and Costly Victory in 38%, so it is now the best family on 74% of seeds (F3).
-- **No approach inflicts a decisive defeat in battle.** The bar is 30% of the Russian main armies lost in battles won within 4 days, which matches battles like Austerlitz or Jena. The placeholder battle model never reaches it.
+- **Among the tested bots, only cutting the Moscow road wins now.** The southern envelopment's second objective is Valutino. Holding it for two sub-steps behind the Russians gives Decisive Success in 13% of games and Costly Victory in 38%, so it is now the best family on 74% of seeds (F3).
+- **No tested approach inflicts a decisive defeat in battle.** The bar is 30% of the Russian main armies lost in battles won within 4 days, which matches battles like Austerlitz or Jena. The placeholder battle model never reaches it.
 
   That is a finding about the battle model, which the sector battles of §2.10 replace. It is not a reason to lower the threshold, so G-004 stays.
 - **Bait and converge ends in Limited Success in 93% of games:** Smolensk taken, the Russian army not beaten. That is the historical par.
@@ -312,10 +314,12 @@ Stage F rebuilt the experiment (D-036). Reports: [the batch, 1,000 scenarios × 
 
 - **Luck is a fifth of the outcome.** That is enough to matter, but not enough to swamp decisions.
 - **The scenario dependence is real.** The best approach for a scenario stays the best under fresh dice in 97% of scenarios, so the large interaction is not dice noise.
-- **But it cannot be read at the start.** A fair adaptive policy picks an approach at the first decision from what the French see: their own strength and the scouts' reports. It learns on 500 seeds and is judged on 500 others. It does no better than always taking the best fixed approach (mean rank 2.60 against 2.57), while an oracle that knows each ending would reach 2.21.
-- **What decides the best approach is hidden at the first decision:** the Russian command's temper and pressure, the weather, the strengths of the forces not yet seen.
 
-  To the player, half the outcome's variance is therefore effectively luck unless the game lets them learn these things in time. The design answer is information: scouting, reports of Russian movement, events such as the false report of 1812 (H-012), and a staff assessment that reads them.
+  *Corrected after the second review:* that figure compared the best on the first roll with the best by the mean over all three rolls, the first included, and counted a tie as agreement. It overstates the stability. The measure with the other rolls held apart is in the next section.
+- **This policy could not read it at the start.** A fair adaptive policy picks an approach at the first decision from what the French see: their own strength and the scouts' reports. It learns on 500 seeds and is judged on 500 others. It does no better than always taking the best fixed approach (mean rank 2.60 against 2.57), while an oracle that knows each ending would reach 2.21. *That oracle knew the dice as well as the scenario, so it is not a bound on reading the situation; see the next section.*
+- **What may decide the best approach is hidden at the first decision:** the Russian command's temper and pressure, the weather, the strengths of the forces not yet seen.
+
+  To the player, much of the outcome's variance may therefore be effectively luck unless the game lets them learn these things in time. *This experiment does not establish that:* one simple policy reading two figures is not a player, and it never re-decides. The design answer is information: scouting, reports of Russian movement, events such as the false report of 1812 (H-012), and a staff assessment that reads them.
 
   The next measure should be an adaptive policy that re-decides every turn with what is visible then.
 - **Spacing of the ranks matters little:** with Costly Victory above Operational Success the shares become 32% / 5% / 44% / 19%.
@@ -328,7 +332,7 @@ Stage F rebuilt the experiment (D-036). Reports: [the batch, 1,000 scenarios × 
 - **An engine defect, found and fixed.** Groups sharing a depot that ran short drew in the order of their names, so the Guard ("fr-guard") ate while Eugène ("fr-left") starved beside it. They now share by need. The effect on the batch is small, because the depots run dry either way.
 
 **F1–F3:**
-- The southern envelopment is the only approach that wins, and it is best on 73% of seeds (F3 fails).
+- Among the tested bots, the southern envelopment is the only one that wins, and it is best on 73% of seeds (F3 fails). That makes it dominant among these bots, not proven dominant in the game.
 - Decisive Success appears on 11% of seeds (F1 is a lower bound, using only these bots).
 - Both follow from the outcome model as designed (D-035) and the placeholder battle model: only cutting the Moscow road wins.
 
@@ -346,3 +350,36 @@ Stage F rebuilt the experiment (D-036). Reports: [the batch, 1,000 scenarios × 
 4. **Targets can be revised** after testing, with the evidence and reasoning recorded in DECISIONS.md.
 
 When these goals conflict, the order of priority is: historical plausibility → meaningful player agency → achievable outcomes → understandable consequences.
+
+## The second independent review (rules 0.12.0, 1 November 2026)
+
+The second review found five defects, a missing control and a misread source (D-037; [record](reviews/2026-11-01-second-review.md)). The figures below are for the adopted rules, foraging reach 11 km included. Reports: [the batch, 1,000 scenarios × 3 sets of dice](balance/2026-11-01-rules-0.12.0.md), [the adaptive policy](balance/2026-11-01-adaptive-0.12.0.md), [the supply-stance probe](balance/2026-11-01-supply-stance-0.12.0.md) and [what-if runs on the foraging reach](balance/2026-11-01-whatif-reach.md). Integrity holds: zero invariant violations in 27,000 games.
+
+**Won (Decisive Success, Costly Victory or Operational Success), every game:**
+
+| Strategy | rules 0.11.0 | rules 0.12.0 | Operational Collapse, 0.11.0 → 0.12.0 |
+|---|---|---|---|
+| concentrated-push | 0.4% | 0.0% | 33.1% → 7.1% |
+| southern-envelopment | 66.2% (Decisive 11.3%) | 82.2% (Decisive 1.5%) | 1.5% → 1.5% |
+| bait-and-converge | 0.0% | 0.0% | 0.0% → 0.0% |
+| methodical | 0.2% | 0.0% | 0.1% → 0.3% |
+| rush | 0.0% | 0.0% | 13.2% → 9.4% |
+| prudent and supplied halts | Precarious Halt in every game | the same | — |
+
+**Where the changes come from**, traced by reverting one fix at a time on 300 seeds:
+- **The road order spared the direct approaches.** With the old rule, the concentrated push collapses in 104 of 300 games; with the new one, in 28. Faster French columns can no longer slip past Russian columns level with them. Why the passing led to collapse has not been traced yet.
+- **The southern envelopment now holds Valutino.** Before, a group on its last stretch into the objective was sent back out to rejoin the route, so the corps rarely stood at Valutino long enough. With only that fix reverted, Costly Victory falls from 238 to 158 of 300 games.
+- **Its Decisive Successes became Costly Victories** because each ration now counts once. In 211 of the 238 costly victories traced, the army was capable but its supply was not sustainable. The groups short most often were Eugène's left wing, the Guard and headquarters, and the right wing.
+
+**The experiment, with the corrected measures:**
+- **Variance of the ending:** strategy 39%, scenario 4%, which strategy suits which scenario 45%, dice 13%. With the ranks spread out: 50% / 3% / 36% / 10%.
+- **Stability, with the other rolls held apart:** where one approach is best on a scenario's first roll and one on its other two, they agree on 99.6% of 791 scenarios. The other 21% of scenarios have a tie for best.
+- **Reading the situation:** an oracle that knows the scenario but not the dice would beat the best fixed approach by 0.13 ranks; one that also knows the dice, by 0.17. The adaptive policy gains nothing, because it learns to pick the southern envelopment in every cell. Among these bots there is little left to read at the first decision.
+- **Supply stance:** bringing depots forward helps bait and converge most (better on 14% of seeds, worse on 2%). For the other approaches it rarely changes the ending's rank.
+
+**What it means, among the tested bots:**
+- **The southern envelopment is dominant.** It is best on 85% of seeds (F3 fails), and it wins mostly at a price: the Moscow road is cut, but the army that cut it cannot be fed there.
+- **Decisive defeat in battle:** no tested approach reached it on 0.11.0, and 0.12.0 also requires a Russian rout. The batch does not yet count how often the Russians are decisively defeated rather than cut off; it should. Either way it is a finding about the placeholder battle model, which the sector battles (§2.10) replace.
+- **No tested halt consolidates**, at any foraging reach from 7.5 to 22 km.
+
+**The foraging reach is now 11 km** (G-019; your decision, "Adopt 11 km"). Read correctly, the source gives 7.5–15 km; 11 km is half the width of its square for extended operations, the case first chosen. The what-if runs over 7.5–22 km came first. No approach family's ending moves by as much as half a point across that range, because their groups march concentrated. Against 22 km, the methodical bot is repulsed more often (35% against 30%). The halts lose more horses (the prudent halt 9.4% against 4.7%) and end with less food (2.7 days against 4.1).

@@ -44,6 +44,8 @@ function battle(s: GameState, id: string, day: number, lossPermille: number, win
     lastNight: day,
     winner,
     losses,
+    // The Russians broke: an orderly withdrawal is no decisive defeat (D-037, tested in second-review.test.ts).
+    routed: winner === 'fr' ? ['ru'] : [],
   };
   s.battles[id] = b;
 }

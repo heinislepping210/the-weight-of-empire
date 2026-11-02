@@ -24,9 +24,9 @@ it.skipIf(env.BALANCE !== '1')('paired supply-stance probe', () => {
   const lines = [
     `# Paired supply-stance probe: rules ${RULES_VERSION}, seeds 1–${SEEDS}`,
     '',
-    'Same bots, same seeds, same group orders: only the supply stance differs. A lower ending rank is better.',
+    'Same bots, same seeds, same group orders: only the supply stance differs. A lower ending rank is better. "Same rank" counts endings of equal rank, which may be different endings (Costly Victory and Operational Success share a rank).',
     '',
-    '| Strategy | Forward better | Same ending | Hold better | Mean rank, forward / hold | French men lost, forward / hold | Food days at end, forward / hold | Most common ending, forward / hold |',
+    '| Strategy | Forward better | Same rank | Hold better | Mean rank, forward / hold | French men lost, forward / hold | Food days at end, forward / hold | Most common ending, forward / hold |',
     '|---|---|---|---|---|---|---|---|',
   ];
   for (const name of names) {

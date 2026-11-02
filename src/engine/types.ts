@@ -36,6 +36,8 @@ export interface Transit {
   to: NodeId;
   /** Distance travelled from `at` towards `to`. */
   metres: number;
+  /** When it set out along this road: of two level columns heading the same way, the earlier is ahead. */
+  seq: number;
 }
 
 export interface Force {
@@ -129,6 +131,8 @@ export interface BattleState {
   winner: Side | null;
   /** Men each force lost in this battle, its retreat included: killed, wounded and taken (§2.13). */
   losses: Record<ForceId, number>;
+  /** Sides that broke in the field or were trapped with no road out; an orderly withdrawal is no rout (§2.13). */
+  routed: Side[];
 }
 
 export type Stage = 'orders' | 'activity' | 'movement' | 'contacts' | 'battleRounds' | 'accrual' | 'night' | 'endOfTurn';
@@ -214,6 +218,10 @@ export interface GameState {
    * it first counted as cut off (§2.13): held long enough once, it stands.
    */
   cutOff: { held: number; achievedAt: SlotRef | null };
+  /** The Russian main armies, fixed at the start: each then held a set share of the Russian strength (§2.13). */
+  mainArmies: ForceId[];
+  /** Counter for the order in which columns set out along roads (`Transit.seq`). */
+  roadSeq: number;
   ledger: Ledger;
   ended: Ending | null;
 }

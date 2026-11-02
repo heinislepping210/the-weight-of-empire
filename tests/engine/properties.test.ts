@@ -40,6 +40,8 @@ const GOLDEN: Record<string, string> = {
   '0.10.0': 'f2210a8dc39c26cc',
   // Scenario and dice separated (state gains `dice`); with the dice equal to the seed every draw is unchanged.
   '0.11.0': '070285ad72acd22c',
+  // The second review (D-037): road order, traction, fixed main armies, the rout rule; state gains `roadSeq` and `mainArmies`.
+  '0.12.0': '471df355d10627e6',
 };
 
 /**
@@ -52,6 +54,8 @@ const GOLDEN_VITEBSK: Record<string, string> = {
   '0.9.0': 'fe2e22e26628a01e',
   '0.10.0': '213ae2dc28f8cfca',
   '0.11.0': '4ceff6b3eb9f0efc',
+  // Also the foraging reach at 11 km (G-019, D-037).
+  '0.12.0': '5cfa601d92d3f681',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */

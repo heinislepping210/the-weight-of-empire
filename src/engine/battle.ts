@@ -99,9 +99,9 @@ function inflict(s: GameState, b: BattleState, forces: Force[], total: number): 
  * Falling back takes time (§3.4a step 4): the force leaves the place at once, as a body, onto the road
  * towards `dest`, and marches the rest of the way in later sub-steps.
  */
-export function fallBack(ctx: Context, f: Force, dest: NodeId): void {
+export function fallBack(s: GameState, ctx: Context, f: Force, dest: NodeId): void {
   const edge = must(edgeBetween(ctx.graph, f.at, dest), `road ${f.at}–${dest}`);
-  f.transit = { edge: edge.id, to: dest, metres: 0 };
+  f.transit = { edge: edge.id, to: dest, metres: 0, seq: s.roadSeq++ };
   f.route = [dest];
   f.posture = 'concentrated';
   f.gathering = 0;
@@ -114,10 +114,11 @@ function withdrawSide(s: GameState, ctx: Context, b: BattleState, side: Side, lo
     const dest = retreatNodeFor(s, ctx, b.node, side);
     if (dest) {
       recordLoss(b, f, loseMen(s, f, Math.floor((f.men * engagement.withdrawalLossPermille) / 1000), 'withdrawal'));
-      fallBack(ctx, f, dest);
+      fallBack(s, ctx, f, dest);
       note(s, log, 'retreated', { force: f.id, to: dest });
     } else {
       recordLoss(b, f, loseMen(s, f, Math.floor((f.men * battle.trappedLossPermille) / 1000), 'battle'));
+      if (!b.routed.includes(side)) b.routed.push(side);
       note(s, log, 'trapped', { force: f.id, node: b.node });
     }
   }
@@ -176,7 +177,9 @@ export function resolveRound(s: GameState, ctx: Context, b: BattleState, acts: R
 
   for (const side of SIDES) for (const f of activeForces(s, b, side, now)) f.fatigue = Math.min(1000, f.fatigue + ctx.rules.fatigue.fightRound);
 
+  // A side whose cohesion gives way breaks: a rout, not an orderly withdrawal (§2.13).
   const broken = SIDES.filter((side) => sideTotals(s, b, side, now).cohesion < r.breakCohesion);
+  for (const side of broken) if (!b.routed.includes(side)) b.routed.push(side);
   if (broken.length > 0) endByWithdrawal(s, ctx, b, broken, log);
 }
 

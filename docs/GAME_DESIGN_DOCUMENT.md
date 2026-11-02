@@ -150,10 +150,10 @@ The simulation underneath is identical; only the way you give orders changes.
 - **Retreat.** A beaten force falls back towards its own depots.
 
 **Horses, carrying and foraging reach (rules 0.9.0, G-019):**
-- **Draught horses.** Every wagon needs draught horses, in the wagon trains and in each group's own baggage. A wagon without its horses stays behind: fewer horses mean smaller loads, never faster or slower wagons.
+- **Draught horses.** Every wagon needs draught horses, in the wagon trains and in each group's own baggage. A wagon without its horses stays behind: fewer horses mean smaller loads, never faster or slower wagons. A wagon train that loses horses on the way unloads what it can no longer draw, into its depot or by the road; with no horses it cannot move (D-037).
 - **Feeding the draught horses.** Wagon-train horses graze along the way, then eat the fodder they carry, then their depot's. On a long haul they eat part of what they were meant to deliver.
 - **What a group can carry.** A group carries what its men (four days' rations each) and its horse-drawn wagons can take. In camp it may hold more. When it sets out on the march it leaves the rest behind: fodder first, ammunition last. At a depot the extra goes back into the depot; anywhere else it is lost. At a depot the staff draws only what the group can carry.
-- **Foraging reach.** A dispersed group reaches a neighbouring district only if that district begins within its foraging reach: half the road to the neighbouring place. Neighbours far down a long road are out of reach.
+- **Foraging reach.** A dispersed group reaches a neighbouring district only if that district begins within its foraging reach: half the road to the neighbouring place. Neighbours far down a long road are out of reach. The reach is 11 km, half the width of the source's foraging square for extended operations, so a neighbouring place counts within 22 km by road (L-011, G-019; corrected from 22 km in rules 0.12.0).
 - **March speed is unchanged.** The infantry sets the pace; horse losses cost carrying, not speed.
 
 **Captured stores and forward depots (D-029, rules 0.6.0):**
@@ -300,10 +300,11 @@ The engine evaluates three things separately, then combines them. Every threshol
 
 - **Inconclusive** (added in D-028): the objective not achieved, the army not seriously harmed, and no halt declared — time simply ran out. It ranks with a Precarious Halt.
 - **Capturing territory alone is never more than a Limited Success.**
-- *Implementation (rules 0.10.0, D-035):* `src/engine/outcome.ts`, with a table of campaign states in `tests/engine/outcome.test.ts` fixing what each ending means.
-  - **Decisively defeated** counts battle losses (killed, wounded, taken, including those in a beaten side's retreat) in battles the French won, over at most 4 days. Sickness and straggling never count.
+- *Implementation (rules 0.10.0, D-035; corrected in 0.12.0, D-037):* `src/engine/outcome.ts`, with a table of campaign states in `tests/engine/outcome.test.ts` fixing what each ending means.
+  - **The Russian main armies** are the forces holding at least a quarter of the Russian strength at the start. They are fixed for the game, so a main army that has been weakened still counts.
+  - **Decisively defeated** counts battle losses (killed, wounded, taken, including those in a beaten side's retreat) in battles the French won and in which the Russians broke, over at most 4 days. A side breaks when its cohesion falls below the breaking point in a round, or when it is trapped with no road out. An orderly withdrawal never counts, however costly: at Borodino the Russians lost about a third and withdrew in order (H-018). Sickness and straggling never count.
   - **Cut off** is tracked sub-step by sub-step: Valutino or Dorogobuzh held by at least 30,000 French while no Russian main army can reach Dorogobuzh past them, for 2 consecutive sub-steps. Once achieved, it stands. Holding Smolensk's north-bank suburb takes the objective but does not cut the Russians off.
-  - **Sustainable** is judged group by group: food carried, on its way by wagon, in its own depot where it stands, and what it can forage there over the next 2 days. The supply line's delivery rate (*T₁*) is not used yet.
+  - **Sustainable** is judged group by group over the next 2 days: food carried; food on its way by wagon, if the train has the horses to draw it and is near enough to arrive in time; its own depot where it stands; and its share of the forage within reach, each district's food shared among the groups that reach it. The supply line's delivery rate (*T₁*) is not used yet.
   - **Secure** does not yet include cut supply lines.
   - **A victory won before a late halt stands** (your decision, D-035): the endings are checked from the top, so a decisive result comes before the halt endings.
 - The report presents every ending with its trade-offs. Rank order is used only for testing statistics: Decisive Success first; Costly Victory and Operational Success second, as different kinds of success; Limited Success and Successful Consolidation third; then Precarious Halt, Repulse and Collapse.

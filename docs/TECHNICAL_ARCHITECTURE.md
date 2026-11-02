@@ -108,6 +108,7 @@ A turn is 2 days: **four daylight sub-steps** of 6 hours (06:00–12:00 and 12:0
      - A force may not set out along a road on which an enemy column is coming the other way. It holds its place, and the enemy column reaches it there.
      - If enemy forces stand at both ends of a road and both would set out along it in the same hour, a seeded draw for that road and hour decides which one gets onto it. The other holds its place.
      - A column may not overtake an enemy column ahead of it on the same road. It closes up behind it and follows it to the next place.
+     - Two columns level on the same road keep the order in which they set out (`Transit.seq`, numbered from `GameState.roadSeq`): the one that was on the road first stays ahead, as does a force falling back onto the road it is already on (D-037).
    - **A force that could not move at all rests** (activity *halt*) for the sub-step.
    - **Setting out, a force leaves behind what it cannot carry** (rules 0.9.0, G-019): fodder first, then food, ammunition last. The excess goes back into the depot if the force stands at its own depot; otherwise it is abandoned and recorded in the ledger.
 4. **Contact.** Contacts found during movement are resolved in this order:

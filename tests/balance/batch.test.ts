@@ -108,7 +108,7 @@ it.skipIf(!enabled)('balance batch', () => {
     }
   }
 
-  const pct = (n: number, d: number) => `${((n / d) * 100).toFixed(1)}%`;
+  const pct = (n: number, d: number) => `${((n / Math.max(1, d)) * 100).toFixed(1)}%`;
   const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
   const endings = Object.keys(ENDING_NAMES) as EndingId[];
   const lines: string[] = [];
@@ -187,16 +187,25 @@ it.skipIf(!enabled)('balance batch', () => {
   // The same split with Costly Victory and Operational Success no longer tied: how much the ranks' spacing matters.
   const SPREAD: Record<EndingId, number> = { decisiveSuccess: 1, costlyVictory: 2, operationalSuccess: 3, limitedSuccess: 4, successfulConsolidation: 4, inconclusive: 5, precariousHalt: 5, repulse: 6, collapse: 7 };
   const f4spread = split((e) => SPREAD[e]);
-  // With fresh dice: is the best approach for a scenario the same as on its first roll?
-  let stableBest = 0;
+  // With fresh dice: does the best approach on a scenario's first roll stay best on its other rolls? The
+  // other rolls are held apart from the first, and scenarios with a tie on either side are counted on their
+  // own, so that neither shared rolls nor ties make the best look more stable than it is (second review).
+  const stability = { agree: 0, differ: 0, tied: 0, overlap: 0 };
   if (DICE > 1) {
+    const bestOf = (score: (f: string) => number) => {
+      const top = Math.min(...FAMILIES.map(score));
+      return FAMILIES.filter((f) => score(f) === top);
+    };
     for (let i = 0; i < SEEDS; i++) {
-      const meanRank = (f: string) => mean(Array.from({ length: DICE }, (_, r) => results[f]![i * DICE + r]!.rank));
-      const bestMean = Math.min(...FAMILIES.map(meanRank));
-      const bestFirst = Math.min(...FAMILIES.map((f) => first(f, i).rank));
-      if (FAMILIES.some((f) => meanRank(f) === bestMean && first(f, i).rank === bestFirst)) stableBest++;
+      const onFirst = bestOf((f) => first(f, i).rank);
+      const onOthers = bestOf((f) => mean(Array.from({ length: DICE - 1 }, (_, r) => results[f]![i * DICE + r + 1]!.rank)));
+      if (onFirst.some((f) => onOthers.includes(f))) stability.overlap++;
+      if (onFirst.length > 1 || onOthers.length > 1) stability.tied++;
+      else if (onFirst[0] === onOthers[0]) stability.agree++;
+      else stability.differ++;
     }
   }
+  const untied = stability.agree + stability.differ;
 
   const halt = results['prudent-halt']!;
   const random = results.random!;
@@ -207,7 +216,7 @@ it.skipIf(!enabled)('balance batch', () => {
   const share = (v: number) => `${(v * 100).toFixed(1)}%`;
   lines.push(
     DICE > 1
-      ? `- **F4:** variance of the ending rank explained by the strategy ${share(f4.strategy)}, by the scenario ${share(f4.scenario)}, by which strategy suits which scenario ${share(f4.interaction)}, and by the battle dice alone ${share(f4.dice)} (${DICE} sets of dice per scenario; target: strategy above scenario). With the ranks spread out (Costly Victory above Operational Success): strategy ${share(f4spread.strategy)}, scenario ${share(f4spread.scenario)}, interaction ${share(f4spread.interaction)}, dice ${share(f4spread.dice)}. The best approach for a scenario stays the best under fresh dice on ${pct(stableBest, SEEDS)} of scenarios.`
+      ? `- **F4:** variance of the ending rank explained by the strategy ${share(f4.strategy)}, by the scenario ${share(f4.scenario)}, by which strategy suits which scenario ${share(f4.interaction)}, and by the battle dice alone ${share(f4.dice)} (${DICE} sets of dice per scenario; target: strategy above scenario). With the ranks spread out (Costly Victory above Operational Success): strategy ${share(f4spread.strategy)}, scenario ${share(f4spread.scenario)}, interaction ${share(f4spread.interaction)}, dice ${share(f4spread.dice)}. Where one approach is best on a scenario's first roll and one is best on its other ${DICE - 1} rolls, they are the same on ${pct(stability.agree, untied)} of ${untied} scenarios; ${pct(stability.tied, SEEDS)} of scenarios have a tie for best on one side or both, and the approaches best on each side overlap on ${pct(stability.overlap, SEEDS)}.`
       : `- **F4:** variance of the ending rank explained by the strategy ${share(f4.strategy)}, by the seed ${share(f4.scenario)}, interaction and dice together ${share(f4.interaction)} (target: strategy above seed). Run with BALANCE_DICE=3 to separate the dice.`,
   );
   lines.push(`- **F5:** the prudent halt, declared on the first turn before any victory, ends in: ${endings.filter((e) => halt.some((r) => r.ending === e)).map((e) => `${ENDING_NAMES[e]} ${pct(halt.filter((r) => r.ending === e).length, halt.length)}`).join(', ')} (target: never Decisive Success; a victory won before a later halt stands, D-035).`);

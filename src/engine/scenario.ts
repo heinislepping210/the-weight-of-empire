@@ -151,6 +151,13 @@ export function newGame(ctx: Context, seed: number, dice: number = seed): GameSt
   for (const id of graph.edges.keys()) roads[id] = 'dry';
 
   const command = rules.russian;
+  // The main armies are fixed now and judged as such throughout, however their strength changes (D-037).
+  const russians = Object.values(forces).filter((f) => f.side === 'ru');
+  const russianMen = russians.reduce((n, f) => n + f.men, 0);
+  const mainArmies = russians
+    .filter((f) => f.men > 0 && f.men * 1000 >= russianMen * command.mainSharePermille)
+    .map((f) => f.id)
+    .sort();
   const state: GameState = {
     schema: 1,
     rulesVersion: rules.version,
@@ -176,6 +183,8 @@ export function newGame(ctx: Context, seed: number, dice: number = seed): GameSt
     },
     halted: false,
     cutOff: { held: 0, achievedAt: null },
+    mainArmies,
+    roadSeq: 0,
     ledger: {
       foraged: { food: 0, fodder: 0 },
       consumed: { food: 0, fodder: 0 },

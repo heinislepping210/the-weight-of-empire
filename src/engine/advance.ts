@@ -9,7 +9,7 @@ import { updateIntel } from './intel';
 import { updatePressure } from './russian';
 import { fallBack, oncoming, resolveNightfall, resolveRound, retreatNodeFor } from './battle';
 import { capacityGrams, usableWagons, weightGrams, withinCapacity } from './carriage';
-import { lineOfRetreatBlocked, mainArmyIds } from './outcome';
+import { lineOfRetreatBlocked } from './outcome';
 import { edgeBetween, neighboursOf, roadDistance, shortestPath, type EdgeDef } from './graph';
 import { chance, drawBetween } from './rng';
 import type { Context } from './scenario';
@@ -543,7 +543,7 @@ function travel(s: GameState, ctx: Context, m: Mover, budget: number, stopAt: (n
       if (to === undefined) break;
       const edge = must(edgeBetween(ctx.graph, m.at, to), `road ${m.at}–${to}`);
       if (way.mayEnter && !way.mayEnter(m.at, edge)) break;
-      m.transit = { edge: edge.id, to, metres: 0 };
+      m.transit = { edge: edge.id, to, metres: 0, seq: s.roadSeq++ };
     }
     const edge = must(ctx.graph.edges.get(m.transit.edge), m.transit.edge);
     const factor = roadFactor(s, ctx, edge);
@@ -591,8 +591,9 @@ function moveForce(s: GameState, ctx: Context, f: Force, budget: number, hour: n
     return frenchFirst === (f.side === 'fr');
   };
   // No overtaking: an enemy column ahead on the same road, going the same way, caps how far the force can go.
-  const reachLimit = (t: Transit): number =>
-    Math.min(Infinity, ...enemies().flatMap((e) => (e.transit !== null && e.transit.edge === t.edge && e.transit.to === t.to && e.transit.metres > t.metres ? [e.transit.metres] : [])));
+  // Level columns keep the order in which they set out: the one already on the road stays ahead (D-037).
+  const ahead = (t: Transit, e: Transit) => e.edge === t.edge && e.to === t.to && (e.metres > t.metres || (e.metres === t.metres && e.seq < t.seq));
+  const reachLimit = (t: Transit): number => Math.min(Infinity, ...enemies().flatMap((e) => (e.transit !== null && ahead(t, e.transit) ? [e.transit.metres] : [])));
   // Marching into a place held by the enemy ends the march: that is contact (§3.4a step 4).
   return travel(
     s,
@@ -618,8 +619,25 @@ function deliveryOf(s: GameState, c: Convoy): { node: NodeId; force: Force | nul
   return null;
 }
 
+/**
+ * A train moves only what its horses can draw (G-019, D-037): with horses lost since it loaded, the
+ * excess is unloaded into its own depot if it stands at one, otherwise left by the road.
+ */
+function shedConvoyLoad(s: GameState, ctx: Context, c: Convoy, log: LogEntry[]): void {
+  const payload = usableWagons(c.wagons, c.horses, ctx.rules) * ctx.rules.convoy.payloadGrams;
+  const { kept, dropped } = withinCapacity(c.cargo, payload, ctx.rules);
+  if (weightGrams(dropped, ctx.rules) === 0) return;
+  c.cargo = kept;
+  const depot = c.transit === null ? s.depots[c.at] : undefined;
+  const toDepot = depot !== undefined && depot.side === c.side;
+  addInto(toDepot ? depot.stock : s.ledger.abandoned, dropped);
+  note(s, log, 'convoyLeftBehind', { convoy: c.id, food: dropped.food, fodder: dropped.fodder, ammo: dropped.ammo, depot: toDepot ? c.at : null });
+}
+
 function moveConvoy(s: GameState, ctx: Context, c: Convoy, log: LogEntry[]): void {
   if (c.leg === 'loading') return;
+  shedConvoyLoad(s, ctx, c, log);
+  if (usableWagons(c.wagons, c.horses, ctx.rules) === 0) return;
   const delivery = deliveryOf(s, c);
   if (c.leg === 'outbound' && !delivery) c.leg = 'returning';
   const target = c.leg === 'outbound' && delivery ? delivery.node : c.home;
@@ -648,7 +666,7 @@ function moveConvoy(s: GameState, ctx: Context, c: Convoy, log: LogEntry[]): voi
  * main armies count as cut off, and that stands even if the block is later given up.
  */
 function trackCutOff(s: GameState, ctx: Context, log: LogEntry[]): void {
-  if (!lineOfRetreatBlocked(s, ctx, mainArmyIds(s, ctx.rules))) {
+  if (!lineOfRetreatBlocked(s, ctx, s.mainArmies)) {
     s.cutOff.held = 0;
     return;
   }
@@ -783,6 +801,7 @@ function resolveEncounter(s: GameState, ctx: Context, enc: Encounter, log: LogEn
     startsAt: nextDaylight(res),
     fightsFrom: {},
     losses: {},
+    routed: [],
     roundsFought: 0,
     roundsThisSlot: 0,
     awaiting: 'deploy',
@@ -815,7 +834,7 @@ function tryWithdraw(s: GameState, ctx: Context, node: NodeId, side: Side, ids: 
   if (!success || dest === null) return false;
   for (const f of forces) {
     loseMen(s, f, Math.floor((f.men * e.withdrawalLossPermille) / 1000), 'withdrawal');
-    fallBack(ctx, f, dest);
+    fallBack(s, ctx, f, dest);
   }
   return true;
 }
@@ -829,7 +848,7 @@ function minorAction(s: GameState, ctx: Context, node: NodeId, sides: Record<Sid
     const f = must(s.forces[id], id);
     const noise = drawBetween(s.dice, ['minor', res.turn, res.slot, node, id], 500, 1500);
     loseMen(s, f, Math.floor((Math.floor((f.men * rate) / 1000) * noise) / 1000), 'battle');
-    if (dest) fallBack(ctx, f, dest);
+    if (dest) fallBack(s, ctx, f, dest);
   }
   note(s, log, 'minorAction', { node, retreated: weaker, to: dest });
 }

@@ -3,11 +3,11 @@
 // Thresholds are game assumptions (G-004). The meaning of each ending is fixed by a table of campaign
 // states in tests/engine/outcome.test.ts (D-035).
 
-import { neighboursOf, shortestPath } from './graph';
-import type { Rules } from './rules';
+import { usableWagons, withinCapacity } from './carriage';
+import { neighboursOf, roadDistance, shortestPath } from './graph';
 import type { Context } from './scenario';
 import { dayIndex } from './time';
-import type { Force, GameState, NodeId, Side } from './types';
+import type { Convoy, Force, GameState, NodeId, Side } from './types';
 import { enemyPresent, sortedValues } from './util';
 
 export type RussianResult = 'decisivelyDefeated' | 'cutOff' | 'forcedOut' | 'damaged' | 'intact';
@@ -68,13 +68,6 @@ export interface Outcome {
 const men = (forces: Force[]) => forces.reduce((n, f) => n + f.men, 0);
 const sideOf = (s: GameState, side: Side) => sortedValues(s.forces).filter((f) => f.side === side);
 
-/** The Russian main armies: each holding at least a set share of the Russian strength. */
-export function mainArmyIds(s: GameState, rules: Rules): string[] {
-  const ru = sideOf(s, 'ru');
-  const total = men(ru);
-  return ru.filter((f) => f.men > 0 && f.men * 1000 >= total * rules.russian.mainSharePermille).map((f) => f.id);
-}
-
 /**
  * Whether, right now, the French hold a designated place on the Russian line of retreat (§2.13) with enough
  * men, so that no Russian main army can reach the end of that line without passing them. Holding other
@@ -98,10 +91,9 @@ export function evaluate(start: GameState, end: GameState, ctx: Context): Outcom
   const r = ctx.rules.outcome;
   const keyPlaces = ctx.scenario.keyPlaces ?? [];
 
-  // Main armies are judged by the forces that were main armies at the start.
+  // Main armies are the forces that were main armies at the start (D-037).
   const ruStart = sideOf(start, 'ru');
-  const ruTotal = men(ruStart);
-  const mainIds = ruStart.filter((f) => f.men * 1000 >= ruTotal * ctx.rules.russian.mainSharePermille).map((f) => f.id);
+  const mainIds = start.mainArmies;
   const mainStart = men(ruStart.filter((f) => mainIds.includes(f.id)));
   const mainEnd = men(sideOf(end, 'ru').filter((f) => mainIds.includes(f.id)));
   const russianMainLostPermille = mainStart === 0 ? 0 : Math.floor(((mainStart - mainEnd) * 1000) / mainStart);
@@ -115,10 +107,11 @@ export function evaluate(start: GameState, end: GameState, ctx: Context): Outcom
 
   const holders = (side: Side, node: NodeId) => men(sideOf(end, side).filter((f) => f.transit === null && f.at === node));
 
-  // Decisively defeated: losses in battles the French won, killed, wounded and taken, counted over at most
-  // a few days — never sickness or straggling, and never the campaign's attrition as a whole (§2.13).
+  // Decisively defeated: losses in battles the French won and in which the Russians broke, killed, wounded
+  // and taken, counted over at most a few days — never sickness or straggling, never the campaign's attrition
+  // as a whole, and never an orderly withdrawal however costly, as at Borodino (§2.13, D-037).
   const won = sortedValues(end.battles)
-    .filter((b) => b.winner === 'fr' && b.sides.ru.some((id) => mainIds.includes(id)))
+    .filter((b) => b.winner === 'fr' && b.routed.includes('ru') && b.sides.ru.some((id) => mainIds.includes(id)))
     .map((b) => ({ day: dayIndex(b.startsAt), lost: mainIds.reduce((n, id) => n + (b.losses[id] ?? 0), 0) }));
   const worstWindow = won.reduce((best, w) => Math.max(best, won.filter((x) => x.day >= w.day && x.day < w.day + r.decisiveWindowDays).reduce((n, x) => n + x.lost, 0)), 0);
   const battleLossPermille = mainStart === 0 ? 0 : Math.floor((worstWindow * 1000) / mainStart);
@@ -140,27 +133,49 @@ export function evaluate(start: GameState, end: GameState, ctx: Context): Outcom
   const cohesion = frMen === 0 ? 0 : Math.floor(frEnd.reduce((n, f) => n + f.cohesion * f.men, 0) / frMen);
   const foodDays = frEnd.reduce((n, f) => n + f.stock.food, 0) / Math.max(1, frMen);
   const capable = frMen * 1000 >= men(frStart) * r.capableMenPermille && cohesion >= r.capableCohesion;
-  // Sustainable is judged group by group (§2.13), as a forecast at its final position: food in hand, on its
-  // way by wagon, in its own depot where it stands (shared by men among the groups there), and what it can
-  // forage there over the coming days, bounded by what the districts in reach still hold. The army's average
-  // must not hide a starving group.
-  const forageFor = (f: Force): number => {
-    if (f.transit !== null) return 0;
-    const fr = ctx.rules.forage;
-    const dispersed = f.posture === 'dispersed';
-    const reach = dispersed ? neighboursOf(ctx.graph, f.at).filter((n) => n.edge.metres <= 2 * fr.reachMetres && !enemyPresent(end, f.side, n.node)).map((n) => n.node) : [];
-    const held = [f.at, ...reach].reduce((n, node) => n + (end.districts[node]?.food ?? 0), 0);
-    const daily = Math.floor((Math.floor((f.men * fr.food.halt) / 1000) * 2 * (dispersed ? fr.dispersedPermille : 1000)) / 1000);
-    return Math.min(held, daily * r.sustainableFoodDays);
+  // Sustainable is judged group by group (§2.13), as a forecast at its final position over the coming days:
+  // food in hand; on its way by wagon, if the train has the horses to draw it and is near enough to arrive in
+  // time; in its own depot where it stands (shared by men among the groups there); and what it can forage,
+  // each district's food shared among the groups that reach it, so that no ration counts twice (D-037). The
+  // army's average must not hide a starving group.
+  const fr = ctx.rules.forage;
+  const groups = frEnd.filter((f) => f.men > 0);
+  const reachOf = (f: Force): NodeId[] => {
+    if (f.transit !== null) return [];
+    if (f.posture !== 'dispersed') return [f.at];
+    return [f.at, ...neighboursOf(ctx.graph, f.at).filter((n) => n.edge.metres <= 2 * fr.reachMetres && !enemyPresent(end, f.side, n.node)).map((n) => n.node)];
   };
+  const wantOf = (f: Force): number => {
+    if (f.transit !== null) return 0;
+    const daily = Math.floor((Math.floor((f.men * fr.food.halt) / 1000) * 2 * (f.posture === 'dispersed' ? fr.dispersedPermille : 1000)) / 1000);
+    return daily * r.sustainableFoodDays;
+  };
+  const wantAt = new Map<NodeId, number>();
+  for (const g of groups) for (const node of reachOf(g)) wantAt.set(node, (wantAt.get(node) ?? 0) + wantOf(g));
+  const forageFor = (f: Force): number => {
+    const want = wantOf(f);
+    if (want === 0) return 0;
+    const share = reachOf(f).reduce((n, node) => n + Math.floor(((end.districts[node]?.food ?? 0) * want) / Math.max(1, wantAt.get(node) ?? 0)), 0);
+    return Math.min(want, share);
+  };
+  const haul = ctx.rules.convoy.metresPerSlot * 2 * r.sustainableFoodDays;
+  const arrivesInTime = (c: Convoy, f: Force): boolean => {
+    const target = f.transit ? f.transit.to : f.at;
+    const onRoad = c.transit ? (ctx.graph.edges.get(c.transit.edge)?.metres ?? 0) - c.transit.metres : 0;
+    return usableWagons(c.wagons, c.horses, ctx.rules) > 0 && onRoad + roadDistance(ctx.graph, c.transit ? c.transit.to : c.at, target) <= haul;
+  };
+  const drawn = (c: Convoy): number =>
+    withinCapacity(c.cargo, usableWagons(c.wagons, c.horses, ctx.rules) * ctx.rules.convoy.payloadGrams, ctx.rules).kept.food;
   const supplyOf = (f: Force): number => {
-    const onTheWay = sortedValues(end.convoys).filter((c) => c.serves === f.id && c.leg === 'outbound').reduce((n, c) => n + c.cargo.food, 0);
+    const onTheWay = sortedValues(end.convoys)
+      .filter((c) => c.serves === f.id && c.leg === 'outbound' && arrivesInTime(c, f))
+      .reduce((n, c) => n + drawn(c), 0);
     const depot = f.transit === null ? end.depots[f.at] : undefined;
     const sharers = depot && depot.side === f.side ? frEnd.filter((g) => g.men > 0 && g.transit === null && g.at === f.at) : [];
     const fromDepot = depot && sharers.length > 0 ? Math.floor((depot.stock.food * f.men) / Math.max(1, men(sharers))) : 0;
     return f.stock.food + f.incoming.food + onTheWay + fromDepot + forageFor(f);
   };
-  const unsupplied = frEnd.filter((f) => f.men > 0 && supplyOf(f) < f.men * r.sustainableFoodDays);
+  const unsupplied = groups.filter((f) => supplyOf(f) < f.men * r.sustainableFoodDays);
   const sustainable = unsupplied.length === 0;
   const secure = frEnd.every((f) => f.battle === null) && frEnd.every((f) => f.transit !== null || holders('ru', f.at) === 0);
   const lostBattle = sortedValues(end.battles).some((b) => b.winner === 'ru');
@@ -177,14 +192,14 @@ export function evaluate(start: GameState, end: GameState, ctx: Context): Outcom
   const pct = (p: number) => `${(p / 10).toFixed(1)}%`;
   const reasons = [
     russian === 'decisivelyDefeated'
-      ? `In battles they lost within ${r.decisiveWindowDays} days, the Russian main armies lost ${pct(battleLossPermille)} of their strength; over the whole campaign ${pct(russianMainLostPermille)}.`
-      : `The Russian main armies lost ${pct(russianMainLostPermille)} of their strength over the campaign; in battles they lost within ${r.decisiveWindowDays} days, ${pct(battleLossPermille)}.`,
+      ? `In battles in which they broke, within ${r.decisiveWindowDays} days, the Russian main armies lost ${pct(battleLossPermille)} of their strength; over the whole campaign ${pct(russianMainLostPermille)}.`
+      : `The Russian main armies lost ${pct(russianMainLostPermille)} of their strength over the campaign; in battles in which they broke, within ${r.decisiveWindowDays} days, ${pct(battleLossPermille)}.`,
     cutOff ? 'Their line of retreat was blocked long enough to cut them off.' : 'Their line of retreat stayed open.',
     holdsKeyGround ? 'French troops hold the objective ground.' : 'The objective ground is not in French hands.',
     `The French army lost ${pct(frenchMenLostPermille)} of its men and ${pct(frenchHorsesLostPermille)} of its horses; it has ${foodDays.toFixed(1)} days' food in hand.`,
     `${capable ? 'It remains capable of further operations' : 'It is too weakened for further operations'}, ${sustainable ? 'its supply is sustainable' : 'its supply is not sustainable'}, and ${secure ? 'it is secure' : 'it is not secure'}.`,
   ];
-  if (unsupplied.length > 0) reasons.push(`Food for less than ${r.sustainableFoodDays} days, counting what it carries, what is on its way, its depot and what it can forage: ${unsupplied.map((f) => f.name).join('; ')}.`);
+  if (unsupplied.length > 0) reasons.push(`Food for less than ${r.sustainableFoodDays} days, counting what it carries, what its wagon train can bring in time, its depot and its share of the forage within reach: ${unsupplied.map((f) => f.name).join('; ')}.`);
   if (end.halted) reasons.push(russian === 'decisivelyDefeated' || russian === 'cutOff' ? 'A halt for the season was declared; the victory over the Russian army still stands.' : 'A halt for the season was declared.');
   return {
     ending,

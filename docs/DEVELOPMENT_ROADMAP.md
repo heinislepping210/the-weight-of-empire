@@ -48,15 +48,18 @@ The first release is **The Vitebsk Decision only**, made genuinely excellent bef
 - **Done (rules 0.10.0, review stage D):** the outcome model as §2.13 defines it (D-035). Most earlier victories turned out to come from the old rules. Now only cutting the Moscow road at Valutino wins, no approach inflicts a decisive defeat in battle, and the halt-on-the-spot bot ends precarious because outlying corps starve. Better bots (stage F) come next.
 - **Done (rules 0.11.0, review stage F):** scenario and dice separated, and a measure of skill, situation and luck (D-036).
   - Luck from the battle dice is about a fifth of the outcome.
-  - Half is which approach suits which scenario, and the player cannot yet read that at the start.
+  - Half is which approach suits which scenario; the one adaptive policy tested could not read it at the start.
   - No halt consolidates, because the placeholder depot stocks cannot feed the army for 20 days. That needs research on the 1812 magazines.
+- **Done (rules 0.12.0, the second independent review):** five defects fixed, the rout rule added, the experiment's measures and claims corrected (D-037).
+  - Fixing the road order cut the concentrated push's collapses from 33% to 7%. Fixing the route into the objective lets the southern envelopment hold Valutino: it now wins 82% of its games, mostly as Costly Victories, and is best on 85% of seeds among the tested bots.
+  - The foraging reach is now 11 km, from the source read correctly, instead of 22 km. Across that range only the methodical bot and the halts were affected.
 - **Met:** "three approach families produce clearly different outcome distributions" (even more so on 0.10.0). On rules 0.8.0, and nearly the same on 0.9.0:
   - concentrated push: mostly Limited Success (58%), Operational Collapse in 30%;
   - southern envelopment: spread from Decisive Success (8%) to Repulse (31%);
   - bait and converge: mostly Costly Victory (75%).
 
   (GAMEPLAY_BALANCING.md, contacts corrected.)
-- **Open:** the strategy explains less of the outcome than the seed (F4, 13% against 15%). Bait and converge does best on 64% of seeds (F3). Neither can be read until the bots and the measure are improved (review stage F).
+- **Open:** among the tested bots one approach dominates (F3: the southern envelopment is best on 85% of seeds). The strategy now explains 39% of the outcome against 4% for the scenario (F4, rules 0.12.0), but that reflects one dominant bot more than skill measured well. Better bots and an adaptive policy that re-decides every turn are still needed.
 - **Still to do:** your play session.
 
 **M2 — The Living Map (Day ~13) — an explicit gate before battles, events and the report are polished**

@@ -1,5 +1,5 @@
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.11.0';
+export const RULES_VERSION = '0.12.0';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -45,10 +45,11 @@ export const RULES = {
     /** A halted, dispersed force spreads its foragers over neighbouring districts and gathers this much more. */
     dispersedPermille: 1800,
     /**
-     * G-019 (L-011): how far foragers reach from a dispersed force's place (plausible 15–30 km). A neighbouring
-     * district begins about half-way along the road to its place, so it counts within twice this distance.
+     * G-019 (L-011, D-037): how far foragers reach from a dispersed force's place: half the width of the source's
+     * foraging square for extended operations (22 km a side; plausible 7.5–15 km). A neighbouring district
+     * begins about half-way along the road to its place, so it counts within twice this distance.
      */
-    reachMetres: 22_000,
+    reachMetres: 11_000,
   },
   posture: {
     /** Sub-steps a dispersed force needs to assemble before it can march or fight at full strength. */

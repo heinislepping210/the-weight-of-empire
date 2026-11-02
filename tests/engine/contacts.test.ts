@@ -121,7 +121,7 @@ describe('opposing columns on one road', () => {
       { 1: { 'ru-post': ['B'] } },
     );
     const start = newGame(ctx, 3);
-    Object.assign(start.forces['fr-flank']!, { at: 'B', transit: { edge: 'B-C', to: 'C', metres: 5_000 } });
+    Object.assign(start.forces['fr-flank']!, { at: 'B', transit: { edge: 'B-C', to: 'C', metres: 5_000, seq: 0 } });
     let s = stepUntil(ordered(start, ctx, [{ force: 'fr-flank', route: ['C'] }]), ctx, (x) => x.resolution.slot === 0 && x.resolution.stage === 'contacts');
     expect(s.forces['ru-post']).toMatchObject({ at: 'C', transit: null });
     expect(s.forces['fr-flank']!.transit?.to).toBe('C');
@@ -138,7 +138,7 @@ describe('opposing columns on one road', () => {
       { 1: { 'ru-post': ['C'] } },
     );
     const start = newGame(ctx, 3);
-    Object.assign(start.forces['ru-post']!, { at: 'B', transit: { edge: 'B-C', to: 'C', metres: 2_000 } });
+    Object.assign(start.forces['ru-post']!, { at: 'B', transit: { edge: 'B-C', to: 'C', metres: 2_000, seq: 0 } });
     Object.assign(start.forces['fr-flank']!, { at: 'B' });
     const s = stepUntil(ordered(start, ctx, [{ force: 'fr-flank', route: ['C'], pace: 'forced' }]), ctx, (x) => x.resolution.slot === 0 && x.resolution.stage === 'contacts');
     const fr = s.forces['fr-flank']!;

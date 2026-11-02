@@ -75,6 +75,16 @@ export function dispatches(entries: readonly LogEntry[], s: GameState, ctx: Cont
         text = `${force(d.force)} could not carry all its stores: it left ${parts.join(', ')} ${d.depot ? `in the depot at ${place(d.depot)}` : 'by the road'}.`;
         break;
       }
+      case 'convoyLeftBehind': {
+        if (s.convoys[String(d.convoy)]?.side !== 'fr') break;
+        const parts = [
+          Number(d.food) > 0 ? `${Number(d.food).toLocaleString('en-GB')} rations` : '',
+          Number(d.fodder) > 0 ? `${Number(d.fodder).toLocaleString('en-GB')} horse-rations of fodder` : '',
+          Number(d.ammo) > 0 ? `${Number(d.ammo).toLocaleString('en-GB')} ammunition` : '',
+        ].filter(Boolean);
+        text = `A wagon train had too few horses to draw its load: it left ${parts.join(', ')} ${d.depot ? `in the depot at ${place(d.depot)}` : 'by the road'}.`;
+        break;
+      }
       case 'convoyShortfall':
         if (s.convoys[String(d.convoy)]?.side === 'fr' && Number(d.horsesDied) > 0) text = `A wagon train lost ${Number(d.horsesDied).toLocaleString('en-GB')} draught horses for want of fodder.`;
         break;

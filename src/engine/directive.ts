@@ -134,7 +134,8 @@ export function axesTo(ctx: Context, from: NodeId, objective: NodeId, max = 3): 
  */
 function routeAlong(ctx: Context, start: NodeId, axis: Axis | null, objective: NodeId): NodeId[] {
   const direct = shortestPath(ctx.graph, start, objective) ?? [];
-  if (!axis) return direct;
+  // Already bound for the objective: it finishes the stretch it is on (D-037).
+  if (!axis || start === objective) return direct;
   let best: NodeId[] | null = null;
   let bestMetres = Infinity;
   axis.places.slice(0, -1).forEach((join, i) => {
