@@ -505,3 +505,30 @@ Two competent variants, built after the second review: a **southern envelopment 
 - **A decisive battle stays out of reach.** The concentrated strike fights far fewer battles than the staged push (about 1.2 a game against 2.7, on 300 seeds), but the Russian main armies never break: their marshal withdraws in good order once cohesion falls below 350, and an army breaks only below 250. The routs in the batch are of small detachments. This is the placeholder battle model again (§2.10).
 - **Choosing by scenario now matters.** With one approach that sometimes wins and sometimes fails badly, an oracle that chooses per scenario on its other rolls would gain 0.26 ranks over the best fixed approach (0.21 to 0.31); the two-figure adaptive policy gains nothing. The interaction share is 43% noise-adjusted (41–44).
 - **The original families stay balanced** (F3: push 37%, bait and converge 36%, southern envelopment 27%); the new bots are competent variants, outside the families, as the staged push and the supplied halt are.
+
+## Feeding the trap (bots, rules 0.16.0, 2 November 2026)
+
+Can a player feed the army that holds Valutino by planning for it? Two more variants of the holding envelopment, no rule change. Reports: [the batch, 1,000 scenarios × 3 sets of dice](balance/2026-11-02-rules-0.16.0-feeding-the-trap.md), [the adaptive policy](balance/2026-11-02-adaptive-0.16.0-feeding-the-trap.md), [the supply-stance probe](balance/2026-11-02-supply-stance-0.16.0-feeding-the-trap.md). Zero invariant violations; the bots that were already there end exactly as in the 0.16.0 reports.
+
+**What a traced game shows** (the holding envelopment, seed 5):
+- Three of the five groups set out with 2½–3½ days of food, are empty by turns 3–4, and go hungry for most of the rest of the game.
+- Their wagon trains trail behind them, loaded, for most of the game; the vanguard's never catches up at all. The trains are slower on every road and slowest where the army goes: on the track and pontoon from Rasasna to Liady, under half their post-road pace.
+- The Guard fills up to 13 days at Vitebsk and eats it all on the 234 km swing.
+
+**The two variants:**
+- **Waiting for the trains** (`southern-envelopment-wait-for-trains`), as first proposed: a group with less than a day's food halts for its wagon train when the train is loaded and within 36 km behind it. 36 km was chosen over 72 km on seeds 1–200; 72 km did worse on both counts.
+- **The Guard at the base** (`southern-envelopment-guard-at-base`): the Guard and headquarters stay at Vitebsk with the main magazine while the corps make the swing. It was the best of four supply-minded variants tried on seeds 1–200, so the batch, which includes those seeds, slightly flatters it. The others were the same with a halt of one or two turns to fill up first, and those halts let the Russians strike first: Repulse 51–66%.
+
+| Strategy, every game | Decisive Success | Costly Victory | Operational Success | Limited Success | Inconclusive | Repulse | Still cut off at the end | Food days at end |
+|---|---|---|---|---|---|---|---|---|
+| southern-envelopment-hold | 0.1% | 35.1% | 0.0% | 2.0% | 29.7% | 32.8% | 35.2% | 1.9 |
+| southern-envelopment-wait-for-trains | 0.0% | 24.9% | 0.0% | 22.0% | 26.8% | 25.8% | 24.9% | 0.8 |
+| southern-envelopment-guard-at-base | 6.4% | 24.5% | 7.7% | 1.1% | 31.7% | 28.6% | 30.9% | 4.1 |
+
+**Reading:**
+- **Halting for the wagons does worse.** The groups eat the train's load on the march, the train then goes back to reload, and the trap is sprung later: the Russians end cut off in 24.9% of games instead of 35.2%.
+- **Leaving the Guard at the base wins decisively**, the first approach to do so in a measurable share: 6.4% Decisive Success and 7.7% Operational Success. The block holds nearly as often without the Guard. The Guard, which was the group left unfed in every cut-off game of the first 200 seeds, is now fed at Vitebsk.
+- **The corps at Valutino are the limit now.** Of the 64 games in seeds 1–200 that end with the Russians cut off, 50 still have a corps unfed at Valutino: Eugène's, Davout's or Poniatowski's, each in about half.
+- **"Uneven stocks at the end" is 71.5% for this bot, by construction:** the Guard sits at Vitebsk with full packs while the corps at Valutino go hungry.
+- **Reading the scenario is worth more with these choices.** An oracle choosing per scenario on its other rolls now gains 0.49 ranks over the best fixed approach (0.44 to 0.55), up from 0.26; the two-figure adaptive policy still gains 0.01.
+- **The families are unchanged** (F3: push 37%, bait and converge 36%, southern envelopment 27%). F1 and F2 count only the families, so they are unchanged too.

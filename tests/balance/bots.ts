@@ -3,7 +3,7 @@
 // They are tuned once for all seeds, never per seed.
 
 import { axesTo, leadGroup, ordersFrom, planDirective, planLogistics } from '../../src/engine';
-import type { Axis, Context, Directive, GameState, GroupOrder, LogisticsOrders, LogisticsStance, NodeId } from '../../src/engine';
+import type { Axis, Context, Directive, ForceId, GameState, GroupOrder, LogisticsOrders, LogisticsStance, NodeId } from '../../src/engine';
 import { roadDistance, shortestPath } from '../../src/engine/graph';
 import { randomPolicy, type Policy } from '../fixtures/driver';
 
@@ -110,19 +110,20 @@ const BASE_BOTS: Record<string, (ctx: Context) => Policy> = {
    * the Old Town, but once Smolensk is taken or Valutino reached it commits to Valutino and holds it to the
    * end, standing to fight there, instead of turning back whenever Smolensk is no longer held.
    */
-  'southern-envelopment-hold': (ctx) => {
-    let corridor: Axis | null = null;
-    let committed = false;
-    return {
-      orders: (s) => {
-        if (frenchHold(s, 'smolensk') || frenchHold(s, 'smolensk-north') || frenchAt(s, 'valutino')) committed = true;
-        if (committed) return orders(s, ctx, { objective: 'valutino', engagement: 'accept' });
-        corridor ??= axisVia(s, ctx, 'smolensk', 'Rasasna');
-        return orders(s, ctx, { objective: 'smolensk', axis: corridor });
-      },
-      ...delegate,
-    };
-  },
+  'southern-envelopment-hold': (ctx) => holdingEnvelopment(ctx, () => []),
+
+  /**
+   * The holding envelopment that keeps its wagon trains close (after the haul what-if): a group that has run
+   * short of food halts for its wagon train when the train is loaded and within two days' haul behind it, and
+   * marches on once fed, as a player would halt a corps for its wagons.
+   */
+  'southern-envelopment-wait-for-trains': (ctx) => holdingEnvelopment(ctx, (s) => waitingForTrains(s, ctx)),
+
+  /**
+   * The holding envelopment that leaves the Guard at the main depot (after the haul what-if): the Guard and
+   * headquarters stay at Vitebsk, fed from its magazine, while the corps make the swing and hold Valutino.
+   */
+  'southern-envelopment-guard-at-base': (ctx) => holdingEnvelopment(ctx, (s) => (s.forces['fr-guard']?.at === 'vitebsk' ? ['fr-guard'] : [])),
 
   /**
    * A concentrated strike at the Russian army itself (after the second review): gather the army around
@@ -149,6 +150,25 @@ const BASE_BOTS: Record<string, (ctx: Context) => Policy> = {
   }),
 };
 
+/**
+ * The southern envelopment that holds Valutino, with the groups `heldBack` names staying where they are: the
+ * corridor via Rasasna to the Old Town, then, once Smolensk is taken or Valutino reached, Valutino to the end.
+ */
+function holdingEnvelopment(ctx: Context, heldBack: (s: GameState) => ForceId[]): Policy {
+  let corridor: Axis | null = null;
+  let committed = false;
+  return {
+    orders: (s) => {
+      if (frenchHold(s, 'smolensk') || frenchHold(s, 'smolensk-north') || frenchAt(s, 'valutino')) committed = true;
+      const holdBack = heldBack(s);
+      if (committed) return orders(s, ctx, { objective: 'valutino', engagement: 'accept', holdBack });
+      corridor ??= axisVia(s, ctx, 'smolensk', 'Rasasna');
+      return orders(s, ctx, { objective: 'smolensk', axis: corridor, holdBack });
+    },
+    ...delegate,
+  };
+}
+
 /** French troops standing at a place, out of battle. */
 const frenchAt = (s: GameState, node: NodeId) => Object.values(s.forces).some((f) => f.side === 'fr' && f.men > 0 && f.transit === null && f.at === node);
 
@@ -157,6 +177,25 @@ function largestArmySeen(s: GameState, men: number): NodeId | null {
   const seen = Object.values(s.intel.fr).filter((x) => s.resolution.turn - x.turn <= 1 && x.men >= men);
   seen.sort((a, b) => b.men - a.men || (a.at < b.at ? -1 : 1));
   return seen[0]?.at ?? null;
+}
+
+/** How far behind a group its loaded wagon train may be for the group to halt for it: two days' haul on a post road. */
+const TRAIN_WAIT_METRES = 36_000;
+
+/**
+ * Groups out of battle with less than a day's food whose own wagon train is on its way to them, loaded with
+ * at least a day's food, and no farther than TRAIN_WAIT_METRES by road: French knowledge only.
+ */
+function waitingForTrains(s: GameState, ctx: Context): ForceId[] {
+  const waiting: ForceId[] = [];
+  for (const f of Object.values(s.forces)) {
+    if (f.side !== 'fr' || f.men <= 0 || f.battle !== null || f.stock.food >= f.men) continue;
+    const train = Object.values(s.convoys).find((c) => c.serves === f.id && c.leg === 'outbound' && c.cargo.food >= f.men);
+    if (!train) continue;
+    const behind = roadDistance(ctx.graph, train.transit ? train.transit.to : train.at, f.transit ? f.transit.to : f.at);
+    if (behind <= TRAIN_WAIT_METRES) waiting.push(f.id);
+  }
+  return waiting.sort();
 }
 
 /** Permille of the French army standing within `km` by road of a place. */
