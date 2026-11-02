@@ -460,3 +460,23 @@ The second review's supply findings (D-040). Wagon trains hand over what the gro
 - **Uneven stocks remain where position makes them:** a corps beside a depot can fill its wagons while a distant one goes short (29% of prudent halts, 9% of concentrated pushes). That is a matter of where the corps stand, not an engine quirk, and it is now visible in the report.
 - **The experiment:** strategy 49% of the variance, scenario 4%, which strategy suits which scenario 27%, dice 20%; but 98% of scenarios now tie for the best approach, since nearly everything ends in Limited Success, so these shares say little. The adaptive policy and the oracles are within 0.04 ranks of the best fixed approach (now the rush).
 - **Forecasts:** the staff's arrival forecast now equals the engine's arrival when nothing intervenes (tested for a tired, dispersed corps and a forced march).
+
+## The experiment, reported as the second review asked (rules 0.15.0, 2 November 2026)
+
+No rule changed; the same games are reported more carefully (D-041). The [batch](balance/2026-11-02-rules-0.15.0.md) and [adaptive](balance/2026-11-02-adaptive-0.15.0.md) reports for 0.15.0 were rerun with it; their ending tables are unchanged.
+
+- **"The dice" are resolution randomness:** battles, withdrawals, road priority and burned stores. Weather and scouting errors are part of the scenario, so they count under "scenario".
+- **Much of the "suitability" was dice noise.** Each strategy–scenario cell is a mean of only three rolls, so it still carries luck, and the raw split books that luck as interaction. Taking it out:
+
+  | Share of the ending's variance | Raw | Noise-adjusted |
+  |---|---|---|
+  | strategy | 48.6% (46.4–50.7) | 48.6% (46.4–50.7) |
+  | scenario | 4.2% (3.7–4.7) | 3.0% (2.5–3.5) |
+  | which strategy suits which scenario | 27.4% (25.7–29.2) | 18.7% (16.8–20.8) |
+  | dice | 19.8% (18.4–20.8) | 29.8% (27.6–31.2) |
+
+  (95% intervals from a bootstrap over scenarios.) Earlier versions' "about half the outcome is suitability" was the raw figure, and overstated.
+- **The headline figures are precise; what they describe is narrow.** Each family's mean rank is known to about ±0.02 and its share of seeds as best (F3) to about ±1 point (push 42%, bait and converge 40%, southern envelopment 17%). But 98% of scenarios tie for best, because nearly every approach ends in Limited Success.
+- **Choosing on the first roll costs 0.12 ranks** on average on the other rolls (regret).
+- **Reading the scenario is worth almost nothing among these bots.** An oracle that chooses each scenario's approach on its other rolls, so it never sees the dice it is scored on, beats the best fixed approach (now the rush) by 0.01 ranks (−0.03 to +0.01); one that also knows the dice, by 0.04 (0.03 to 0.06). The earlier oracle, scored on the rolls it chose on, was optimistic.
+- **Not yet done:** nested resampling of the adaptive policy's learning, and a per-turn adaptive policy with the full French observations (the review's suggested next experiment).

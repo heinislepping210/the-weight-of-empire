@@ -4,7 +4,9 @@
 //
 // Fresh dice: BALANCE_DICE=3 replays every scenario seed with 3 sets of dice (the first is the seed itself,
 // comparable with earlier reports), so the variance of the ending can be split into strategy, scenario,
-// their interaction and pure battle luck (review stage F).
+// their interaction and the dice (review stage F). The dice decide battles, withdrawals, road priority and
+// burned stores; weather and scouting errors belong to the scenario. Intervals come from a bootstrap over
+// scenarios (BALANCE_BOOT replicates, default 200), keeping every strategy and roll of a scenario together.
 //
 // What-if runs: BALANCE_OVERRIDES='{"attrition":{"cohesionLossAtFullShortfall":30}}' replaces rule values
 // for this run only, to test a researched range before anything is adopted. The report names the overrides.
@@ -30,6 +32,7 @@ const SEEDS = Number(env.BALANCE_SEEDS ?? 1000);
 const DICE = Math.max(1, Number(env.BALANCE_DICE ?? 1));
 /** The dice for roll `r` of a scenario seed: the seed itself first, then fresh ones. */
 const diceFor = (seed: number, r: number) => (r === 0 ? seed : keyHash(seed, ['dice', r]));
+const BOOT = Math.max(0, Number(env.BALANCE_BOOT ?? 200));
 const OVERRIDES = env.BALANCE_OVERRIDES ? (JSON.parse(env.BALANCE_OVERRIDES) as Record<string, unknown>) : null;
 
 /** Rule values with the overrides laid over them; an unknown key is an error, so a typo cannot pass silently. */
@@ -200,20 +203,38 @@ it.skipIf(!enabled)('balance batch', () => {
 
   // F4: two-way analysis of variance with replication (strategy × scenario seed, DICE rolls per cell).
   const strategies = names.filter((n) => n !== 'random');
-  const split = (rankOf: (e: EndingId) => number) => {
+  const allSeeds = Array.from({ length: SEEDS }, (_, i) => i);
+  /**
+   * Shares of the ending's variance, over a sample of scenarios (with repeats, for the bootstrap). The raw
+   * shares are descriptive: each cell's mean over a few rolls still carries dice noise, which inflates the
+   * strategy, scenario and above all the interaction terms. The adjusted shares take out what that noise
+   * is expected to add (two-way analysis with replication) and count it with the dice (second review, F1).
+   */
+  const split = (rankOf: (e: EndingId) => number, seeds: number[] = allSeeds) => {
     const x = (n: string, seed: number, roll: number) => rankOf(results[n]![seed * DICE + roll]!.ending);
     const cell = (n: string, seed: number) => mean(Array.from({ length: DICE }, (_, r) => x(n, seed, r)));
-    const grand = mean(strategies.flatMap((n) => results[n]!.map((r) => rankOf(r.ending))));
+    const cells = new Map(strategies.map((n) => [n, seeds.map((i) => cell(n, i))]));
+    const grand = mean(strategies.flatMap((n) => cells.get(n)!));
     const ss = { strategy: 0, scenario: 0, cells: 0, dice: 0 };
-    for (const n of strategies) ss.strategy += SEEDS * DICE * (mean(results[n]!.map((r) => rankOf(r.ending))) - grand) ** 2;
-    for (let i = 0; i < SEEDS; i++) ss.scenario += strategies.length * DICE * (mean(strategies.map((n) => cell(n, i))) - grand) ** 2;
-    for (const n of strategies) for (let i = 0; i < SEEDS; i++) {
-      const c = cell(n, i);
+    for (const n of strategies) ss.strategy += seeds.length * DICE * (mean(cells.get(n)!) - grand) ** 2;
+    seeds.forEach((_, k) => (ss.scenario += strategies.length * DICE * (mean(strategies.map((n) => cells.get(n)![k]!)) - grand) ** 2));
+    for (const n of strategies) seeds.forEach((i, k) => {
+      const c = cells.get(n)![k]!;
       ss.cells += DICE * (c - grand) ** 2;
       for (let r = 0; r < DICE; r++) ss.dice += (x(n, i, r) - c) ** 2;
-    }
-    const total = ss.cells + ss.dice;
-    return { strategy: ss.strategy / total, scenario: ss.scenario / total, interaction: (ss.cells - ss.strategy - ss.scenario) / total, dice: ss.dice / total };
+    });
+    const total = Math.max(1e-12, ss.cells + ss.dice);
+    const interaction = ss.cells - ss.strategy - ss.scenario;
+    const [a, b] = [strategies.length, seeds.length];
+    const noise = DICE > 1 ? ss.dice / (a * b * (DICE - 1)) : 0;
+    const adj = { strategy: Math.max(0, ss.strategy - (a - 1) * noise), scenario: Math.max(0, ss.scenario - (b - 1) * noise), interaction: Math.max(0, interaction - (a - 1) * (b - 1) * noise) };
+    return {
+      strategy: ss.strategy / total,
+      scenario: ss.scenario / total,
+      interaction: interaction / total,
+      dice: ss.dice / total,
+      adjusted: { strategy: adj.strategy / total, scenario: adj.scenario / total, interaction: adj.interaction / total, dice: 1 - (adj.strategy + adj.scenario + adj.interaction) / total },
+    };
   };
   const f4 = split((e) => ENDING_RANK[e]);
   // The same split with Costly Victory and Operational Success no longer tied: how much the ranks' spacing matters.
@@ -223,6 +244,9 @@ it.skipIf(!enabled)('balance batch', () => {
   // other rolls are held apart from the first, and scenarios with a tie on either side are counted on their
   // own, so that neither shared rolls nor ties make the best look more stable than it is (second review).
   const stability = { agree: 0, differ: 0, tied: 0, overlap: 0 };
+  // Regret: how many ranks worse, on the other rolls, the approach best on the first roll does than the
+  // approach best on those other rolls (ties on the first roll averaged).
+  let regret = 0;
   if (DICE > 1) {
     const bestOf = (score: (f: string) => number) => {
       const top = Math.min(...FAMILIES.map(score));
@@ -230,7 +254,9 @@ it.skipIf(!enabled)('balance batch', () => {
     };
     for (let i = 0; i < SEEDS; i++) {
       const onFirst = bestOf((f) => first(f, i).rank);
-      const onOthers = bestOf((f) => mean(Array.from({ length: DICE - 1 }, (_, r) => results[f]![i * DICE + r + 1]!.rank)));
+      const others = (f: string) => mean(Array.from({ length: DICE - 1 }, (_, r) => results[f]![i * DICE + r + 1]!.rank));
+      const onOthers = bestOf(others);
+      regret += mean(onFirst.map(others)) - Math.min(...FAMILIES.map(others));
       if (onFirst.some((f) => onOthers.includes(f))) stability.overlap++;
       if (onFirst.length > 1 || onOthers.length > 1) stability.tied++;
       else if (onFirst[0] === onOthers[0]) stability.agree++;
@@ -238,6 +264,39 @@ it.skipIf(!enabled)('balance batch', () => {
     }
   }
   const untied = stability.agree + stability.differ;
+
+  // Uncertainty: a bootstrap over scenarios, keeping each scenario's strategies and rolls together (second
+  // review, F5). The 27,000 games are not independent results: they are 1,000 scenarios, each played many ways.
+  const boot: { meanRank: Record<string, number[]>; best: Record<string, number[]>; raw: Record<string, number[]>; adjusted: Record<string, number[]> } = {
+    meanRank: Object.fromEntries(FAMILIES.map((f) => [f, []])),
+    best: Object.fromEntries(FAMILIES.map((f) => [f, []])),
+    raw: { strategy: [], scenario: [], interaction: [], dice: [] },
+    adjusted: { strategy: [], scenario: [], interaction: [], dice: [] },
+  };
+  for (let b = 0; b < BOOT; b++) {
+    const sample = allSeeds.map((k) => keyHash(1812, ['boot', b, k]) % SEEDS);
+    for (const f of FAMILIES) boot.meanRank[f]!.push(mean(sample.flatMap((i) => Array.from({ length: DICE }, (_, r) => results[f]![i * DICE + r]!.rank))));
+    const shares: Record<string, number> = Object.fromEntries(FAMILIES.map((f) => [f, 0]));
+    for (const i of sample) {
+      const top = Math.min(...FAMILIES.map((f) => first(f, i).rank));
+      const winners = FAMILIES.filter((f) => first(f, i).rank === top);
+      for (const w of winners) shares[w]! += 1 / winners.length;
+    }
+    for (const f of FAMILIES) boot.best[f]!.push(shares[f]! / SEEDS);
+    if (DICE > 1) {
+      const s = split((e) => ENDING_RANK[e], sample);
+      for (const k of ['strategy', 'scenario', 'interaction', 'dice'] as const) {
+        boot.raw[k]!.push(s[k]);
+        boot.adjusted[k]!.push(s.adjusted[k]);
+      }
+    }
+  }
+  /** The middle 95% of the bootstrap replicates. */
+  const interval = (xs: number[], show: (v: number) => string) => {
+    if (xs.length < 2) return 'n/a';
+    const sorted = [...xs].sort((p, q) => p - q);
+    return `${show(sorted[Math.floor(0.025 * (sorted.length - 1))]!)}–${show(sorted[Math.ceil(0.975 * (sorted.length - 1))]!)}`;
+  };
 
   const halt = results['prudent-halt']!;
   const random = results.random!;
@@ -248,12 +307,33 @@ it.skipIf(!enabled)('balance batch', () => {
   const share = (v: number) => `${(v * 100).toFixed(1)}%`;
   lines.push(
     DICE > 1
-      ? `- **F4:** variance of the ending rank explained by the strategy ${share(f4.strategy)}, by the scenario ${share(f4.scenario)}, by which strategy suits which scenario ${share(f4.interaction)}, and by the battle dice alone ${share(f4.dice)} (${DICE} sets of dice per scenario; target: strategy above scenario). With the ranks spread out (Costly Victory above Operational Success): strategy ${share(f4spread.strategy)}, scenario ${share(f4spread.scenario)}, interaction ${share(f4spread.interaction)}, dice ${share(f4spread.dice)}. Where one approach is best on a scenario's first roll and one is best on its other ${DICE - 1} rolls, they are the same on ${pct(stability.agree, untied)} of ${untied} scenarios; ${pct(stability.tied, SEEDS)} of scenarios have a tie for best on one side or both, and the approaches best on each side overlap on ${pct(stability.overlap, SEEDS)}.`
+      ? `- **F4:** variance of the ending rank explained by the strategy ${share(f4.strategy)}, by the scenario ${share(f4.scenario)}, by which strategy suits which scenario ${share(f4.interaction)}, and by the dice ${share(f4.dice)} (${DICE} sets of dice per scenario; target: strategy above scenario). These raw shares carry dice noise in the cell means; with that noise counted with the dice: strategy ${share(f4.adjusted.strategy)}, scenario ${share(f4.adjusted.scenario)}, interaction ${share(f4.adjusted.interaction)}, dice ${share(f4.adjusted.dice)}. With the ranks spread out (Costly Victory above Operational Success), raw: strategy ${share(f4spread.strategy)}, scenario ${share(f4spread.scenario)}, interaction ${share(f4spread.interaction)}, dice ${share(f4spread.dice)}. Where one approach is best on a scenario's first roll and one is best on its other ${DICE - 1} rolls, they are the same on ${pct(stability.agree, untied)} of ${untied} scenarios; ${pct(stability.tied, SEEDS)} of scenarios have a tie for best on one side or both, and the approaches best on each side overlap on ${pct(stability.overlap, SEEDS)}. Choosing on the first roll costs on average ${(regret / SEEDS).toFixed(2)} ranks on the other rolls (regret).`
       : `- **F4:** variance of the ending rank explained by the strategy ${share(f4.strategy)}, by the seed ${share(f4.scenario)}, interaction and dice together ${share(f4.interaction)} (target: strategy above seed). Run with BALANCE_DICE=3 to separate the dice.`,
   );
   lines.push(`- **F5:** the prudent halt, declared on the first turn before any victory, ends in: ${endings.filter((e) => halt.some((r) => r.ending === e)).map((e) => `${ENDING_NAMES[e]} ${pct(halt.filter((r) => r.ending === e).length, halt.length)}`).join(', ')} (target: never Decisive Success; a victory won before a later halt stands, D-035).`);
   lines.push(`- **F6:** random play reaches Decisive Success in ${pct(random.filter((r) => r.ending === 'decisiveSuccess').length, random.length)} of games (target < 5%).`);
-  lines.push('', `*F1 and F3 use each seed's first roll; F2, F5 and F6 count every game. Bots: ${names.join(', ')}.*`);
+  lines.push('', `*F1 and F3 use each seed's first roll; F2, F5 and F6 count every game. "The dice" decide battles, withdrawals, road priority and burned stores; weather and scouting errors are part of the scenario. Bots: ${names.join(', ')}.*`);
+  if (BOOT > 1) {
+    const rank = (v: number) => v.toFixed(2);
+    lines.push(
+      '',
+      `## Uncertainty (bootstrap over scenarios, ${BOOT} replicates, middle 95%)`,
+      '',
+      'Each replicate redraws the scenarios with replacement, keeping every strategy and every roll of a scenario together.',
+      '',
+      '| Family | Mean ending rank | Share of seeds on which it does best (F3) |',
+      '|---|---|---|',
+      ...FAMILIES.map((f) => `| ${f} | ${rank(mean(results[f]!.map((r) => r.rank)))} (${interval(boot.meanRank[f]!, rank)}) | ${pct(bestShare[f]!, SEEDS)} (${interval(boot.best[f]!, share)}) |`),
+    );
+    if (DICE > 1) {
+      lines.push(
+        '',
+        '| Variance share (F4) | Raw | Noise-adjusted |',
+        '|---|---|---|',
+        ...(['strategy', 'scenario', 'interaction', 'dice'] as const).map((k) => `| ${k} | ${share(f4[k])} (${interval(boot.raw[k]!, share)}) | ${share(f4.adjusted[k])} (${interval(boot.adjusted[k]!, share)}) |`),
+      );
+    }
+  }
 
   console.log(['BALANCE-REPORT-START', ...lines, 'BALANCE-REPORT-END'].join('\n'));
   // Integrity is a gate; the fairness diagnostics above are not.

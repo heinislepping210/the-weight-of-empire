@@ -1,6 +1,6 @@
 # Paired supply-stance probe: rules 0.15.0, seeds 1–1000
 
-Same bots, same seeds, same group orders: only the supply stance differs. A lower ending rank is better. "Same rank" counts endings of equal rank, which may be different endings (Costly Victory and Operational Success share a rank).
+Same bots and seeds; only the supply stance differs. The bots decide as they go, so their later orders may differ as supply changes: this compares two policies, not two replays of the same orders. A lower ending rank is better. "Same rank" counts endings of equal rank, which may be different endings (Costly Victory and Operational Success share a rank).
 
 | Strategy | Forward better | Same rank | Hold better | Mean rank, forward / hold | French men lost, forward / hold | Food days at end, forward / hold | Most common ending, forward / hold |
 |---|---|---|---|---|---|---|---|

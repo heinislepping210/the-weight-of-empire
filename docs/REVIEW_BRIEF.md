@@ -52,6 +52,7 @@ The first review's findings and their status are in [reviews/2026-10-31-independ
 | Second review, next phase | Movement in time order within each hour; the attacker drawn on a tie | 0.13.0 | D-038 |
 | Second review, D3 | A cut road counts only if the Russians are still cut off at the end (graded) | 0.14.0 | D-039 |
 | Second review, supply | Trains issue like depots (all the food a corps can carry); "sustainable" day by day; forecasts run the movement rules | 0.15.0 | D-040 |
+| Second review, reporting | Dice labelled as resolution randomness; noise-adjusted variance split; regret; scenario-clustered intervals; a cross-fitted oracle | — | D-041 |
 
 Each change was written test-first: tests that failed on the previous rules.
 
@@ -62,7 +63,7 @@ Each change was written test-first: tests that failed on the previous rules.
 3. [TECHNICAL_ARCHITECTURE](TECHNICAL_ARCHITECTURE.md) §3.4a: the turn timeline and the contact rule.
 4. [GAMEPLAY_BALANCING](GAMEPLAY_BALANCING.md), from "Contacts corrected" to the end, with the reports in [balance/](balance/). The latest are [rules 0.15.0](balance/2026-11-02-rules-0.15.0.md), [the adaptive policy](balance/2026-11-02-adaptive-0.15.0.md), and the what-ifs on [the cut road](balance/2026-11-01-whatif-cutoff.md) and [the foraging reach](balance/2026-11-01-whatif-reach.md).
 5. [HISTORICAL_RESEARCH](HISTORICAL_RESEARCH.md) and [HISTORICAL_ASSUMPTIONS](HISTORICAL_ASSUMPTIONS.md): sources, and the status of every claim (H-, L- and G- entries).
-6. [DECISIONS](DECISIONS.md) D-029 to D-040.
+6. [DECISIONS](DECISIONS.md) D-029 to D-041.
 7. Code:
    - `src/engine/advance.ts`: turn resolution, about 900 lines.
    - `battle.ts`, `carriage.ts`, `directive.ts` (the staff planner), `outcome.ts` and `rules.ts` (every rule value).
@@ -86,7 +87,7 @@ Each change was written test-first: tests that failed on the previous rules.
   - The adaptive policy gains nothing over the best fixed approach.
   - Two of the "competent" bot variants are not yet competent.
 - **The foraging reach was corrected** to 11 km (G-019, D-037), after the source turned out to give the widths of foraging squares, not radii.
-- **Open measures:** F3 by openings (branch the first two directives with a shared continuation); an adaptive policy that re-decides every turn; confidence intervals on the batch figures.
+- **Open measures:** F3 by openings (branch the first two directives with a shared continuation); an adaptive policy that re-decides every turn with the full French observations, with nested resampling of its learning. (Scenario-clustered intervals and a noise-adjusted variance split are in the batch since D-041.)
 - **Most rule values are still game assumptions.** Only march speeds, wagon loads, rations, hunger, horses per wagon and carrying have been checked against sources, and those only as ranges; the foraging reach was misread at first and corrected in 0.12.0.
 - **Roads are provisional:** straight-line distance × 1.25 (G-007).
 

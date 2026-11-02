@@ -1,5 +1,6 @@
 // Paired supply-stance probe (independent review, stage B): the same bots on the same seeds, once
-// bringing the depots forward and once keeping them, so the difference is the supply stance alone.
+// bringing the depots forward and once keeping them. The bots decide as they go, so their later orders may
+// differ as supply changes: a paired comparison of two policies, not a replay of fixed orders (second review, F6).
 // Skipped in normal runs; run with
 //   BALANCE=1 BALANCE_SEEDS=1000 npx vitest run tests/balance/supply-stance.test.ts
 // It prints a markdown table between SUPPLY-REPORT markers. A diagnostic, not a target.
@@ -24,7 +25,7 @@ it.skipIf(env.BALANCE !== '1')('paired supply-stance probe', () => {
   const lines = [
     `# Paired supply-stance probe: rules ${RULES_VERSION}, seeds 1–${SEEDS}`,
     '',
-    'Same bots, same seeds, same group orders: only the supply stance differs. A lower ending rank is better. "Same rank" counts endings of equal rank, which may be different endings (Costly Victory and Operational Success share a rank).',
+    'Same bots and seeds; only the supply stance differs. The bots decide as they go, so their later orders may differ as supply changes: this compares two policies, not two replays of the same orders. A lower ending rank is better. "Same rank" counts endings of equal rank, which may be different endings (Costly Victory and Operational Success share a rank).',
     '',
     '| Strategy | Forward better | Same rank | Hold better | Mean rank, forward / hold | French men lost, forward / hold | Food days at end, forward / hold | Most common ending, forward / hold |',
     '|---|---|---|---|---|---|---|---|',

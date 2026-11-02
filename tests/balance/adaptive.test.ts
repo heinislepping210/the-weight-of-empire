@@ -2,8 +2,9 @@
 // approach at the first decision from what the French can see then: their own strength and the scouts'
 // estimates of the Russians. It learns its choices on the first half of the seeds and is judged on the
 // held-out second half, against the best fixed approach and against two oracles (upper bounds, not
-// playable policies): one that knows the scenario but not the dice, and one that knows both. Skipped in
-// normal runs; run with
+// playable policies): one that knows the scenario but not the dice (it chooses on a scenario's other rolls
+// and is scored on this one), and one that knows both. Differences come with intervals from a bootstrap
+// over the held-out scenarios. Skipped in normal runs; run with
 //   BALANCE=1 BALANCE_SEEDS=1000 BALANCE_DICE=3 npx vitest run tests/balance/adaptive.test.ts
 // Each scenario is played with BALANCE_DICE sets of dice, and every policy is scored by its mean rank over
 // them. It prints a markdown report between ADAPTIVE-REPORT markers. A diagnostic, not a target.
@@ -19,6 +20,7 @@ import { BOTS } from './bots';
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const SEEDS = Number(env.BALANCE_SEEDS ?? 1000);
 const DICE = Math.max(1, Number(env.BALANCE_DICE ?? 1));
+const BOOT = Math.max(0, Number(env.BALANCE_BOOT ?? 200));
 /** The dice for roll `r` of a scenario seed: the seed itself first, then fresh ones (as in the batch). */
 const diceFor = (seed: number, r: number) => (r === 0 ? seed : keyHash(seed, ['dice', r]));
 
@@ -75,8 +77,12 @@ it.skipIf(env.BALANCE !== '1')('adaptive policy on held-out seeds', () => {
   // Judge on the held-out seeds.
   const adaptive = test.map((i) => rank(choice[cellOf(i)]!, i));
   const fixedRanks = test.map((i) => rank(fixed, i));
-  // Knows which approach suits the scenario, but not how the battles will fall.
-  const scenarioOracle = test.map((i) => Math.min(...candidates.map((n) => rank(n, i))));
+  // Knows which approach suits the scenario, but not how the battles will fall: for each roll it takes the
+  // approach best on the scenario's other rolls, and is scored on this one, so it never picks with hindsight
+  // of the dice it is judged on (second review, F4). It needs more than one set of dice.
+  const onOthers = (n: string, i: number, r: number) => mean(rolls.filter((q) => q !== r).map((q) => ENDING_RANK[ending[n]![i]![q]!]));
+  const crossPick = (i: number, r: number) => candidates.reduce((best, n) => (onOthers(n, i, r) < onOthers(best, i, r) ? n : best));
+  const scenarioOracle = test.map((i) => mean(rolls.map((r) => ENDING_RANK[ending[crossPick(i, r)]![i]![r]!])));
   // Knows the dice too: the best ending on every roll.
   const fullOracle = test.map((i) => mean(rolls.map((r) => Math.min(...candidates.map((n) => ENDING_RANK[ending[n]![i]![r]!])))));
   /** Share of games won, over every roll. */
@@ -84,19 +90,25 @@ it.skipIf(env.BALANCE !== '1')('adaptive policy on held-out seeds', () => {
     const games = test.flatMap((i) => rolls.map((r) => ENDING_RANK[pick(i, r)]));
     return `${((games.filter((x) => x <= 2).length / games.length) * 100).toFixed(1)}%`;
   };
-  const bestFor = (i: number) => candidates.reduce((best, n) => (rank(n, i) < rank(best, i) ? n : best));
+  /** Middle 95% of the mean difference from the best fixed approach, over bootstrap redraws of the held-out scenarios. */
+  const versusFixed = (ranks: number[]) => {
+    const diffs = ranks.map((x, k) => x - (fixedRanks[k] as number));
+    const reps = Array.from({ length: BOOT }, (_, b) => mean(diffs.map((_, k) => diffs[keyHash(1812, ['adaptive-boot', b, k]) % diffs.length]!))).sort((x, y) => x - y);
+    const at = (q: number) => reps[Math.round(q * (reps.length - 1))]!;
+    return `${mean(diffs) >= 0 ? '+' : ''}${mean(diffs).toFixed(2)}${reps.length > 1 ? ` (${at(0.025).toFixed(2)} to ${at(0.975).toFixed(2)})` : ''}`;
+  };
   const bestEnding = (i: number, r: number) => candidates.map((n) => ending[n]![i]![r]!).reduce((a, b) => (ENDING_RANK[b] < ENDING_RANK[a] ? b : a));
   const lines = [
     `# Adaptive policy on held-out seeds: rules ${RULES_VERSION}, seeds 1–${SEEDS}`,
     '',
     `Candidates: ${candidates.join(', ')}. The adaptive policy picks one at the first decision from two things the French see: their own strength and the Russians their scouts report (each in thirds), learned on seeds 1–${half} and judged on seeds ${half + 1}–${SEEDS}. Each scenario is played with ${DICE} set${DICE === 1 ? '' : 's'} of dice and scored by its mean rank over them. A lower rank is better; "won" means Decisive Success, Costly Victory or Operational Success, over every game.`,
     '',
-    '| Policy on the held-out seeds | Mean ending rank | Won |',
-    '|---|---|---|',
-    `| Best fixed approach, chosen on the training seeds (${fixed}) | ${mean(fixedRanks).toFixed(2)} | ${winsOf((i, r) => ending[fixed]![i]![r]!)} |`,
-    `| Adaptive: reads strength and scouting reports | ${mean(adaptive).toFixed(2)} | ${winsOf((i, r) => ending[choice[cellOf(i)]!]![i]![r]!)} |`,
-    `| Scenario oracle: knows which approach suits the scenario, not the dice (upper bound for reading the situation) | ${mean(scenarioOracle).toFixed(2)} | ${winsOf((i, r) => ending[bestFor(i)]![i]![r]!)} |`,
-    `| Full oracle: knows the dice too (${DICE === 1 ? 'the same as the scenario oracle with one set of dice' : 'includes luck no player can read'}) | ${mean(fullOracle).toFixed(2)} | ${winsOf(bestEnding)} |`,
+    `| Policy on the held-out seeds | Mean ending rank | Against the best fixed approach (middle 95% of ${BOOT} bootstrap redraws) | Won |`,
+    '|---|---|---|---|',
+    `| Best fixed approach, chosen on the training seeds (${fixed}) | ${mean(fixedRanks).toFixed(2)} | — | ${winsOf((i, r) => ending[fixed]![i]![r]!)} |`,
+    `| Adaptive: reads strength and scouting reports | ${mean(adaptive).toFixed(2)} | ${versusFixed(adaptive)} | ${winsOf((i, r) => ending[choice[cellOf(i)]!]![i]![r]!)} |`,
+    ...(DICE > 1 ? [`| Scenario oracle: chooses on a scenario's other rolls, so it knows the scenario but not the dice it is scored on | ${mean(scenarioOracle).toFixed(2)} | ${versusFixed(scenarioOracle)} | ${winsOf((i, r) => ending[crossPick(i, r)]![i]![r]!)} |`] : []),
+    `| Full oracle: knows the dice too (includes luck no player can read) | ${mean(fullOracle).toFixed(2)} | ${versusFixed(fullOracle)} | ${winsOf(bestEnding)} |`,
     '',
     '| Each approach on the held-out seeds | Mean ending rank | Most common ending |',
     '|---|---|---|',
@@ -109,7 +121,11 @@ it.skipIf(env.BALANCE !== '1')('adaptive policy on held-out seeds', () => {
     '',
     `Choices learned per cell (own strength third × scouted Russian strength third): ${choice.map((c, k) => `${Math.floor(k / 3)}${k % 3}: ${c}`).join('; ')}.`,
     '',
-    `**Reading:** a perfect reader of the scenario could improve on the best fixed approach by ${(mean(fixedRanks) - mean(scenarioOracle)).toFixed(2)} ranks on average (knowing the dice as well, by ${(mean(fixedRanks) - mean(fullOracle)).toFixed(2)}); this adaptive policy, reading two figures at the first decision, captures ${(mean(fixedRanks) - mean(adaptive)).toFixed(2)}. That bounds what this policy can read, not what a player can.`,
+    DICE > 1
+      ? `**Reading:** a perfect reader of the scenario could improve on the best fixed approach by ${(mean(fixedRanks) - mean(scenarioOracle)).toFixed(2)} ranks on average (knowing the dice as well, by ${(mean(fixedRanks) - mean(fullOracle)).toFixed(2)}); this adaptive policy, reading two figures at the first decision, captures ${(mean(fixedRanks) - mean(adaptive)).toFixed(2)}. That bounds what this policy can read, not what a player can.`
+      : '**Reading:** with one set of dice the scenario oracle cannot be separated from luck; run with BALANCE_DICE=3.',
+    '',
+    '*The intervals redraw the held-out scenarios only; they do not repeat the learning on the training seeds, so they understate the uncertainty of the learned choices.*',
   ];
   console.log(['ADAPTIVE-REPORT-START', ...lines, 'ADAPTIVE-REPORT-END'].join('\n'));
 }, 3_600_000);
