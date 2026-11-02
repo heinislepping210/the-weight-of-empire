@@ -33,12 +33,11 @@ const SUPPLY: [LogisticsStance, string][] = [
 ];
 const label = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** Sets or clears one field of a group's own orders, keeping the other. */
+/** Sets or clears one field of a group's own orders, keeping the others. */
 function changed(own: GroupOverride | undefined, field: keyof GroupOverride, value: string): GroupOverride | null {
-  const next: GroupOverride = { ...own, [field]: value || undefined };
-  if (next.pace === undefined) delete next.pace;
-  if (next.engagement === undefined) delete next.engagement;
-  return Object.keys(next).length > 0 ? next : null;
+  const next: Record<string, string | undefined> = { ...own, [field]: value || undefined };
+  for (const key of Object.keys(next)) if (next[key] === undefined) delete next[key];
+  return Object.keys(next).length > 0 ? (next as GroupOverride) : null;
 }
 
 export function OrdersPanel({ s, ctx, directive, onDirective, plan, summary, supply, overrides, onOverride, halt, onHalt, onCommit }: Props) {
@@ -187,6 +186,16 @@ export function OrdersPanel({ s, ctx, directive, onDirective, plan, summary, sup
                         ))}
                       </select>
                     </label>
+                    {p.staffRoad !== null && (
+                      <label>
+                        Road{' '}
+                        <select value={own?.road ?? ''} onChange={(e) => onOverride(p.force, changed(own, 'road', e.target.value))}>
+                          <option value="">Staff: {p.staffRoad === 'own' ? 'own road' : 'follow the route'}</option>
+                          <option value="route">Follow the route</option>
+                          <option value="own">Own road</option>
+                        </select>
+                      </label>
+                    )}
                     <label>
                       Battle{' '}
                       <select value={own?.engagement ?? ''} onChange={(e) => onOverride(p.force, changed(own, 'engagement', e.target.value))}>

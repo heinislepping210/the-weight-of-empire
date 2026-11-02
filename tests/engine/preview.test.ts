@@ -59,17 +59,53 @@ describe('the chosen route keeps its identity', () => {
     const lead = leadGroup(s, ctx, 'smolensk')!;
     expect(lead.at).not.toBe('liozno');
     expect(axesTo(ctx, lead.at, 'smolensk').some((a) => a.id === axis.id)).toBe(false);
-    // …yet groups still behind keep to the chosen corridor rather than the shortest roads.
+    // …yet groups still behind keep to the chosen corridor, unless the staff says they take their own road.
     const plan = planDirective(s, ctx, d);
     const corridor = new Set(axis.places);
     const followers = plan.filter((p) => p.order.route && p.order.route.length > 1 && !corridor.has(s.forces[p.force]!.at));
     expect(followers.length).toBeGreaterThan(0);
+    let viaCorridor = 0;
     for (const p of followers) {
       const f = s.forces[p.force]!;
-      const shortest = shortestPath(ctx.graph, f.transit ? f.transit.to : f.at, 'smolensk') ?? [];
-      const viaCorridor = p.order.route!.some((n) => corridor.has(n) && n !== 'smolensk');
-      expect(viaCorridor || shortest.some((n) => corridor.has(n) && n !== 'smolensk'), p.force).toBe(true);
+      const from = f.transit ? f.transit.to : f.at;
+      const shortest = shortestPath(ctx.graph, from, 'smolensk') ?? [];
+      if (p.reasons.some((r) => r.startsWith('Takes its own road'))) {
+        expect(p.order.route, p.force).toEqual(f.transit ? [from, ...shortest] : shortest);
+      } else {
+        expect(p.order.route!.some((n) => corridor.has(n) && n !== 'smolensk') || shortest.some((n) => corridor.has(n) && n !== 'smolensk'), p.force).toBe(true);
+        viaCorridor++;
+      }
     }
+    expect(viaCorridor).toBeGreaterThan(0);
+  });
+});
+
+describe('the road each group takes (§2.4b)', () => {
+  const plan = (overrides?: Directive['overrides']) => planDirective(start(), ctx, directive({ objective: 'smolensk', axis: southern(), overrides }));
+  const group = (p: ReturnType<typeof plan>, id: string) => p.find((x) => x.force === id)!;
+  const shortestFrom = (id: string) => shortestPath(ctx.graph, start().forces[id]!.at, 'smolensk');
+
+  it('a group far from the chosen route takes its own road by default, and says why', () => {
+    const eugene = group(plan(), 'fr-left');
+    expect(eugene.staffRoad).toBe('own');
+    expect(eugene.order.route).toEqual(shortestFrom('fr-left'));
+    expect(eugene.reasons.some((r) => r.startsWith('Takes its own road: following the route via Liubavichi and Rasasna would add'))).toBe(true);
+  });
+
+  it('a group near the route follows it', () => {
+    const guard = group(plan(), 'fr-guard');
+    expect(guard.staffRoad).toBe('route');
+    expect(guard.order.route).toContain('rasasna');
+  });
+
+  it('your order sends a group round the route after all, or by its own road, and the staff choice is still shown', () => {
+    const p = plan({ 'fr-left': { road: 'route' }, 'fr-guard': { road: 'own' } });
+    expect(group(p, 'fr-left').order.route).toContain('rasasna');
+    expect(group(p, 'fr-left').reasons[0]).toBe('Your order: follow the route.');
+    expect(group(p, 'fr-left').staffRoad).toBe('own');
+    expect(group(p, 'fr-guard').order.route).toEqual(shortestFrom('fr-guard'));
+    expect(group(p, 'fr-guard').reasons[0]).toBe('Your order: own road.');
+    expect(group(p, 'fr-guard').staffRoad).toBe('route');
   });
 });
 
@@ -84,7 +120,8 @@ describe('the army-level summary comes first', () => {
   });
 
   it('names the groups that would arrive only after the campaign ends', () => {
-    const plan = planDirective(start(), ctx, directive({ objective: 'smolensk', axis: southern() }));
+    // Eugène sent all the way round the southern route, against the staff's advice.
+    const plan = planDirective(start(), ctx, directive({ objective: 'smolensk', axis: southern(), overrides: { 'fr-left': { road: 'route' } } }));
     const late = plan.filter((p) => p.arrival && slotIndexOf(p.arrival.dry) > slotIndexOf({ turn: ctx.scenario.turns, slot: 3 }));
     expect(late.length).toBeGreaterThan(0);
     expect(summarizePlan(start(), ctx, plan).lines[0]).toContain(`After the campaign ends: ${late.map((p) => p.name).join('; ')}.`);

@@ -44,7 +44,7 @@ The first release is **The Vitebsk Decision only**, made genuinely excellent bef
 - **Done (rules 0.7.0):** hunger's effect on cohesion set from the historical record, a judgment within a researched range (D-030).
 - **Done (rules 0.8.0):** contacts corrected after the independent review (D-031): reinforcements join battles, opposing columns cannot pass each other, retreats take time on the road, and a halt stops every march.
 - **Done (rules 0.9.0):** horses, carrying and foraging reach (D-032). The endings hardly depend on the new values within their researched ranges.
-- **Done (review stage C):** one plan for preview and commit, a kept route, and an army summary first (D-033). Keeping the route shows the southern-envelopment bot was flattered before; how far-off groups should follow a route is open for decision (GAMEPLAY_BALANCING.md, the kept route).
+- **Done (review stage C):** one plan for preview and commit, a kept route, and an army summary first (D-033). Keeping the route showed the southern-envelopment bot had been flattered before. The road is now chosen per group, own road by default on a long detour (D-034), and the southern envelopment is a real approach again (GAMEPLAY_BALANCING.md, the kept route).
 - **Met:** "three approach families produce clearly different outcome distributions." On rules 0.8.0, and nearly the same on 0.9.0:
   - concentrated push: mostly Limited Success (58%), Operational Collapse in 30%;
   - southern envelopment: spread from Decisive Success (8%) to Repulse (31%);

@@ -40,7 +40,17 @@ export interface Directive {
 export interface GroupOverride {
   pace?: Pace;
   engagement?: Engagement;
+  /** Follow the chosen route, or take its own road to the objective (§2.4b). */
+  road?: RoadChoice;
 }
+
+export type RoadChoice = 'route' | 'own';
+
+/**
+ * Staff default (D-034): a group not already on the chosen route takes its own road when following the route
+ * would add more than half again to its march; the player can send it round the route regardless.
+ */
+const LONG_DETOUR_PERMILLE = 1500;
 
 export type LogisticsStance = 'hold' | 'forward';
 
@@ -56,8 +66,10 @@ export interface PlannedOrder {
   arrival: { dry: SlotRef; mud: SlotRef } | null;
   foodDaysOnArrival: number | null;
   reasons: string[];
-  /** The player's own pace or battle stance replaced the staff's for this group. */
+  /** The player's own pace, battle stance or road replaced the staff's for this group. */
   own: boolean;
+  /** With a chosen route: whether the staff would have this group follow it or take its own road. */
+  staffRoad: RoadChoice | null;
 }
 
 const placeName = (ctx: Context, id: NodeId) => ctx.graph.nodes.get(id)?.name ?? id;
@@ -228,6 +240,7 @@ function overrideReason(ov: GroupOverride): string {
   const parts = [
     ov.pace === 'rest' ? 'rest here' : ov.pace === 'forced' ? 'forced march' : ov.pace === 'steady' ? 'steady pace' : '',
     ov.engagement === 'seek' ? 'seek battle' : ov.engagement === 'avoid' ? 'avoid battle' : ov.engagement === 'accept' ? 'accept battle' : '',
+    ov.road === 'route' ? 'follow the route' : ov.road === 'own' ? 'own road' : '',
   ].filter(Boolean);
   return `Your order: ${parts.join(', ')}.`;
 }
@@ -243,12 +256,12 @@ export function planDirective(s: GameState, ctx: Context, d: Directive): Planned
     if (f.side !== 'fr' || f.men <= 0) continue;
     const here = placeName(ctx, f.at);
     if (f.battle !== null) {
-      plans.push({ force: f.id, name: f.name, order: { force: f.id }, arrival: null, foodDaysOnArrival: null, reasons: [`Engaged in battle at ${here}: no new movement until it ends.`], own: false });
+      plans.push({ force: f.id, name: f.name, order: { force: f.id }, arrival: null, foodDaysOnArrival: null, reasons: [`Engaged in battle at ${here}: no new movement until it ends.`], own: false, staffRoad: null });
       continue;
     }
     // The player's own pace or battle stance replaces the staff's, and is forecast like it.
     const ov = d.overrides?.[f.id] ?? {};
-    const own = ov.pace !== undefined || ov.engagement !== undefined;
+    const own = ov.pace !== undefined || ov.engagement !== undefined || ov.road !== undefined;
     const tempo = ov.pace ?? d.tempo;
     const engagement = ov.engagement ?? d.engagement;
     const start = f.transit ? f.transit.to : f.at;
@@ -270,12 +283,20 @@ export function planDirective(s: GameState, ctx: Context, d: Directive): Planned
         foodDaysOnArrival: Math.floor(f.stock.food / Math.max(1, f.men)),
         reasons: [...reasons, ...knownThreats(s, ctx, [], start)],
         own,
+        staffRoad: null,
       });
       continue;
     }
 
     const objective = d.objective as NodeId;
-    const path = routeAlong(ctx, start, axis, objective);
+    // With a chosen route: follow it, or take its own road when the route would be a long detour (D-034).
+    const direct = shortestPath(ctx.graph, start, objective) ?? [];
+    const along = routeAlong(ctx, start, axis, objective);
+    const directMetres = pathMetres(ctx.graph, start, direct);
+    const alongMetres = pathMetres(ctx.graph, start, along);
+    const staffRoad: RoadChoice | null = !axis ? null : !axis.places.includes(start) && alongMetres * 1000 > directMetres * LONG_DETOUR_PERMILLE ? 'own' : 'route';
+    const ownRoad = axis !== null && (ov.road ?? staffRoad) === 'own';
+    const path = ownRoad ? direct : along;
     const route = f.transit ? [f.transit.to, ...path] : path;
     const metres = pathMetres(ctx.graph, start, path) + (f.transit ? (ctx.graph.edges.get(f.transit.edge)?.metres ?? 0) - f.transit.metres : 0);
     const dry = slotsToCover(s, ctx, f, route, tempo, false);
@@ -294,7 +315,12 @@ export function planDirective(s: GameState, ctx: Context, d: Directive): Planned
     });
 
     const reasons = [`Route: ${[start, ...path].map((n) => placeName(ctx, n)).join(' → ')}, ${Math.round(metres / 1000)} km.`];
-    if (axis && path.length > 0 && !axis.places.includes(start)) {
+    if (axis && ownRoad && ov.road === undefined) {
+      reasons.push(`Takes its own road: following the route ${axis.label.replace(/^Via /, 'via ')} would add ${km(alongMetres - directMetres)} (${km(alongMetres)} against ${km(directMetres)}).`);
+    } else if (axis && !ownRoad && ov.road === 'route' && staffRoad === 'own') {
+      reasons.push(`Follows the route as you ordered: ${km(alongMetres - directMetres)} longer than its own road.`);
+    }
+    if (axis && !ownRoad && path.length > 0 && !axis.places.includes(start)) {
       const join = path.find((n) => axis.places.includes(n));
       if (join && join !== objective) reasons.push(`Joins the route ${axis.label.replace(/^Via /, 'via ')} at ${placeName(ctx, join)}.`);
       else reasons.push('Converges on the objective by its own road.');
@@ -329,6 +355,7 @@ export function planDirective(s: GameState, ctx: Context, d: Directive): Planned
       foodDaysOnArrival: foodDays,
       reasons,
       own,
+      staffRoad,
     });
   }
   return plans;

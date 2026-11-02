@@ -246,10 +246,21 @@ Stage C made previews trustworthy (D-033). No rule changed, but one bot did. The
   - Bait and converge is now best on 83% of seeds.
   - The strategy explains 32% of the variance and the seed 14%, so F4 passes. But that is because one family got clearly worse, not because skill was measured better.
 
-**Open, for a design decision:** should the staff send a group far from the chosen route all the way round it?
-- **(a) Keep the route strict.** The player holds such a group back, or picks another route.
-- **(b) Converge when the detour is long.** Let a group converge by its own road when joining the route would add much more than its direct road, and say so in its reasons.
-- **(c) Let the player choose per group** between "follow the route" and "own road".
+**Decided (D-034): the road is chosen per group, own road by default on a long detour.**
+- **The staff's default:** a group not already on the chosen route takes its own road when following the route would add more than half again to its march. It says so in its reasons.
+- **Your override:** you can set any group to follow the route or take its own road.
+
+Report: [balance/2026-11-01-rules-0.9.0-own-road.md](balance/2026-11-01-rules-0.9.0-own-road.md).
+
+| southern-envelopment | Decisive Success | Costly Victory | Operational Success | Limited Success | Repulse | Collapse | Smolensk held |
+|---|---|---|---|---|---|---|---|
+| Route silently lost (the old defect) | 7.5% | 20.2% | 8.5% | 28.5% | 28.9% | 2.0% | 49% |
+| Route strict for every group | 0.2% | 0.8% | 0.0% | 5.0% | 59.9% | 5.7% | 5% |
+| **Own road on a long detour (now)** | 6.9% | 8.6% | 24.8% | 27.6% | 26.2% | 1.7% | 52% |
+
+- **The southern envelopment is a real approach again**, and an honest one: groups near the crossing take the southern route, while far-off groups such as Eugène's converge by their own roads.
+- **It now wins a quarter of its games by manoeuvre** (Operational Success: the Russians forced out without a decisive battle), where the old version mostly won costly victories.
+- **F3 and F4 return to where they were:** bait and converge is best on 62% of seeds, and the strategy explains 13% of the variance against 18% for the seed. Stage F's better measures are still needed.
 
 ## Acting on the results
 

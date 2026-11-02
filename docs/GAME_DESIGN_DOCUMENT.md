@@ -87,6 +87,7 @@ Orders persist until you change them.
 - **Built:** directives, axes, the staff planner with per-group orders, forecasts and reasons, player overrides, and the logistics stance (D-029).
 - **One plan (D-033).** Your own pace or battle stance for a group is planned and forecast with the staff's, so the map, the forecast and the committed orders are always the same plan.
 - **The route is kept (D-033).** The chosen route is kept whole, so it still guides the groups after another group becomes the lead.
+- **The road per group (D-034).** Each group follows the chosen route or takes its own road. By default, a group far from the route takes its own road when the route would add more than half again to its march, and says so; you can set any group either way.
 - **Summary first (D-033).** A short army summary leads: how far apart the groups arrive (and who arrives only after the campaign ends), which groups may meet a stronger known enemy, the worst-fed group, and horses short of fodder. The orders of each group open on demand.
 - **Still to come:** detached tasks, decision points (auto-advance and stop conditions), wagon deliveries in the food forecast, and dragging a route.
 The simulation underneath is identical; only the way you give orders changes.
