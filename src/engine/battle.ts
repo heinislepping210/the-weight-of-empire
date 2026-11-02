@@ -170,7 +170,7 @@ export function resolveRound(s: GameState, ctx: Context, b: BattleState, acts: R
     const rate = r.casualtyPermille[acts[enemy]] + (acts[side] === 'press' ? r.pressExposurePermille : 0);
     let losses = Math.floor((power[enemy] * rate) / 1000);
     if (side !== b.attacker && acts[side] === 'hold') losses = Math.floor((losses * r.defenderHoldPermille) / 1000);
-    losses = Math.floor((losses * drawBetween(s.seed, ['battle', b.id, b.roundsFought, side], 800, 1200)) / 1000);
+    losses = Math.floor((losses * drawBetween(s.dice, ['battle', b.id, b.roundsFought, side], 800, 1200)) / 1000);
     inflict(s, b, activeForces(s, b, side, now), losses);
   }
 

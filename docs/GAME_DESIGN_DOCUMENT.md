@@ -248,6 +248,11 @@ The Russians decide at the same time, and their choices are hidden until resolve
 
 **Resolution randomness** comes from a counter-based generator keyed by (seed, stream, turn, entity, purpose). That means **unrelated choices never shift other random draws**. Two players on one seed get the same weather on 10 August, whatever they do.
 
+**Scenario and dice are separate streams** (rules 0.11.0, D-036).
+- **The seed sets the scenario:** strengths, the Russian command's temper and pressure, the weather, and the scouts' estimate errors.
+- **The dice decide the fortunes of war:** battle rounds, withdrawals, skirmishes, the share of captured stores burned, and who gets onto a road first.
+- **By default the dice equal the seed.** Replaying a seed with fresh dice keeps the situation and changes only the luck. That is how the balance tests tell luck from situation, and how the report can later show luck separately from decisions.
+
 **Seeds and links:** a human-friendly code plus the rules version, e.g. `…/#/challenge?seed=K7Q3-9TFA&rules=1.0`. A link made under an older rules version shows a warning.
 
 **Fairness guardrails:**

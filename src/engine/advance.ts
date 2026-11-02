@@ -334,7 +334,6 @@ function stageAccrual(s: GameState, ctx: Context, log: LogEntry[]): void {
     // Deliveries made during this sub-step join the stock only now (§3.4a step 6).
     addInto(f.stock, f.incoming);
     f.incoming = emptySupplies();
-    issueFromDepot(s, ctx, f);
     const resting = f.activity === 'halt' || f.activity === 'gather';
     const change = moving ? (f.pace === 'forced' ? fatigue.marchForced : fatigue.marchSteady) : resting ? fatigue.halt : 0;
     f.fatigue = Math.max(0, Math.min(1000, f.fatigue + change));
@@ -344,6 +343,7 @@ function stageAccrual(s: GameState, ctx: Context, log: LogEntry[]): void {
       if (f.gathering === 0) f.posture = 'concentrated';
     }
   }
+  issueFromDepots(s, ctx);
   for (const d of sortedValues(s.depots)) {
     addInto(d.stock, d.incoming);
     d.incoming = emptySupplies();
@@ -466,24 +466,44 @@ function forage(s: GameState, ctx: Context, f: Force): void {
 }
 
 /**
- * A force standing at its own side's depot draws rations directly, without wagons, but only what it
- * can carry (G-019): food first, then ammunition, then fodder.
+ * Forces standing at their own side's depot draw rations directly, without wagons, but only what they can
+ * carry (G-019): food first, then ammunition, then fodder. When a depot cannot meet every want it shares
+ * each kind in proportion to need, never in the order of the groups' names (D-036).
  */
-function issueFromDepot(s: GameState, ctx: Context, f: Force): void {
-  const depot = s.depots[f.at];
-  if (!depot || depot.side !== f.side || f.transit || f.men <= 0) return;
+function issueFromDepots(s: GameState, ctx: Context): void {
   const { depotIssue, consumption, gramsPerUnit } = ctx.rules;
-  const target = {
-    food: f.men * consumption.foodPerMan * depotIssue.foodDays,
-    fodder: (f.horses + f.draught) * consumption.fodderPerHorse * depotIssue.fodderDays,
-    ammo: Math.floor((f.men * depotIssue.ammoPerThousandMen) / 1000),
-  };
-  let free = Math.max(0, capacityGrams(f, ctx.rules) - weightGrams(f.stock, ctx.rules));
-  for (const supply of ['food', 'ammo', 'fodder'] as const) {
-    const take = Math.min(Math.max(0, target[supply] - f.stock[supply]), depot.stock[supply], Math.floor(free / gramsPerUnit[supply]));
-    depot.stock[supply] -= take;
-    f.stock[supply] += take;
-    free -= take * gramsPerUnit[supply];
+  for (const depot of sortedValues(s.depots)) {
+    const here = sortedValues(s.forces).filter((f) => f.side === depot.side && f.at === depot.node && f.transit === null && f.men > 0);
+    if (here.length === 0) continue;
+    const free = here.map((f) => Math.max(0, capacityGrams(f, ctx.rules) - weightGrams(f.stock, ctx.rules)));
+    for (const supply of ['food', 'ammo', 'fodder'] as const) {
+      const unit = gramsPerUnit[supply];
+      const target = (f: Force) =>
+        supply === 'food'
+          ? f.men * consumption.foodPerMan * depotIssue.foodDays
+          : supply === 'fodder'
+            ? (f.horses + f.draught) * consumption.fodderPerHorse * depotIssue.fodderDays
+            : Math.floor((f.men * depotIssue.ammoPerThousandMen) / 1000);
+      const wants = here.map((f, i) => Math.min(Math.max(0, target(f) - f.stock[supply]), Math.floor((free[i] as number) / unit)));
+      const total = wants.reduce((a, b) => a + b, 0);
+      if (total === 0) continue;
+      const pool = Math.min(total, depot.stock[supply]);
+      const gives = wants.map((w) => Math.floor((pool * w) / total));
+      // What rounding leaves goes a unit at a time to those still short, in a fixed order.
+      let left = pool - gives.reduce((a, b) => a + b, 0);
+      for (let i = 0; left > 0 && i < here.length; i++) {
+        if ((gives[i] as number) < (wants[i] as number)) {
+          gives[i] = (gives[i] as number) + 1;
+          left--;
+        }
+      }
+      here.forEach((f, i) => {
+        const n = gives[i] as number;
+        depot.stock[supply] -= n;
+        f.stock[supply] += n;
+        free[i] = (free[i] as number) - n * unit;
+      });
+    }
   }
 }
 
@@ -567,7 +587,7 @@ function moveForce(s: GameState, ctx: Context, f: Force, budget: number, hour: n
         e.transit === null && e.battle === null && e.at === to && e.route[0] === from && (e.activity === 'march' || e.activity === 'cross') && !enemyPresent(s, e.side, to),
     );
     if (!rival) return true;
-    const frenchFirst = chance(s.seed, ['road', res.turn, res.slot, hour, edge.id], 500);
+    const frenchFirst = chance(s.dice, ['road', res.turn, res.slot, hour, edge.id], 500);
     return frenchFirst === (f.side === 'fr');
   };
   // No overtaking: an enemy column ahead on the same road, going the same way, caps how far the force can go.
@@ -648,7 +668,7 @@ function captureDepots(s: GameState, ctx: Context, log: LogEntry[]): void {
     const winner = otherSide(loser);
     if (holders(loser, d.node) || !holders(winner, d.node)) continue;
     const { burnMinPermille, burnMaxPermille } = ctx.rules.capture;
-    const burn = drawBetween(s.seed, ['capture', d.node, res.turn, res.slot], burnMinPermille, burnMaxPermille);
+    const burn = drawBetween(s.dice, ['capture', d.node, res.turn, res.slot], burnMinPermille, burnMaxPermille);
     for (const kind of ['food', 'fodder', 'ammo'] as const) {
       const lost = Math.floor((d.stock[kind] * burn) / 1000);
       d.stock[kind] -= lost;
@@ -790,7 +810,7 @@ function tryWithdraw(s: GameState, ctx: Context, node: NodeId, side: Side, ids: 
   const dest = retreatNodeFor(s, ctx, node, side);
   const permille = fatigue > e.withdrawMaxFatigue ? 0 : e.withdrawBasePermille - Math.floor(fatigue / 2);
   const res = s.resolution;
-  const success = dest !== null && chance(s.seed, ['withdraw', res.turn, res.slot, node], permille);
+  const success = dest !== null && chance(s.dice, ['withdraw', res.turn, res.slot, node], permille);
   note(s, log, 'withdrawal', { node, side, success, to: success ? dest : null });
   if (!success || dest === null) return false;
   for (const f of forces) {
@@ -807,7 +827,7 @@ function minorAction(s: GameState, ctx: Context, node: NodeId, sides: Record<Sid
   const res = s.resolution;
   for (const id of sides[weaker]) {
     const f = must(s.forces[id], id);
-    const noise = drawBetween(s.seed, ['minor', res.turn, res.slot, node, id], 500, 1500);
+    const noise = drawBetween(s.dice, ['minor', res.turn, res.slot, node, id], 500, 1500);
     loseMen(s, f, Math.floor((Math.floor((f.men * rate) / 1000) * noise) / 1000), 'battle');
     if (dest) fallBack(ctx, f, dest);
   }

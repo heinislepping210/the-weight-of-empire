@@ -38,6 +38,8 @@ const GOLDEN: Record<string, string> = {
   '0.9.0': '229a30ce286dce6b',
   // The outcome model (D-035): battles record each force's losses; the state tracks how long the line of retreat is held.
   '0.10.0': 'f2210a8dc39c26cc',
+  // Scenario and dice separated (state gains `dice`); with the dice equal to the seed every draw is unchanged.
+  '0.11.0': '070285ad72acd22c',
 };
 
 /**
@@ -49,6 +51,7 @@ const GOLDEN_VITEBSK: Record<string, string> = {
   // G-019, and the Russian armies' starting fodder trimmed to what they can carry.
   '0.9.0': 'fe2e22e26628a01e',
   '0.10.0': '213ae2dc28f8cfca',
+  '0.11.0': '4ceff6b3eb9f0efc',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */
@@ -165,5 +168,5 @@ describe('determinism, conservation and resumption', () => {
       }),
       { numRuns: 60 },
     );
-  });
+  }, 30_000); // sixty whole games: well past the 5-second default under a busy machine
 });

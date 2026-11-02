@@ -91,6 +91,26 @@ describe('posture: dispersed or concentrated (§2.4b)', () => {
 });
 
 describe('depots issue supplies directly (§2.6)', () => {
+  it('groups sharing a depot that runs short share what it can issue by need, not by their names', () => {
+    const ctx = passiveContext(
+      testGround((s) => {
+        // Both groups at A with empty packs and bare fields; the depot holds less than they need.
+        forceInit(s, 'fr-main').at = 'A';
+        forceInit(s, 'fr-main').stock = { food: 0, fodder: 0, ammo: 0 };
+        forceInit(s, 'fr-flank').stock = { food: 0, fodder: 0, ammo: 0 };
+        s.depots[0]!.stock = { food: 40_000, fodder: 0, ammo: 0 };
+        s.convoys = [];
+        s.districts.A = { food: 0, fodder: 0 };
+      }),
+    );
+    const s = stepUntil(ordered(newGame(ctx, 4), ctx, []), ctx, (x) => x.resolution.slot === 1 && x.resolution.stage === 'activity');
+    const main = s.forces['fr-main']!.stock.food;
+    const flank = s.forces['fr-flank']!.stock.food;
+    expect(main + flank).toBe(40_000);
+    // The main body (60,000 men) needs three times what the flank (20,000) needs, and gets three times as much.
+    expect(Math.abs(main - 3 * flank)).toBeLessThanOrEqual(4);
+  });
+
   it('a force at its own depot tops up at the end of the sub-step, and the depot pays for it', () => {
     const ctx = passiveContext(
       testGround((s) => {

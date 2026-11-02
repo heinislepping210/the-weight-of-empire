@@ -192,7 +192,10 @@ export interface GameState {
   schema: 1;
   rulesVersion: string;
   scenarioId: string;
+  /** Sets the scenario: strengths, the Russian command's temper, weather and the scouts' estimates (§2.12). */
   seed: number;
+  /** Decides the chances of play: battles, withdrawals, skirmishes, burned stores, who gets onto a road first. */
+  dice: number;
   resolution: Resolution;
   forces: Record<ForceId, Force>;
   convoys: Record<ConvoyId, Convoy>;

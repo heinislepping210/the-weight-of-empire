@@ -46,6 +46,10 @@ The first release is **The Vitebsk Decision only**, made genuinely excellent bef
 - **Done (rules 0.9.0):** horses, carrying and foraging reach (D-032). The endings hardly depend on the new values within their researched ranges.
 - **Done (review stage C):** one plan for preview and commit, a kept route, and an army summary first (D-033). Keeping the route showed the southern-envelopment bot had been flattered before. The road is now chosen per group, own road by default on a long detour (D-034), and the southern envelopment is a real approach again (GAMEPLAY_BALANCING.md, the kept route).
 - **Done (rules 0.10.0, review stage D):** the outcome model as §2.13 defines it (D-035). Most earlier victories turned out to come from the old rules. Now only cutting the Moscow road at Valutino wins, no approach inflicts a decisive defeat in battle, and the halt-on-the-spot bot ends precarious because outlying corps starve. Better bots (stage F) come next.
+- **Done (rules 0.11.0, review stage F):** scenario and dice separated, and a measure of skill, situation and luck (D-036).
+  - Luck from the battle dice is about a fifth of the outcome.
+  - Half is which approach suits which scenario, and the player cannot yet read that at the start.
+  - No halt consolidates, because the placeholder depot stocks cannot feed the army for 20 days. That needs research on the 1812 magazines.
 - **Met:** "three approach families produce clearly different outcome distributions" (even more so on 0.10.0). On rules 0.8.0, and nearly the same on 0.9.0:
   - concentrated push: mostly Limited Success (58%), Operational Collapse in 30%;
   - southern envelopment: spread from Decisive Success (8%) to Repulse (31%);

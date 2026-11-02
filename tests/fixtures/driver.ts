@@ -43,8 +43,9 @@ export function inputFor(s: GameState, status: Status, policy: Policy): Input {
   return { ...base, decision: choice === 'delegate' ? { kind: 'delegate' } : { kind: 'nightfall', choice } };
 }
 
-export function play(ctx: Context, seed: number, policy: Policy, limit = 5_000): Run {
-  let s = newGame(ctx, seed);
+/** Plays a whole game. Fresh `dice` replay the same scenario with different fortunes of war (by default the seed). */
+export function play(ctx: Context, seed: number, policy: Policy, limit = 5_000, dice = seed): Run {
+  let s = newGame(ctx, seed, dice);
   const states = [s];
   const inputs: Input[] = [];
   const logs: LogEntry[][] = [];
@@ -77,7 +78,17 @@ const ROUND = ['press', 'hold', 'withdraw', 'delegate'] as const;
 const NIGHT = ['stay', 'withdraw', 'delegate'] as const;
 
 /** Always-valid orders chosen pseudo-randomly from a seed, for property tests. */
-export function randomPolicy(ctx: Context, choiceSeed: number): Policy {
+export function randomPolicy(ctx: Context, choiceSeed: number, perGame = false): Policy {
+  // Different random choices in every game (seed and dice), so the control is not one fixed schedule.
+  if (perGame) {
+    const inner = (s: GameState) => randomPolicy(ctx, keyHash(choiceSeed, [s.seed, s.dice]));
+    return {
+      orders: (s, turn) => inner(s).orders(s, turn),
+      logistics: (s, turn) => inner(s).logistics?.(s, turn) ?? null,
+      round: (s, b) => inner(s).round?.(s, b) ?? 'delegate',
+      nightfall: (s, b) => inner(s).nightfall?.(s, b) ?? 'delegate',
+    };
+  }
   const pick = <T>(options: readonly T[], key: (string | number)[]): T => options[keyHash(choiceSeed, key) % options.length] as T;
   return {
     orders(s, turn) {

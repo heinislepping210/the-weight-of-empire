@@ -133,7 +133,7 @@ A turn is 2 days: **four daylight sub-steps** of 6 hours (06:00–12:00 and 12:0
 ## 3.5 Persistence
 *Status (31 October 2026): designed, not built.* The engine can resume from any saved state, and the tests check this. But the browser does not yet save a campaign: "Save for comparison" in the prototype stores only a summary for the comparison screen. Real saves are an M3 criterion (DEVELOPMENT_ROADMAP.md).
 
-- **A save holds the scenario, seed and rules version, the input log (orders, battle decisions, event choices), a snapshot at the latest pause point, and a checksum.** It is stored in IndexedDB through a tiny wrapper (one small dependency, or about 50 lines of our own).
+- **A save holds the scenario, seed, dice (D-036) and rules version, the input log (orders, battle decisions, event choices), a snapshot at the latest pause point, and a checksum.** It is stored in IndexedDB through a tiny wrapper (one small dependency, or about 50 lines of our own).
 - **Autosave at every pause point** (§3.4). Two save slots are written alternately, so a crash during a write never loses the previous save.
 - Loading verifies the checksum and resumes from the snapshot. If that fails, the game rebuilds the state by replaying the input log. If that also fails, you get a clear message plus the option to export the raw file.
 - Export/import is a JSON file. The game explains that browser saves are not permanent and don't sync between devices.

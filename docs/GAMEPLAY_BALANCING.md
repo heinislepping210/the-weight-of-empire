@@ -297,6 +297,47 @@ Review stage D brought the evaluator in line with §2.13 (D-035). Report: [balan
 
 The battle-loss bar for a decisive defeat should be revisited only with the sector battles, and against historical battle losses.
 
+## Skill, situation and luck (rules 0.11.0, review stage F, 1 November 2026)
+
+Stage F rebuilt the experiment (D-036). Reports: [the batch, 1,000 scenarios × 3 sets of dice](balance/2026-11-01-rules-0.11.0.md), and [an adaptive policy on held-out seeds](balance/2026-11-01-adaptive.md).
+- **Two random streams.** The scenario (strengths, the Russian command, weather, scouting errors) and the dice (battles, withdrawals, skirmishes, burned stores, road priority) are now separate, so each scenario can be replayed with fresh dice.
+- **New controls.** The random control varies per game, and two competent bot variants were added.
+- **Integrity is a gate:** zero invariant violations in 27,000 games.
+
+**Where the ending comes from** (ranks of the endings, two-way analysis with three sets of dice per scenario):
+
+| Strategy | Scenario | Which strategy suits which scenario | Battle dice alone |
+|---|---|---|---|
+| 26% | 6% | 49% | 20% |
+
+- **Luck is a fifth of the outcome.** That is enough to matter, but not enough to swamp decisions.
+- **The scenario dependence is real.** The best approach for a scenario stays the best under fresh dice in 97% of scenarios, so the large interaction is not dice noise.
+- **But it cannot be read at the start.** A fair adaptive policy picks an approach at the first decision from what the French see: their own strength and the scouts' reports. It learns on 500 seeds and is judged on 500 others. It does no better than always taking the best fixed approach (mean rank 2.60 against 2.57), while an oracle that knows each ending would reach 2.21.
+- **What decides the best approach is hidden at the first decision:** the Russian command's temper and pressure, the weather, the strengths of the forces not yet seen.
+
+  To the player, half the outcome's variance is therefore effectively luck unless the game lets them learn these things in time. The design answer is information: scouting, reports of Russian movement, events such as the false report of 1812 (H-012), and a staff assessment that reads them.
+
+  The next measure should be an adaptive policy that re-decides every turn with what is visible then.
+- **Spacing of the ranks matters little:** with Costly Victory above Operational Success the shares become 32% / 5% / 44% / 19%.
+
+**The competent variants, and what they exposed:**
+- **The patient push does worse.** Gathering at Rudnia before attacking ends in Repulse in 57% of games, and Smolensk is held in only 35%. The four turns spent gathering let the Russians strike or settle in. Concentrating is not free, and this bot does not yet know when to stop waiting.
+- **No halt consolidates.** The supplied halt first moves Eugène's corps to Vitebsk and Davout's to Orsha, then halts. It still ends Precarious in every game. At the end every French depot is empty, and Eugène's and Poniatowski's corps starve.
+
+  The scenario's placeholder stocks (G-012: 2.1 million rations in French depots) plus the countryside within reach cannot feed 185,000 men through a 20-day halt. That is a question for research on the 1812 magazines, not a reason to loosen the sustainability test.
+- **An engine defect, found and fixed.** Groups sharing a depot that ran short drew in the order of their names, so the Guard ("fr-guard") ate while Eugène ("fr-left") starved beside it. They now share by need. The effect on the batch is small, because the depots run dry either way.
+
+**F1–F3:**
+- The southern envelopment is the only approach that wins, and it is best on 73% of seeds (F3 fails).
+- Decisive Success appears on 11% of seeds (F1 is a lower bound, using only these bots).
+- Both follow from the outcome model as designed (D-035) and the placeholder battle model: only cutting the Moscow road wins.
+
+**Still open from the review:**
+- F3 by openings: branch the first two directives from the same start, with a shared continuation.
+- An adaptive policy that re-decides every turn.
+- Bots that know when to stop concentrating.
+- The research on the 1812 magazines.
+
 ## Acting on the results
 
 1. **First ask whether the model is plausible and the result understandable.** A low decisive-success rate that follows from historically plausible rules is a finding, not a bug.

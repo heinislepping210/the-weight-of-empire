@@ -2,6 +2,10 @@
 //   BALANCE=1 BALANCE_SEEDS=1000 npx vitest run tests/balance/batch.test.ts
 // It prints a markdown report between BALANCE-REPORT markers. The F-targets are diagnostics, not quotas.
 //
+// Fresh dice: BALANCE_DICE=3 replays every scenario seed with 3 sets of dice (the first is the seed itself,
+// comparable with earlier reports), so the variance of the ending can be split into strategy, scenario,
+// their interaction and pure battle luck (review stage F).
+//
 // What-if runs: BALANCE_OVERRIDES='{"attrition":{"cohesionLossAtFullShortfall":30}}' replaces rule values
 // for this run only, to test a researched range before anything is adopted. The report names the overrides.
 
@@ -9,6 +13,7 @@ import { expect, it } from 'vitest';
 import { ENDING_NAMES, ENDING_RANK, RULES, RULES_VERSION, createContext, evaluate } from '../../src/engine';
 import type { EndingId, GameState, Rules } from '../../src/engine';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
+import { keyHash } from '../../src/engine/rng';
 import { play } from '../fixtures/driver';
 import { violations } from '../fixtures/invariants';
 import { BOTS, FAMILIES } from './bots';
@@ -22,6 +27,9 @@ function trainHorsesLost(start: GameState, end: GameState): number {
   return Math.floor(((horses(start) - horses(end)) * 1000) / Math.max(1, horses(start)));
 }
 const SEEDS = Number(env.BALANCE_SEEDS ?? 1000);
+const DICE = Math.max(1, Number(env.BALANCE_DICE ?? 1));
+/** The dice for roll `r` of a scenario seed: the seed itself first, then fresh ones. */
+const diceFor = (seed: number, r: number) => (r === 0 ? seed : keyHash(seed, ['dice', r]));
 const OVERRIDES = env.BALANCE_OVERRIDES ? (JSON.parse(env.BALANCE_OVERRIDES) as Record<string, unknown>) : null;
 
 /** Rule values with the overrides laid over them; an unknown key is an error, so a typo cannot pass silently. */
@@ -68,9 +76,9 @@ it.skipIf(!enabled)('balance batch', () => {
   const problems: string[] = [];
   for (const name of names) {
     results[name] = [];
-    for (let seed = 1; seed <= SEEDS; seed++) {
-      const run = play(ctx, seed, (BOTS[name] as (c: typeof ctx) => ReturnType<(typeof BOTS)[string]>)(ctx));
-      for (const v of violations(run)) problems.push(`${name} seed ${seed}: ${v}`);
+    for (let seed = 1; seed <= SEEDS; seed++) for (let roll = 0; roll < DICE; roll++) {
+      const run = play(ctx, seed, (BOTS[name] as (c: typeof ctx) => ReturnType<(typeof BOTS)[string]>)(ctx), 5_000, diceFor(seed, roll));
+      for (const v of violations(run)) problems.push(`${name} seed ${seed} roll ${roll}: ${v}`);
       const o = evaluate(run.states[0]!, run.final, ctx);
       const log = run.logs.flat();
       const captured = log.filter((e) => e.kind === 'depotCaptured');
@@ -104,7 +112,7 @@ it.skipIf(!enabled)('balance batch', () => {
   const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
   const endings = Object.keys(ENDING_NAMES) as EndingId[];
   const lines: string[] = [];
-  lines.push(`# Balance report: rules ${RULES_VERSION}${OVERRIDES ? ' (what-if)' : ''}, The Vitebsk Decision, seeds 1–${SEEDS}`, '');
+  lines.push(`# Balance report: rules ${RULES_VERSION}${OVERRIDES ? ' (what-if)' : ''}, The Vitebsk Decision, seeds 1–${SEEDS}${DICE > 1 ? `, ${DICE} sets of dice each` : ''}`, '');
   if (OVERRIDES) lines.push(`**What-if run, not the adopted rules.** Overrides: \`${JSON.stringify(OVERRIDES)}\``, '');
   lines.push(`Bots: ${names.join(', ')}. Approach families: ${FAMILIES.join(', ')}. Battles are left to the marshal.`, '');
   lines.push(`**Invariant violations: ${problems.length}**${problems.length ? ` (first: ${problems.slice(0, 5).join('; ')})` : ''}`, '');
@@ -146,37 +154,65 @@ it.skipIf(!enabled)('balance batch', () => {
     );
   }
 
-  // F1/F2/F3: achievability, several ways to win, no dominant approach (families only).
-  const decisive = (name: string, seed: number) => results[name]![seed]!.ending === 'decisiveSuccess';
+  // F1/F2/F3 on the first roll of each seed (the seed's own dice), comparable with earlier reports.
+  const first = (name: string, seed: number) => results[name]![seed * DICE]!;
+  const decisive = (name: string, seed: number) => first(name, seed).ending === 'decisiveSuccess';
   let anyFamilyDecisive = 0;
   const bestShare: Record<string, number> = Object.fromEntries(FAMILIES.map((f) => [f, 0]));
   for (let i = 0; i < SEEDS; i++) {
     if (FAMILIES.some((f) => decisive(f, i))) anyFamilyDecisive++;
-    const best = Math.min(...FAMILIES.map((f) => results[f]![i]!.rank));
-    const winners = FAMILIES.filter((f) => results[f]![i]!.rank === best);
+    const best = Math.min(...FAMILIES.map((f) => first(f, i).rank));
+    const winners = FAMILIES.filter((f) => first(f, i).rank === best);
     for (const w of winners) bestShare[w]! += 1 / winners.length;
   }
 
-  // F4: how much of the ending is explained by the strategy, and how much by the seed.
+  // F4: two-way analysis of variance with replication (strategy × scenario seed, DICE rolls per cell).
   const strategies = names.filter((n) => n !== 'random');
-  const grand = mean(strategies.flatMap((n) => results[n]!.map((r) => r.rank)));
-  const byStrategy = strategies.map((n) => mean(results[n]!.map((r) => r.rank)));
-  const bySeed = Array.from({ length: SEEDS }, (_, i) => mean(strategies.map((n) => results[n]![i]!.rank)));
-  const ssTotal = strategies.reduce((acc, n) => acc + results[n]!.reduce((a, r) => a + (r.rank - grand) ** 2, 0), 0);
-  const ssStrategy = SEEDS * byStrategy.reduce((a, m) => a + (m - grand) ** 2, 0);
-  const ssSeed = strategies.length * bySeed.reduce((a, m) => a + (m - grand) ** 2, 0);
+  const split = (rankOf: (e: EndingId) => number) => {
+    const x = (n: string, seed: number, roll: number) => rankOf(results[n]![seed * DICE + roll]!.ending);
+    const cell = (n: string, seed: number) => mean(Array.from({ length: DICE }, (_, r) => x(n, seed, r)));
+    const grand = mean(strategies.flatMap((n) => results[n]!.map((r) => rankOf(r.ending))));
+    const ss = { strategy: 0, scenario: 0, cells: 0, dice: 0 };
+    for (const n of strategies) ss.strategy += SEEDS * DICE * (mean(results[n]!.map((r) => rankOf(r.ending))) - grand) ** 2;
+    for (let i = 0; i < SEEDS; i++) ss.scenario += strategies.length * DICE * (mean(strategies.map((n) => cell(n, i))) - grand) ** 2;
+    for (const n of strategies) for (let i = 0; i < SEEDS; i++) {
+      const c = cell(n, i);
+      ss.cells += DICE * (c - grand) ** 2;
+      for (let r = 0; r < DICE; r++) ss.dice += (x(n, i, r) - c) ** 2;
+    }
+    const total = ss.cells + ss.dice;
+    return { strategy: ss.strategy / total, scenario: ss.scenario / total, interaction: (ss.cells - ss.strategy - ss.scenario) / total, dice: ss.dice / total };
+  };
+  const f4 = split((e) => ENDING_RANK[e]);
+  // The same split with Costly Victory and Operational Success no longer tied: how much the ranks' spacing matters.
+  const SPREAD: Record<EndingId, number> = { decisiveSuccess: 1, costlyVictory: 2, operationalSuccess: 3, limitedSuccess: 4, successfulConsolidation: 4, inconclusive: 5, precariousHalt: 5, repulse: 6, collapse: 7 };
+  const f4spread = split((e) => SPREAD[e]);
+  // With fresh dice: is the best approach for a scenario the same as on its first roll?
+  let stableBest = 0;
+  if (DICE > 1) {
+    for (let i = 0; i < SEEDS; i++) {
+      const meanRank = (f: string) => mean(Array.from({ length: DICE }, (_, r) => results[f]![i * DICE + r]!.rank));
+      const bestMean = Math.min(...FAMILIES.map(meanRank));
+      const bestFirst = Math.min(...FAMILIES.map((f) => first(f, i).rank));
+      if (FAMILIES.some((f) => meanRank(f) === bestMean && first(f, i).rank === bestFirst)) stableBest++;
+    }
+  }
 
   const halt = results['prudent-halt']!;
   const random = results.random!;
   lines.push('', '## Fairness diagnostics (targets are diagnostics, not quotas)', '');
   lines.push(`- **F1 (fair-policy part):** at least one approach family reaches Decisive Success on ${pct(anyFamilyDecisive, SEEDS)} of seeds (target ≥ 60%). No oracle search yet.`);
-  lines.push(`- **F2:** Decisive Success rate per family: ${FAMILIES.map((f) => `${f} ${pct(results[f]!.filter((r) => r.ending === 'decisiveSuccess').length, SEEDS)}`).join(', ')} (target ≈ 25% each).`);
+  lines.push(`- **F2:** Decisive Success rate per family: ${FAMILIES.map((f) => `${f} ${pct(results[f]!.filter((r) => r.ending === 'decisiveSuccess').length, results[f]!.length)}`).join(', ')} (target ≈ 25% each).`);
   lines.push(`- **F3:** share of seeds on which each family does best: ${FAMILIES.map((f) => `${f} ${pct(bestShare[f]!, SEEDS)}`).join(', ')} (target: none above 50%).`);
+  const share = (v: number) => `${(v * 100).toFixed(1)}%`;
   lines.push(
-    `- **F4:** variance of the ending rank explained by the strategy ${pct(ssStrategy, ssTotal)}, by the seed ${pct(ssSeed, ssTotal)}, interaction and noise ${pct(ssTotal - ssStrategy - ssSeed, ssTotal)} (target: strategy above seed). Re-rolling battle dice alone is not yet possible.`,
+    DICE > 1
+      ? `- **F4:** variance of the ending rank explained by the strategy ${share(f4.strategy)}, by the scenario ${share(f4.scenario)}, by which strategy suits which scenario ${share(f4.interaction)}, and by the battle dice alone ${share(f4.dice)} (${DICE} sets of dice per scenario; target: strategy above scenario). With the ranks spread out (Costly Victory above Operational Success): strategy ${share(f4spread.strategy)}, scenario ${share(f4spread.scenario)}, interaction ${share(f4spread.interaction)}, dice ${share(f4spread.dice)}. The best approach for a scenario stays the best under fresh dice on ${pct(stableBest, SEEDS)} of scenarios.`
+      : `- **F4:** variance of the ending rank explained by the strategy ${share(f4.strategy)}, by the seed ${share(f4.scenario)}, interaction and dice together ${share(f4.interaction)} (target: strategy above seed). Run with BALANCE_DICE=3 to separate the dice.`,
   );
-  lines.push(`- **F5:** the prudent halt, declared on the first turn before any victory, ends in: ${endings.filter((e) => halt.some((r) => r.ending === e)).map((e) => `${ENDING_NAMES[e]} ${pct(halt.filter((r) => r.ending === e).length, SEEDS)}`).join(', ')} (target: never Decisive Success; a victory won before a later halt stands, D-035).`);
-  lines.push(`- **F6:** random play reaches Decisive Success on ${pct(random.filter((r) => r.ending === 'decisiveSuccess').length, SEEDS)} of seeds (target < 5%).`);
+  lines.push(`- **F5:** the prudent halt, declared on the first turn before any victory, ends in: ${endings.filter((e) => halt.some((r) => r.ending === e)).map((e) => `${ENDING_NAMES[e]} ${pct(halt.filter((r) => r.ending === e).length, halt.length)}`).join(', ')} (target: never Decisive Success; a victory won before a later halt stands, D-035).`);
+  lines.push(`- **F6:** random play reaches Decisive Success in ${pct(random.filter((r) => r.ending === 'decisiveSuccess').length, random.length)} of games (target < 5%).`);
+  lines.push('', `*F1 and F3 use each seed's first roll; F2, F5 and F6 count every game. Bots: ${names.join(', ')}.*`);
 
   console.log(['BALANCE-REPORT-START', ...lines, 'BALANCE-REPORT-END'].join('\n'));
   // Integrity is a gate; the fairness diagnostics above are not.

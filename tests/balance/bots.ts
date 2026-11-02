@@ -4,6 +4,7 @@
 
 import { axesTo, leadGroup, ordersFrom, planDirective, planLogistics } from '../../src/engine';
 import type { Axis, Context, Directive, GameState, GroupOrder, LogisticsOrders, LogisticsStance, NodeId } from '../../src/engine';
+import { roadDistance, shortestPath } from '../../src/engine/graph';
 import { randomPolicy, type Policy } from '../fixtures/driver';
 
 // By default every bot brings its supply base forward, as a competent staff would (§2.6); the paired
@@ -88,7 +89,58 @@ const BASE_BOTS: Record<string, (ctx: Context) => Policy> = {
 
   /** Forced marches straight at Smolensk. */
   rush: (ctx) => ({ orders: (s) => orders(s, ctx, { objective: 'smolensk-north', tempo: 'forced' }), ...delegate }),
+
+  // Competent variants (review stage F): the same approaches, played as a careful player would.
+
+  /** The concentrated push done patiently: gather the army around Rudnia first, then attack together. */
+  'concentrated-push-staged': (ctx) => {
+    let gathered = false;
+    return {
+      orders: (s, turn) => {
+        // Three quarters of the army within 30 km of Rudnia, or four turns gone: then forward together.
+        if (!gathered && (turn > 4 || shareNear(s, ctx, 'rudnia', 30) >= 750)) gathered = true;
+        return gathered ? orders(s, ctx, { objective: 'smolensk-north' }) : orders(s, ctx, { objective: 'rudnia', engagement: 'accept' });
+      },
+      ...delegate,
+    };
+  },
+
+  /** A halt prepared first: outlying groups move to depots for two turns, then the halt is declared. */
+  'supplied-halt': (ctx) => ({
+    orders: (s, turn) => (turn >= 3 || s.halted ? orders(s, ctx, { posture: 'dispersed', engagement: 'accept' }) : toStations(s, ctx)),
+    halt: (_s, turn) => turn >= 3,
+    ...delegate,
+  }),
 };
+
+/** Permille of the French army standing within `km` by road of a place. */
+function shareNear(s: GameState, ctx: Context, node: NodeId, km: number): number {
+  const french = Object.values(s.forces).filter((f) => f.side === 'fr' && f.men > 0);
+  const total = french.reduce((n, f) => n + f.men, 0);
+  const near = french.filter((f) => f.transit === null && roadDistance(ctx.graph, f.at, node) <= km * 1000).reduce((n, f) => n + f.men, 0);
+  return Math.floor((near * 1000) / Math.max(1, total));
+}
+
+/**
+ * Where the supplied halt puts each group: Eugène from Surazh and Davout from Dubrovna to the depots at
+ * Vitebsk and Orsha; the Guard (Vitebsk), the vanguard (Liozno, which the staff makes a depot) and
+ * Poniatowski (Mogilev) stay where they are.
+ */
+const STATIONS: Record<string, NodeId> = { 'fr-left': 'vitebsk', 'fr-right': 'orsha' };
+
+function toStations(s: GameState, ctx: Context): GroupOrder[] {
+  chosen.set(s, { ...base, posture: 'dispersed', engagement: 'accept' });
+  return Object.values(s.forces)
+    .filter((f) => f.side === 'fr' && f.men > 0 && f.battle === null)
+    .sort((a, b) => (a.id < b.id ? -1 : 1))
+    .map((f) => {
+      const target = STATIONS[f.id];
+      const from = f.transit ? f.transit.to : f.at;
+      if (!target || (from === target && !f.transit)) return { force: f.id, route: f.transit ? [f.transit.to] : [], pace: 'steady', posture: 'dispersed', engagement: 'accept' };
+      const path = shortestPath(ctx.graph, from, target) ?? [];
+      return { force: f.id, route: f.transit ? [f.transit.to, ...path] : path, pace: 'steady', engagement: 'accept' };
+    });
+}
 
 /** The purposeful bots with a given supply stance; their group orders are the same either way. */
 export function botsWithSupply(stance: LogisticsStance): Record<string, (ctx: Context) => Policy> {
@@ -97,8 +149,8 @@ export function botsWithSupply(stance: LogisticsStance): Record<string, (ctx: Co
 
 export const BOTS: Record<string, (ctx: Context) => Policy> = {
   ...botsWithSupply('forward'),
-  /** Random valid orders, random supply arrangements included: the control that should rarely do well. */
-  random: (ctx) => randomPolicy(ctx, 0x5eed),
+  /** Random valid orders, random supply arrangements included, different in every game: the control that should rarely do well. */
+  random: (ctx) => randomPolicy(ctx, 0x5eed, true),
 };
 
 /** The three approach families of §2.13; the others are controls. */

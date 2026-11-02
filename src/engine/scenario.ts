@@ -89,8 +89,9 @@ function resolveStrength(seed: number, forceId: ForceId, what: string, s: Streng
   return typeof s === 'number' ? s : drawBetween(seed, ['setup', forceId, what], s[0], s[1]);
 }
 
-export function newGame(ctx: Context, seed: number): GameState {
-  if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw new Error('seed must be a 32-bit unsigned integer');
+/** A new game. The same seed with fresh `dice` replays the same scenario with different fortunes of war. */
+export function newGame(ctx: Context, seed: number, dice: number = seed): GameState {
+  for (const n of [seed, dice]) if (!Number.isInteger(n) || n < 0 || n > 0xffffffff) throw new Error('seed and dice must be 32-bit unsigned integers');
   const { scenario, rules, graph } = ctx;
 
   const forces: Record<ForceId, Force> = {};
@@ -155,6 +156,7 @@ export function newGame(ctx: Context, seed: number): GameState {
     rulesVersion: rules.version,
     scenarioId: scenario.id,
     seed,
+    dice,
     resolution: { turn: 1, slot: 0, stage: 'orders', encounterQueue: null, battleSeq: 0 },
     forces,
     convoys,

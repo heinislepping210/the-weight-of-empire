@@ -30,7 +30,14 @@ An outside AI reviewer assessed commit `1ade716` (rules 0.7.0, milestone M1) fro
 | The captured-store burn share does not depend on time | — | Documentation corrected. The mechanism is unchanged: either describe it as uncertain residual stores or model the destruction over time. Still to decide |
 | No road capacity or column length | M2 | Open, as planned for the living map |
 | The batch never contrasts the supply stances | B | **Paired supply-stance probe added** (`tests/balance/supply-stance.test.ts`). Forward supply helps a little and almost never hurts, so it is not yet a dilemma |
-| F1–F6 test narrower claims than their names. F4 cannot separate skill from luck with one deterministic run per strategy and seed; the random control uses a fixed choice seed; every bot brings depots forward | F | Open. The bots that do not concentrate before attacking now understate their approaches (GAMEPLAY_BALANCING.md, contacts corrected) |
+| F1–F6 test narrower claims than their names. F4 cannot separate skill from luck with one deterministic run per strategy and seed; the random control uses a fixed choice seed; every bot brings depots forward | F | **Largely done in rules 0.11.0** (D-036):
+- scenario and dice separated, and each scenario replayed with three sets of dice;
+- the variance split into strategy, scenario, interaction and dice;
+- an adaptive policy judged on held-out seeds against an oracle;
+- the random control varied per game;
+- competent bot variants added; they exposed a depot-sharing defect, now fixed.
+
+The main finding: the best approach depends on hidden scenario factors that cannot be read at the first decision. Still open: F3 by openings, a per-turn adaptive policy, and better concentrating bots |
 | Russian strikes count armies that cannot arrive in time | later | Open: a time-to-concentrate check, after the contact fix |
 | Losses are not tagged by force and cause for a future after-action report | later | Open |
 | The orders panel lacks an army-level summary (arrival spread, exposed groups, worst bottleneck) | C | **Built** (D-033): the summary comes first, with the worst-fed group and horses short of fodder; group orders open on demand; the top bar names the worst-fed group; foraging in the forecast is bounded by the districts on the way |
