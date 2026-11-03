@@ -8,7 +8,7 @@ You are playtesting a browser strategy game, *The Weight of Empire: The Vitebsk 
 
 **Get the game (record the time you start)**
 1. `git clone https://github.com/heinislepping210/the-weight-of-empire.git`, `cd the-weight-of-empire`.
-2. Pin the build to the commit that last changed this brief: `git checkout $(git log -1 --format=%H -- docs/playtests/2026-11-03-agent-brief.md)`. Record the commit.
+2. Pin the build to the commit that last changed this brief: `git checkout $(git log -1 --format=%H -- docs/playtests/2026-11-03-agent-brief.md)`. Record the commit. Check that step A of the script says when the battle panel shows its line about Stand orders; if it doesn't, you have an older build.
 3. `npm ci --ignore-scripts --no-audit --no-fund`, then `npm run dev`. Open the address it prints (normally http://localhost:5173) in a browser at least 1200 pixels wide. Record the time: setup ends, play starts.
 
 **Rules for this test**

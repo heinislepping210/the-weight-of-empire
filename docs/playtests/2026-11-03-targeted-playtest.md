@@ -30,7 +30,7 @@ For each moment, fill a row of the sheet *before* you click: your prediction, th
 - **not triggered:** the moment never came;
 - **couldn't verify:** it came, but the screen never showed the answer.
 
-**A. Stand.** In a battle, after reading the battle panel (at the deployment or at a round) and before you deploy, continue or leave it to the marshal: "If the French lose the position in this battle, will the marshal hold on or break off?" Quote the panel wording you relied on. If you command the battle yourself, or the position never falls, the answer can't be checked: mark it couldn't verify.
+**A. Stand.** In a battle, after reading the battle panel (at the deployment or at a round) and before you deploy, continue or leave it to the marshal: "If the French lose the position in this battle, will the marshal hold on or break off?" Quote the panel wording you relied on. (The panel has a line about Stand orders only when some of your men in that battle are under them; if it has none, say so.) If you command the battle yourself, or the position never falls, the answer can't be checked: mark it couldn't verify.
 
 **B. A French corps falling back.** Pick one named French group that is likely to fight soon.
 1. On the orders screen, before committing: "If this group is beaten, where will it fall back to?"
