@@ -533,7 +533,7 @@ Can a player feed the army that holds Valutino by planning for it? Two more vari
 - **Reading the scenario is worth more with these choices.** An oracle choosing per scenario on its other rolls now gains 0.49 ranks over the best fixed approach (0.44 to 0.55), up from 0.26; the two-figure adaptive policy still gains 0.01.
 - **The families are unchanged** (F3: push 37%, bait and converge 36%, southern envelopment 27%). F1 and F2 count only the families, so they are unchanged too.
 
-## Sector battles (rules 0.17.0–0.17.1, 2 November 2026; `sector-battles` branch)
+## Sector battles (rules 0.17.0–0.17.1, 2 November 2026)
 
 The placeholder round model is replaced by the sector battles of §2.10 (D-043; contracts in TECHNICAL_ARCHITECTURE §3.4b). Reports: [the batch, 1,000 scenarios × 3 sets of dice](balance/2026-11-02-rules-0.17.1.md), [the adaptive policy](balance/2026-11-02-adaptive-0.17.1.md), [the supply-stance probe](balance/2026-11-02-supply-stance-0.17.1.md), [the sensitivity of four battle values](balance/2026-11-02-sensitivity-0.17.1.md). Zero invariant violations in 39,000 games, with every man, horse and gun of a force in battle checked at every pause.
 
@@ -560,7 +560,7 @@ The placeholder round model is replaced by the sector battles of §2.10 (D-043; 
 - None moves any ending by more than 2.6 percentage points (13 games in 500), and none produces a single decisive defeat.
 - The shock of a lost position moves the most: at 40, 80 or 120 cohesion, a Russian main army broke in 21, 31 or 39 battles per 100 games of the holding envelopment, the French routed in 22, 32 or 45 per 100 games of the concentrated push, and the push collapsed in 1.2%, 2.8% or 4.4% of games.
 - The pursuit rate moves French routs (the push: 25, 32 or 42 per 100 games, halved to doubled), not the endings. The contested exit's cost and the flank barely register at the bots' level; a player who uses them may feel them more.
-- **Recommendation: keep all four placeholders.** No source supports another value, and none changes what the bots achieve. Whether a decisive defeat is reachable is a question of pinning, not of these numbers.
+- **Kept, all four (your decision at checkpoint B).** No source supports another value, and none changes what the bots achieve. Whether a decisive defeat is reachable is a question of pinning, not of these numbers.
 
 **Next steps (for your decision):** a bot that sets out to pin a Russian army (close its roads out before attacking); your playtest of the sector battles; and research for the battle values, none of which is sourced yet.
 

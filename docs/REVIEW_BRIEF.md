@@ -1,6 +1,6 @@
 # Review Brief
 
-For an outside reviewer, human or AI, asked to give feedback on the project as it stands (2 November 2026, rules 0.16.0 on main and 0.17.1 on the `sector-battles` branch, milestone M1). It says what exists, what changed since the first independent review, where to look, and what is already known, so a review can go beyond it. The detailed instructions for a second review are in [reviews/SECOND_REVIEW_PROMPT.md](reviews/SECOND_REVIEW_PROMPT.md).
+For an outside reviewer, human or AI, asked to give feedback on the project as it stands (2 November 2026, rules 0.17.1, milestone M1). It says what exists, what changed since the first independent review, where to look, and what is already known, so a review can go beyond it. The detailed instructions for a second review are in [reviews/SECOND_REVIEW_PROMPT.md](reviews/SECOND_REVIEW_PROMPT.md).
 
 ## What the project is
 
@@ -25,7 +25,7 @@ For an outside reviewer, human or AI, asked to give feedback on the project as i
   - hunger that costs men through straggling and cohesion more slowly.
 - **A Russian command** that acts on its own scouting, with seeded political pressure and temperament.
 - **Army directives with a staff planner.** One plan serves both preview and commit. It covers your own orders per group, a kept route with a per-group road choice, an army summary first, and every order's reasons.
-- **Sector battles** (§2.10, on the `sector-battles` branch): the field in three sectors and a reserve, with contracts for every man and gun, simultaneous rounds, four results kept apart and escape graded by the situation (TECHNICAL_ARCHITECTURE §3.4b).
+- **Sector battles** (§2.10): the field in three sectors and a reserve, with contracts for every man and gun, simultaneous rounds, four results kept apart and escape graded by the situation (TECHNICAL_ARCHITECTURE §3.4b).
 - **An outcome evaluator** as §2.13 defines it:
   - decisive defeat from battle losses within 4 days;
   - cut off at designated places on the Moscow road, held for 2 sub-steps;
@@ -55,7 +55,7 @@ The first review's findings and their status are in [reviews/2026-10-31-independ
 | Second review, supply | Trains issue like depots (all the food a corps can carry); "sustainable" day by day; forecasts run the movement rules | 0.15.0 | D-040 |
 | Second review, reporting | Dice labelled as resolution randomness; noise-adjusted variance split; regret; scenario-clustered intervals; a cross-fitted oracle | — | D-041 |
 | Competent bots | A southern envelopment that holds Valutino, a concentrated strike; a beaten attacker falls back the way it came | 0.16.0 | D-042 |
-| Sector battles (branch) | Three sectors and a reserve, cavalry and guns, four results kept apart, graded exits, pursuit once; contracts tested before the combat code (TECHNICAL_ARCHITECTURE §3.4b) | 0.17.0–0.17.1 | D-043 |
+| Sector battles | Three sectors and a reserve, cavalry and guns, four results kept apart, graded exits, pursuit once; contracts tested before the combat code (TECHNICAL_ARCHITECTURE §3.4b) | 0.17.0–0.17.1 | D-043 |
 
 Each change was written test-first: tests that failed on the previous rules.
 
@@ -64,7 +64,7 @@ Each change was written test-first: tests that failed on the previous rules.
 1. This brief, then [PROJECT_VISION](PROJECT_VISION.md) for the goals and the scope limits.
 2. [GAME_DESIGN_DOCUMENT](GAME_DESIGN_DOCUMENT.md) §2: §2.4b directives, §2.6 logistics, §2.12 variation, §2.13 outcomes.
 3. [TECHNICAL_ARCHITECTURE](TECHNICAL_ARCHITECTURE.md) §3.4a: the turn timeline and the contact rule.
-4. [GAMEPLAY_BALANCING](GAMEPLAY_BALANCING.md), from "Contacts corrected" to the end, with the reports in [balance/](balance/). The latest are [rules 0.17.1 with the sector battles](balance/2026-11-02-rules-0.17.1.md) (on the branch), [the sensitivity of four battle values](balance/2026-11-02-sensitivity-0.17.1.md), [rules 0.16.0 with the bots that feed the trap](balance/2026-11-02-rules-0.16.0-feeding-the-trap.md), [the adaptive policy](balance/2026-11-02-adaptive-0.17.1.md), and the what-ifs on [the cut road](balance/2026-11-01-whatif-cutoff.md), [the foraging reach](balance/2026-11-01-whatif-reach.md) and [the line-haul limit](balance/2026-11-02-whatif-haul.md).
+4. [GAMEPLAY_BALANCING](GAMEPLAY_BALANCING.md), from "Contacts corrected" to the end, with the reports in [balance/](balance/). The latest are [rules 0.17.1 with the sector battles](balance/2026-11-02-rules-0.17.1.md), [the sensitivity of four battle values](balance/2026-11-02-sensitivity-0.17.1.md), [rules 0.16.0 with the bots that feed the trap](balance/2026-11-02-rules-0.16.0-feeding-the-trap.md), [the adaptive policy](balance/2026-11-02-adaptive-0.17.1.md), and the what-ifs on [the cut road](balance/2026-11-01-whatif-cutoff.md), [the foraging reach](balance/2026-11-01-whatif-reach.md) and [the line-haul limit](balance/2026-11-02-whatif-haul.md).
 5. [HISTORICAL_RESEARCH](HISTORICAL_RESEARCH.md) and [HISTORICAL_ASSUMPTIONS](HISTORICAL_ASSUMPTIONS.md): sources, and the status of every claim (H-, L- and G- entries).
 6. [DECISIONS](DECISIONS.md) D-029 to D-042.
 7. Code:
