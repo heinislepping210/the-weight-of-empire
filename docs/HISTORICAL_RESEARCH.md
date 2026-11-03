@@ -185,3 +185,39 @@ Edward Foord's *Napoleon's Russian Campaign of 1812* (1914), chapter V, describe
 
 Sources consulted: Foord (1914), [Project Gutenberg #57185](https://www.gutenberg.org/ebooks/57185), public domain; Wikipedia, "Battle of Valutino".
 
+## The third review's history audit (3 November 2026)
+
+The reviewer found three historical claims to check: the Prudichevo crossing (H-022), the dated French returns (H-021, G-021) and the scopes of the battle figures (H-020). No rule changed.
+
+**The Prudichevo crossing (H-022): supported, and the map's compression is small.**
+- Foord's text, read again with its page numbers: the ford "about 6 miles out" and the junction with the high road "about 2 miles west of Lubino" (p. 131); on the 19th Napoleon "sent Eblé to Prudichevo to bridge the Dnieper" and ordered Junot to cross there, and a column was seen crossing that morning (p. 148); Junot advanced from Prudichevo during the action (p. 152).
+- **A second account agrees.** The Russian *Military Encyclopaedia* (Sytin, vol. 5, 1911, pp. 220–221, article "Valutina gora"; public domain, dates in the Old Style) has Russian outposts reporting French bridge-building on the Dnieper "about 10 versts above Smolensk, near Prudishchevo" (about 10.7 km upstream, matching Foord's 6 miles), Junot crossing at Prudishchevo, and Murat's cavalry fording the river beside it.
+- **Where the track met the high road.** Lubino (Wikidata Q13635925) lies about 3.5 km north-east of the game's Valutino, so a junction about 2 miles (3.2 km) west of Lubino falls within about a kilometre of Valutino. The game's road ends where the track did, to within the network's precision. From the Old Town it is 12.6 km by the network rule; the track ran about 10 km to the ford and a few more to the junction, so the real way was somewhat longer, and the game marches it at 42% of a post road's pace (a track, and a ford).
+- **What the sources do not settle:** whether infantry and guns could ford it before Eblé's bridge (the cavalry did on the 19th), and whether anyone used it before the 19th. The game lets either side use it throughout, slowly. A village of that name could not be found in present-day registers; Clausewitz and a period map are still unread.
+
+**The French returns of 1 August (H-021, G-021): obtained, totalled, not adopted.** Nafziger's order of battle of the Grande Armée for 1 August 1812 (collection no. 812HAB, 30 pages, citing Fabry, *Campagne de Russie*), from the collection Nafziger donated to the US Army's Combined Arms Research Library, was read from the Internet Archive's copy of the library's page. We use its figures, not its text. It lists each battalion, squadron and battery with officers and men, and each battery's guns, but prints no corps totals, so we added them up by game group (checked by hand for III Corps and I Corps' infantry). Regimental guns are the 3- and 4-pounders of the infantry regiments; field guns the foot and horse companies; park guns those listed under a park.
+
+| Game group | In the game: men, cavalry, guns | The return, 1 August (all ranks; cavalry; field + regimental guns) |
+|---|---|---|
+| Guard and headquarters | 28,000–36,000; 4,000–6,000; 100–112 | 37,100; 6,100; 154 + 18, and 30 in the Guard's park |
+| Vanguard: Murat and Ney | 38,000–50,000; 13,000–17,000; 130–190 | 62,200 (III Corps 33,800, I–III Reserve Cavalry Corps 28,400); 30,400; 166 + 14 |
+| Eugène | 28,000–36,000; 3,000–5,000; 130–165 | 45,800, with a Bavarian light brigade and battery attached; 4,600; 98 + 24 |
+| Davout | 42,000–55,000; 2,500–4,500; 190–250 | 69,600; 3,400; 110 + 68 |
+| Poniatowski and Junot | 26,000–36,000; 4,000–6,000; 120–165 | 47,900 (V Corps 30,900, VIII Corps 17,000); 5,400; 74 + 28 |
+| **Five groups** | **162,000–213,000** | **262,600**, besides 7,700 in headquarters services and 5,900 in the IV Reserve Cavalry Corps |
+
+- **The totals do not fit mid-August.** The central army is usually put at about 180,000 in mid-August (H-009); this return gives 262,600 for the same groups on 1 August. Two weeks of attrition might explain part of it; the rest suggests that some figures are earlier states carried forward. The return names Fabry but not the date of each figure. The 15 August return (812HDA, 17 pages) is the check, and was not read in this audit.
+- **Cavalry is the largest gap.** The vanguard's 13,000–17,000 came from the 15,000 Murat had at Krasnyi on 14 August (H-021); the return gives his three corps and Ney's light cavalry 30,400 two weeks earlier. Horses died fast that summer, so both may be right, each at its date.
+- **Guns differ less, and both ways.** The Guard has more field guns in the return (154, with line horse companies attached to its reserve) than at Borodino (109); Davout, Eugène and the southern group have fewer field and regimental guns than the game gives them (the game's were set at 4.6 guns per 1,000 men).
+- **Not adopted.** Any change to the ranges changes battles, and the date of the figures is in doubt. Read the 15 August return first, then propose ranges with measured effects.
+
+**The battle figures (H-020): re-cited with their scopes.** Foord (1914) gives page-cited figures that differ from the encyclopedias' in what they count:
+- **Krasnyi, 14 August:** Neverovsky's square of about 5,000 (9 battalions, his cavalry and 8 guns behind the ravine, a battalion and 2 guns in the town) lost about 1,500 men, half of them prisoners, and 8 guns; the French loss "did not appear to exceed 800" (pp. 127–128). No French strength is given.
+- **Smolensk, 16–17 August:** on the 16th Raevsky held the city with "scarcely 13,000 men" and 72 guns, his own count, probably infantry and artillery only (p. 131). On the 17th about 19,000 Russians faced the assault of some 55,000 French infantry (p. 140), out of over 120,000 French before the city (p. 138); Dokhturov's whole force "probably hardly exceeded 30,000", 55 battalions engaged (p. 143); the two Russian armies counted 121,000 with some 650 guns before the operations (p. 118). Losses: about 6,000 Russian on the 17th and 7,000 for both days, about 12,000 French (pp. 143–144).
+- **Valutino, 19 August:** about 50,000 French on the field, "perhaps 37,000" seriously engaged, against "probably about 30,000" Russians brought in one after another; losses over 7,000 French and about 5,000 Russian, prisoners "not more than some hundreds" (p. 155).
+- **Each figure is a share of something different:** a day's fighting, a corps, the troops engaged, or the army. The register now says which.
+
+**A local rearguard as a control.** The reviewer asked for a local rearguard action and a closed exit to be tested apart. On the engine's test ground, a division of 6,500 (1,200 cavalry, 14 guns) caught in the open by 20,000 (15,000 cavalry), with its road open, got away in order in 52 of 60 sets of dice and routed in 8, always by its own road, losing a median 6.8% of its men and 1 gun. Neverovsky also got away, but lost about a quarter of his men and half his guns. The game lets such a rearguard off more lightly than Krasnyi did; that is recorded, not tuned (no band is a target). With every road out held, the same division never got away in order. Both are now tests (`third-review.test.ts`, section 7).
+
+Sources consulted: Foord (1914), Project Gutenberg #57185, pp. 118–155; *Voennaya entsiklopediya* (Sytin, 1911–1915), vol. 5, "Valutina gora", via Russian Wikisource; Nafziger, "French Grande Armée, 1 August 1812" (812HAB), via the Wayback Machine copy of the US Army Combined Arms Research Library's collection; Wikidata Q13635925 (Lubino).
+

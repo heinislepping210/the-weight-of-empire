@@ -714,3 +714,22 @@ No rule changed (D-047). The batch now reports F3 with its ties, F4 with a split
 **Supply stance:** the new pinning bots end at the same rank on 100% (search) and 97.1% (strike first) of seeds whichever way they keep their depots.
 
 **Reading:** the review's method questions are answered without changing the earlier picture: among the tested bots only holding Valutino wins; the families tie at Limited Success; reading the situation at the first decision gains nothing. The pinning question is sharper. A Russian army in this model does not stay where it can be surrounded. Whether that is right for the Russian command at Smolensk, which in 1812 held the town through two days of battle before leaving, is a question for the history audit and the playtest, not for the bots.
+
+## The Prudichevo road, measured again (rules 0.18.0, 3 November 2026)
+
+The history audit confirmed the crossing from a second account but left open whether infantry and guns could ford it before Eblé's bridge (HISTORICAL_RESEARCH, "The third review's history audit"). So how much do the results hang on this one road? The same bots on the same 200 seeds, first roll, with and without it (a one-off probe, no rule changed):
+
+| Bot | Better with the road / same / better without | Mean rank, with / without | Won (Decisive Success, Costly Victory or Operational Success), with / without |
+|---|---|---|---|
+| southern-envelopment-hold | 9.5% / 45.5% / 45.0% | 4.21 / 3.41 | 17.0% / 41.0% |
+| southern-envelopment-guard-at-base | 16.0% / 42.0% / 42.0% | 3.90 / 3.40 | 26.5% / 36.5% (Decisive Success 3.0% / 7.0%) |
+| southern-envelopment-wait-for-trains | 14.5% / 67.5% / 18.0% | 3.62 / 3.54 | 22.5% / 27.5% |
+| southern-envelopment | 27.0% / 40.5% / 32.5% | 3.67 / 3.56 | 6.5% / 10.0% |
+| pinning-attack | 17.0% / 74.0% / 9.0% | 3.53 / 3.69 | 0% / 0% |
+| pinning-fix-first | 19.5% / 78.5% / 2.0% | 3.46 / 3.81 | 0% / 0% |
+| concentrated-push, bait-and-converge | 2.5–7.5% / 92.5–97.5% / 0% | about 0.1 better with it | 0% / 0% |
+
+**Reading:**
+- **The holding plans win more often without the road.** It is mostly the French who use it, not the Russians: the corps of the envelopment, and late in the game the Guard, reach Valutino by the ford. Without it the Guard can only go by the north bank, so it attacks the Russians there from the west while the block holds Valutino, and the trap closes from both sides (traced on seeds 2, 3 and 4). The Russian armies took the road in about 11 of the 90 games it changed.
+- **So the effect runs through the bots' routes,** not through a Russian escape: a player can choose either way to Valutino while the road exists.
+- **For your decision, later:** keep the road (recommended: two accounts support it); or make it usable only after bridging, which needs an engineering rule we do not have. Nothing changes until then.

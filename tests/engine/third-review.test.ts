@@ -313,3 +313,42 @@ describe('6. the interface says what the rules do', () => {
     expect(b.field.positionLost).toEqual(['fr']);
   });
 });
+
+describe('7. history as negative controls (H-020, the reviewer\'s note on scopes)', () => {
+  // Krasnyi, 14 August 1812: Neverovsky's division, about 6,500 with 14 guns, was caught in the open by Murat's
+  // cavalry and part of Ney's corps, and got away by its road, though at a heavy cost (Foord 1914, pp. 127-128).
+  // A control, not a band: the game's losses here are lighter than history's, and no test asks for history's.
+  const krasnyi = (blocked: boolean) =>
+    createContext(
+      testGround((d) => {
+        Object.assign(forceInit(d, 'ru-main'), { at: 'B', men: 6_500, cavalry: 1_200, guns: 14, horses: 1_500 });
+        Object.assign(forceInit(d, 'fr-main'), { men: 20_000, cavalry: 15_000, guns: 24, horses: 17_500 });
+        forceInit(d, 'fr-flank').at = blocked ? 'C' : 'G';
+        if (blocked) {
+          d.forces = d.forces.filter((f) => f.id !== 'ru-post');
+          // A depot does not close a road; troops do: at A, C and E, the three roads out of B.
+          d.forces.push({ id: 'fr-e', side: 'fr', name: 'Corps at E', at: 'E', men: 8_000, horses: 500, wagons: 0, stock: { food: 16_000, fodder: 1_000, ammo: 500 } });
+          d.forces.push({ id: 'fr-a', side: 'fr', name: 'Corps at A', at: 'A', men: 8_000, horses: 500, wagons: 0, stock: { food: 16_000, fodder: 1_000, ammo: 500 } });
+        }
+      }),
+      RULES,
+      { russianCommand: holdStill },
+    );
+  const results = (ctx: Context) =>
+    Array.from({ length: 60 }, (_, k) => {
+      const run = play(ctx, k + 1, { orders: () => [], round: () => 'delegate', nightfall: () => 'delegate' });
+      return battleOf(run.final).field.result.ru;
+    });
+
+  it('a local rearguard with its road open gets away in order in most fortunes of war, and is never trapped', () => {
+    const r = results(krasnyi(false));
+    expect(r.filter((x) => x === 'withdrew').length).toBeGreaterThanOrEqual(45);
+    expect(r).not.toContain('trapped');
+  });
+
+  it('the same division with every road out held cannot leave in order: once it breaks off, it is trapped', () => {
+    const r = results(krasnyi(true));
+    expect(r).not.toContain('withdrew');
+    expect(r.filter((x) => x === 'trapped').length).toBeGreaterThan(0);
+  });
+});
