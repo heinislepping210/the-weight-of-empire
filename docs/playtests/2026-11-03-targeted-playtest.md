@@ -24,11 +24,11 @@ If you can, have an observer who only takes notes. Observers: don't help; if the
 
 ## Predict, then look
 
-For each moment, fill a row of the sheet *before* you click: your prediction, the evidence on screen you relied on (quote the wording), and how confident you are. Afterwards fill in what happened and its status:
+For each moment, fill a row of the sheet *before* the click that resolves it: your prediction, the evidence on screen you relied on (quote the wording), and how confident you are. Afterwards fill in what happened and its status:
 - **confirmed:** it happened as predicted;
 - **contradicted:** something else happened;
-- **not triggered:** the moment never came;
-- **couldn't verify:** it came, but the screen never showed the answer.
+- **not triggered:** the event never occurred;
+- **couldn't verify:** it occurred, but the screen never showed the result.
 
 **A. Stand.** In a battle, after reading the battle panel (at the deployment or at a round) and before you deploy, continue or leave it to the marshal: "If the French lose the position in this battle, will the marshal hold on or break off?" Quote the panel wording you relied on. (The panel has a line about Stand orders only when some of your men in that battle are under them; if it has none, say so.) If you command the battle yourself, or the position never falls, the answer can't be checked: mark it couldn't verify.
 
@@ -50,7 +50,7 @@ If it never happens, mark not triggered.
 
 ## The narrow window (if you are testing the layout)
 
-Set the browser window to 800 pixels high. At each width below, scroll until **Commit orders for the next two days** is in view, and note whether the map or its legend covers it: **901, 900, 899, 768 and 390 pixels.** At 900 pixels, also click the button and check that the orders were committed (the date at the top moves on two days). A single check at one width can miss the fault.
+Do this at one orders pause only, after you have written that pause's predictions and set your orders, so that the check does not change the game. Set the browser window to 800 pixels high. At each of **901, 900, 899, 768 and 390 pixels** wide, scroll until **Commit orders for the next two days** is in view and note, without clicking, whether the map or its legend covers it (a screenshot at each width helps). A single check at one width can miss the fault. Then, at 900 pixels, click the button once. If the date at the top moves on two days, that was your commit for this turn. If it doesn't, go back to your usual width and commit there. Commit only once.
 
 ## Sheet
 
@@ -70,8 +70,9 @@ Add rows as needed.
 - Deviations from the opening, with reasons:
 - Decisions made in battle: ____ ; how many you could explain afterwards ("I did X because Y"): ____
 - "I could predict what my orders would do", 1–5: ____ · "I felt in command", 1–5: ____ (an agent marks these as an agent's observations)
-- Narrow window: covered at 901 / 900 / 899 / 768 / 390? Did the click at 900 commit the orders?
-- Console errors, wrong numbers, or text that contradicted what then happened (with the date in the game):
+- Narrow window: covered or clear at 901 / 900 / 899 / 768 / 390? Did the click at 900 commit the orders?
+- Console errors, or text that contradicted what then happened (with the date in the game):
+- Conflicting numbers: a figure that disagrees with another figure on the screen, citing both places (don't guess which is right):
 - What surprised you, one line each:
 
 ## Optional, after the sheet is done
