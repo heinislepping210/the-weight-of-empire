@@ -77,6 +77,10 @@ export function violations(run: Run): string[] {
     }
     for (const b of Object.values(s.battles)) {
       for (const side of b.routed) if (b.field.result[side] !== 'routed' && b.field.result[side] !== 'trapped') out.push(`${where}: battle ${b.id} lists ${side} as routed without a rout or a trap`);
+      // Losses by sub-step add up to losses by force (second review, D4; third review).
+      const summed: Record<string, number> = {};
+      for (const at of Object.values(b.lossesAt)) for (const [id, n] of Object.entries(at)) summed[id] = (summed[id] ?? 0) + n;
+      for (const [id, n] of Object.entries(b.losses)) if ((summed[id] ?? 0) !== n) out.push(`${where}: battle ${b.id} losses of ${id} by sub-step do not add up`);
     }
   });
   const seen = new Map<number, Set<string>>();

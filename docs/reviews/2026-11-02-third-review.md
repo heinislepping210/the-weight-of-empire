@@ -1,0 +1,86 @@
+# Third independent review of 2 November 2026: record and status
+
+A third outside AI reviewer assessed `main` at `f489efb` (rules 0.17.2, with the stand order) from [REVIEW_BRIEF](../REVIEW_BRIEF.md). Its scope: the browser, the sector-battle contracts, the experiments, the historical evidence and the hand-off to M2. It left the repository untouched. P1 means a behaviour that can change a battle or operational outcome and should be resolved before M2 represents it; P2 a material issue of clarity, coverage or interpretation.
+
+**The reviewer's verdict, in short:**
+- **Four P1 findings, all in how a side leaves the field.** A forward depot silently redirects a retreat away from key ground; two break-offs skip a contested disengagement; Stand can hold a marshal in a battle with nobody in the line; cavalry still deploying can pursue.
+- **The engineering contracts largely hold.** Conservation, exact resumption (26 next-state hashes and logs matched after JSON round trips) and the simultaneous sector calculation were confirmed; a balanced ledger can still book a casualty at the wrong time or from an ineligible force.
+- **The experiments show differences among the tested policies, not whether a player can see and use them.** F3 is dominated by ties; the adjusted F4 split rests on a noise assumption.
+- **Historically,** the Prudichevo crossing is supported but its geometry compressed; the Nafziger returns are accessible; H-020 mixes scopes.
+- **Next:** set the retreat contract first, then the boundary tests and paired campaigns with lethality held fixed, then a playtest with a specific question, and M2 art only where the geography is settled.
+
+**Our assessment:** accurate. We reproduced each P1 finding with the reviewer's numbers:
+1. Seed and dice 13, the pinning attack: forward ends in Repulse, hold in Limited Success. At the forward run's nightfall on turn 8, Davout's retreat from Smolensk's north bank is Porechye, where a depot was founded on turn 6; with that depot removed it is the Old Town.
+2. The test ground at B with B–C a ford: the French exit is open, the Russian contested. Both break off: both leave at once, no sector is fought, no ammunition is spent, and the round still counts.
+3. The French standing at cohesion 900 with every sector lost and all troops in reserve: four rounds with no loss and no change of control; the marshal stays at every nightfall.
+4. A reinforcement's cavalry in the reserve, eligible now or only from the next sub-step: pursuit takes 800 men either way.
+
+The other engine claims are confirmed in the code (one exit class pricing every corps' own road; the four-day window and the losses after the cut keyed by a battle's start). The stale "sector battles not built" line in the review brief was already corrected locally.
+
+## The five main findings
+
+| Finding | Evidence | Reviewer's suggested fix | Status |
+|---|---|---|---|
+| 1. P1. A forward depot silently redirects a retreat away from key ground: a logistical improvement can change the campaign verdict through automatic route choice | `battle.ts` `retreatNodeFor` (nearest own depot) and `leaveField`; seed 13 as above | Decide what a retreat should weigh (the corps' prior line, cohesion with friendly forces, the mission it covered). If the nearest-depot rule stays, show the destination as a consequence of founding a depot. Add the seed-13 replay and a fixture with equally accessible, operationally different exits | **Fixed in rules 0.18.0 (D-046).** You chose "along its line", and, after we measured three readings of it, the base line: an attacker goes back the way it came; otherwise a side falls back towards its base (the Moscow road for the Russians, the starting depots for the French), else towards its own troops, else a depot; one road for the whole side, fixed before anyone moves. Seed 13 is a regression test: with or without the Porechye depot, Davout falls back the same way |
+| 2. P1. Two break-offs bypass a contested disengagement | `resolveRound` leaves at once when any break-off side has an open or blocked exit; architecture §3.4b D | Resolve the mixed case explicitly (write the exception, or keep the contested phase against what still threatens); a matrix of open, contested and blocked exits with two departures, both orders of sides | **Fixed in rules 0.18.0 (D-046).** You chose "both leave at once", each at its own exit's cost; a single contested break-off still fights its round. The four combinations of open and contested exits are tested |
+| 3. P1. Stand can keep a marshal in a battle with nobody left in the line | `ai.ts` commits the reserve only to a sector one step short of loss; under Stand it never breaks off above cohesion 300 | Define standing with an empty line: a viable reserve counter-attack, or a way to concede the field; a way for a blocked marshal to resolve a lost position; a fixture one step before complete loss | **Fixed in rules 0.18.0 (D-046).** With nobody in the line, the reserve counter-attacks where the ground is least lost; the case from the finding now changes control within four rounds |
+| 4. P1. Cavalry can pursue before its deployment delay expires | `pursue` uses every force on the side; sector combat and the reserve check `fightsFrom` | Use the same eligibility for pursuit; decide separately whether still-deploying cavalry can screen; test the slot before, the first eligible slot and night | **Fixed in rules 0.18.0 (D-046).** Only deployed cavalry pursues or screens; tested with the delay at 0 and at 1 |
+| 5. P2. F3 is dominated by ties, and the adjusted F4 split rests on a noise assumption | `batch.test.ts` F3 and F4; in the stand report a tie on one or both sides in 95.8% of seeds, the 97.6% agreement applying to 42 seeds; the adjustment pools within-cell variance while rollout seeds are shared across strategies | Put unique winners, ties and regret beside F3; call raw F4 descriptive and adjusted F4 model-dependent; validate the adjustment, or estimate noise from paired contrasts | **Confirmed in the code, open** |
+
+## Browser campaign and interface
+
+The reviewer drove the React interface in Chromium at 1440 × 1000 on seed 1812, with no page or console errors. An advance on Smolensk with the Guard standing, its first deployment moved, the first round held, then delegated, ended in Limited Success (battles at Rudnia and Smolensk, 10 rounds, three player decisions; 2.5 food days in hand, two groups failing the individual supply test). A first-turn halt ended in Precarious Halt (the Russians attacked at Liozno). The route and the individual supply warnings were the clearest parts of the prototype.
+
+| Finding | Reviewer's suggested change | Status |
+|---|---|---|
+| P2. Stand's preview describes one group's order as a side-wide result: the rule needs a strict majority of the men in the battle and still allows withdrawal below 300 (day) and 400 (night); Stand can accompany a route though the preview says the group holds the place | "Marches as ordered. In battle, the marshal holds longer if most of the army there is under Stand orders." Show on the field whether the majority is active; test minority, exactly half, majority | **Confirmed, open** |
+| P2. Compare omits the verdict; the Russian loss denominators differ between views; truncation in the evaluator and rounding in Compare differ by 0.1 point | Store the ending and a few criterion flags (key ground, the first failing supply test); named denominators; consistent rounding; Russian figures hidden for unfinished runs | **Confirmed, open** |
+| P3. Deployment choices do not update the sector totals before commitment; the position-loss warning reads an event latch and always says "two sectors" | Preview pending placements, or label the field "Staff proposal"; live counts from the tracks | **Confirmed, open** |
+
+## Engine contracts and residual risks
+
+- **Conservation and the build:** the suite (211 passing), typecheck and build pass; reduced batch and supply runs had no invariant violation in 5,120 campaigns.
+- **Exact resumption:** confirmed over a whole forward pinning campaign (ten order pauses, three deployments, twelve rounds, one nightfall). Browser saves remain outside this check.
+- **Simultaneity and hidden choices:** substantially supported. Exit and deployment boundaries sit outside ordinary sector resolution and need their own tests.
+- **Fixed in rules 0.18.0 (D-046): one side's exit class priced several routes** (confirmed in the code, campaign effect unmeasured): the lead corps' road sets the class, while each corps that marched in falls back its own way at the lead corps' rearguard rate. Specify a shared exit, or a class, path and cost per corps; freeze destinations before positions change in a two-sided departure. *Now a shared exit: every corps takes the side's one road, fixed for both sides before either moves.*
+- **Fixed in rules 0.18.0 (D-046): the four-day window used battle start dates** (the second review's D4, more relevant now that Stand lengthens battles): all a battle's losses fall on its first day, and a battle that starts before the cut is left out of the losses after it. A casualty timeline keyed by sub-step could serve both. *Now built: `lossesAt` by sub-step, read by both, with an invariant that it adds up to the losses by force.*
+- **Found while measuring the fixes (rules 0.18.0, D-046): two armies leaving down one road.** Under the base line, before these fixes, rush seed 498 roll 1, both sides broke off at Smolensk's north bank and both fell back to Rudnia, and the Russian columns passed the Guard on the road. Two faults met. When both sides left at once, nothing kept them off the same road; *now the side going back the way it came keeps it (the attacker, if both or neither do), and the other takes its next road while it has one, at that road's cost.* And a column closed up behind one enemy column was led past a slower one that its leader overtook (D-038); *now it closes up behind the slower one.* Both have regression tests.
+- **"Trapped" coverage may mislead:** with every exit blocked the marshal stays until it breaks, so an encirclement still needs the enemy to lose enough cohesion. Report exposure to a blocked state apart from a terminal trap.
+
+## The pinning and depot puzzle
+
+The reviewer's paired check (100 seeds) and the committed stand report agree: forward is never better, hold better in 18–22.5% of seeds, with Limited Success 80% against 98%. Seed 13 isolates one mechanism (finding 1). Suggested next measurement: log, for every paired reversal, depot additions, the first different movement, and whether a withdrawal took a different destination or exit class; then rerun with the same retreat policy in both arms.
+
+## Bot competence and experiment method
+
+| Diagnostic | Reviewer's reading | Suggested change |
+|---|---|---|
+| F1, F2 | zero Decisive Success among the three canonical bots excludes deliberate variants (the Guard at the base reached 4.8%) | report canonical policies, variants and held-out selection apart; report which mechanisms each candidate reached and the fresh-roll success rate once there |
+| F3 | fractional credit for ties is a valid summary, but cannot tell a player which route helps | outright-best, shared-best and joint-last rates, plus regret on fresh rolls; the criteria within ties |
+| F4 | committed split 22.1% strategy, 6.3% scenario, 48.0% interaction, 23.6% dice; adjusted 22.1 / 5.4 / 37.1 / 35.4; spread ranks move strategy to 14.2% | keep the scenario bootstrap and common random numbers; validate the adjustment under known covariance, or use an independently seeded decomposition |
+| F5, F6 | useful controls; zero decisive wins in random play is weak evidence when purposeful policies are also at zero | F5 as an outcome-rule regression over varied halts; plausible novice controls (default orders, an obvious advance, a competent policy with scrambled battle choices) |
+
+The adaptive selector gains +0.01 ranks; the scenario oracle 0.16 and the same-roll oracle 0.54 are benchmarks with privileged information, not ceilings on what a player can learn. A useful extension: a few observable later-turn decisions (waiting for a delivery, reinforcing a threatened block) on held-out scenarios and rolls.
+
+**The pinning bot needs a stronger competence check.** Its "closable" test passes when one corps can reach several exits, and its greedy assignment can miss a feasible pairing; it reserves nobody for the strike. Suggested: a small assignment search with distinct blockers, a real striker, travel time and a hold-until condition, and counts of games reaching each stage (plan feasible, blockers in place together, target still there, striker arrives, withdrawal attempted, exit blocked then).
+
+## Historical audit
+
+| Claim | Reviewer's evidence | Suggested change | Status |
+|---|---|---|---|
+| H-022 supports the route but compresses its geometry | Foord ch. V, pp. 131 and 148: the ford about six miles out, the junction about two miles west of Lubino, Eblé's bridge on 19 August. The game joins the Old Town to Valutino directly, usable throughout | paint the ford and junction as approximate; test a junction west of Lubino and a ford usable only after bridging against the present edge; keep it provisional until a period map or another account confirms it | open |
+| The Nafziger returns are accessible | 812HAB and 812HDA, dated 1 and 15 August; e.g. four Old Guard horse batteries of six pieces, beside regimental and headquarters pieces listed apart | a crosswalk from each game group to its formations, date, attachments and strength basis; regimental, field and park guns apart; Russian composition kept separate | open |
+| H-020 mixes scopes and leans on a tertiary chain | Foord p. 131: Raievski just under 13,000 with 72 guns, against roughly 30,000 Russians engaged at Smolensk in the larger battle | cite source and page for each numerator and denominator; Borodino stays the test of a bloodied army retiring in order; test a local rearguard action and a closed exit separately | open |
+
+The reviewer judged the provenance gate in RIGHTS_AND_LEGAL and the split between candidate and committed art fit for M2, without checking Canva's terms or clearing rights itself.
+
+## The reviewer's recommended next phase
+
+1. Set the retreat contract before building map affordances on it: who picks the fallback place, whether all corps share it, and what happens when both sides break off with different exit classes. Keep seed 13 as a regression case.
+2. Add tests for Stand with only a reserve, blocked positions and cavalry eligible exactly at departure; run the same paired campaigns before and after, with exits, destinations and outcomes reported, holding lethality and the decisive-defeat thresholds fixed.
+3. Make the next playtest answer a specific question: can a player predict which corps will stand or retreat, what a retreat does to the block, and why holding a place yields Limited Success? Show the verdict in Compare; record elapsed time and the decisions the player can explain.
+4. Start the M2 visual exploration where the geography is settled; keep the crossing, retreat arrows and Stand indicators provisional until engine and panel agree.
+
+## Verification and reproduction (the reviewer's)
+
+Node.js 22 or later (the reviewer used 24): `npm ci --ignore-scripts --no-audit --no-fund`, `npm test`, `npm run typecheck`, `npm run build`, then `BALANCE=1 BALANCE_SEEDS=60 BALANCE_DICE=3 npx vitest run tests/balance/batch.test.ts --silent=false` and `BALANCE=1 BALANCE_SEEDS=100 npx vitest run tests/balance/supply-stance.test.ts --silent=false`. Its fixtures called the battle resolver directly through Vite's TypeScript loader; its campaign probes used the repository's driver and `advance`. We reproduced the P1 findings with our own probe rather than its script.

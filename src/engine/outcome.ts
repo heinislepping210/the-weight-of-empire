@@ -6,7 +6,7 @@
 import { takenUp, usableWagons, withinCapacity } from './carriage';
 import { neighboursOf, roadDistance, shortestPath } from './graph';
 import type { Context } from './scenario';
-import { dayIndex, slotIndex } from './time';
+import { slotIndex } from './time';
 import type { Convoy, Force, GameState, NodeId, Side } from './types';
 import { enemyPresent, sortedValues } from './util';
 
@@ -114,10 +114,18 @@ export function evaluate(start: GameState, end: GameState, ctx: Context): Outcom
   // Decisively defeated: losses in battles the French won and in which the Russians broke, killed, wounded
   // and taken, counted over at most a few days — never sickness or straggling, never the campaign's attrition
   // as a whole, and never an orderly withdrawal however costly, as at Borodino (§2.13, D-037).
-  const won = sortedValues(end.battles)
-    .filter((b) => b.winner === 'fr' && b.routed.includes('ru') && b.sides.ru.some((id) => mainIds.includes(id)))
-    .map((b) => ({ day: dayIndex(b.startsAt), lost: mainIds.reduce((n, id) => n + (b.losses[id] ?? 0), 0) }));
-  const worstWindow = won.reduce((best, w) => Math.max(best, won.filter((x) => x.day >= w.day && x.day < w.day + r.decisiveWindowDays).reduce((n, x) => n + x.lost, 0)), 0);
+  // The losses count on the day they fell, not the day a battle began (second review, D4; third review).
+  const mainLost = (byForce: Record<string, number>) => mainIds.reduce((n, id) => n + (byForce[id] ?? 0), 0);
+  const lostOnDay = new Map<number, number>();
+  for (const b of sortedValues(end.battles)) {
+    if (b.winner !== 'fr' || !b.routed.includes('ru') || !b.sides.ru.some((id) => mainIds.includes(id))) continue;
+    for (const [at, byForce] of Object.entries(b.lossesAt)) {
+      const day = Math.floor(Number(at) / 2);
+      lostOnDay.set(day, (lostOnDay.get(day) ?? 0) + mainLost(byForce));
+    }
+  }
+  const lossDays = [...lostOnDay.keys()].sort((a, b) => a - b);
+  const worstWindow = lossDays.reduce((best, d) => Math.max(best, lossDays.filter((x) => x >= d && x < d + r.decisiveWindowDays).reduce((n, x) => n + (lostOnDay.get(x) ?? 0), 0)), 0);
   const battleLossPermille = mainStart === 0 ? 0 : Math.floor((worstWindow * 1000) / mainStart);
 
   // Cut off: the line of retreat was blocked for long enough at some point. What that earns depends on
@@ -125,7 +133,9 @@ export function evaluate(start: GameState, end: GameState, ctx: Context): Outcom
   const cutAt = end.cutOff.achievedAt;
   const roadCut = cutAt !== null;
   const stillCutOff = roadCut && lineOfRetreatBlocked(end, ctx, mainIds);
-  const lostSinceCut = cutAt === null ? 0 : sortedValues(end.battles).filter((b) => slotIndex(b.startsAt) >= slotIndex(cutAt)).reduce((n, b) => n + mainIds.reduce((m, id) => m + (b.losses[id] ?? 0), 0), 0);
+  // Every battle's losses from the sub-step of the cut on, a battle begun before it included.
+  const lostSinceCut =
+    cutAt === null ? 0 : sortedValues(end.battles).reduce((n, b) => n + Object.entries(b.lossesAt).filter(([at]) => Number(at) >= slotIndex(cutAt)).reduce((m, [, byForce]) => m + mainLost(byForce), 0), 0);
   const lostSinceCutPermille = mainStart === 0 ? 0 : Math.floor((lostSinceCut * 1000) / mainStart);
   const costlyEscape = roadCut && !stillCutOff && lostSinceCutPermille >= r.damagedLossPermille;
   const cutOff = r.cutOffCredit === 'stands' ? roadCut : stillCutOff;

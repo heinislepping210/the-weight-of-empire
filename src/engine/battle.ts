@@ -3,7 +3,7 @@
 // escape graded by the operational situation. The contracts are in TECHNICAL_ARCHITECTURE §3.4b; the
 // values in `rules.battle` are placeholders (G-006, G-022).
 
-import { edgeBetween, neighboursOf, roadDistance } from './graph';
+import { edgeBetween, neighboursOf, pathMetres, roadDistance, shortestPath } from './graph';
 import type { Rules } from './rules';
 import { chance, drawBetween } from './rng';
 import type { Context } from './scenario';
@@ -166,32 +166,78 @@ export function oncoming(s: GameState, side: Side, edgeId: string, node: NodeId)
 }
 
 /**
- * The neighbouring place, free of the enemy, that lies nearest to one of the side's own depots: beaten
- * forces fall back towards home. A road with an enemy column coming the other way is no line of retreat.
- * A force that marched into the place falls back the way it came (`back`) if that road is open, never on
- * through the enemy it attacked (D-042).
+ * How a side's road out was chosen: the way its attacking main body came, towards its base, towards its own troops,
+ * or towards a depot.
  */
-export function retreatNodeFor(s: GameState, ctx: Context, node: NodeId, side: Side, back: NodeId | null = null): NodeId | null {
-  const options = neighboursOf(ctx.graph, node)
-    .filter((n) => !enemyPresent(s, side, n.node) && !oncoming(s, side, n.edge.id, node))
-    .map((n) => n.node);
-  if (back !== null && options.includes(back)) return back;
-  const homes = sortedValues(s.depots)
-    .filter((d) => d.side === side)
-    .map((d) => d.node);
-  let best: NodeId | null = null;
-  let bestDistance = Infinity;
-  for (const option of options) {
-    const distance = homes.length === 0 ? 0 : Math.min(...homes.map((h) => roadDistance(ctx.graph, option, h)));
-    if (best === null || distance < bestDistance) {
-      best = option;
-      bestDistance = distance;
-    }
-  }
-  return best;
+export type RetreatBasis = 'line' | 'base' | 'own' | 'depot';
+
+/**
+ * Where a side's line of communications runs back to (your decision on the third review): for the Russians the ends
+ * of their line of retreat (`exitPlaces`); for the French, and for a side without such places, the depots it started
+ * with. A depot founded during the campaign is not a base.
+ */
+function basesOf(ctx: Context, side: Side): NodeId[] {
+  const exits = side === 'ru' ? (ctx.scenario.exitPlaces ?? []) : [];
+  return exits.length > 0 ? [...exits] : ctx.scenario.depots.filter((d) => d.side === side).map((d) => d.node);
 }
 
-const retreatOf = (s: GameState, ctx: Context, b: BattleState, f: Force) => retreatNodeFor(s, ctx, b.node, f.side, f.side === b.attacker ? f.cameFrom : null);
+/**
+ * Where a side under pressure falls back from `node`, all together, along its line (third review, your decisions;
+ * TECHNICAL_ARCHITECTURE §3.4b D). The roads out are those free of the enemy and of enemy columns coming the other
+ * way. An attacker goes back by the road its main body (`attacker`) came, if that is open (D-042); a defender
+ * passes null. Otherwise the side takes the road towards its base (`basesOf`), by roads that do not go back
+ * through `node`; failing that, towards the nearest place its own troops hold; failing that, towards its nearest
+ * depot. Neither a depot founded on the way nor a detachment standing off the line pulls it away. Null when no
+ * road is open. `avoid` is a place it may not fall back to: the enemy's own road out, when both sides leave at
+ * once (`departureRoads`).
+ */
+export function lineOfRetreat(s: GameState, ctx: Context, node: NodeId, side: Side, attacker: Force | null, avoid: NodeId | null = null): { to: NodeId; basis: RetreatBasis } | null {
+  const options = neighboursOf(ctx.graph, node)
+    .filter((n) => n.node !== avoid && !enemyPresent(s, side, n.node) && !oncoming(s, side, n.edge.id, node))
+    .map((n) => n.node)
+    .sort();
+  if (options.length === 0) return null;
+  if (attacker?.cameFrom && options.includes(attacker.cameFrom)) return { to: attacker.cameFrom, basis: 'line' };
+  const around = (from: NodeId, to: NodeId) => {
+    const path = from === to ? [] : shortestPath(ctx.graph, from, to, new Set([node]));
+    return path === null ? Infinity : pathMetres(ctx.graph, from, path);
+  };
+  const nearest = (places: NodeId[]) => {
+    let best: { to: NodeId; metres: number } | null = null;
+    for (const option of options) {
+      const metres = Math.min(...places.map((p) => around(option, p)));
+      if (Number.isFinite(metres) && (best === null || metres < best.metres)) best = { to: option, metres };
+    }
+    return best?.to ?? null;
+  };
+  const towardsBase = nearest(basesOf(ctx, side));
+  if (towardsBase !== null) return { to: towardsBase, basis: 'base' };
+  const held = [...new Set(sortedValues(s.forces).filter((f) => f.side === side && f.men > 0 && f.transit === null && f.at !== node).map((f) => f.at))];
+  const towardsOwn = held.length > 0 ? nearest(held) : null;
+  if (towardsOwn !== null) return { to: towardsOwn, basis: 'own' };
+  const depots = sortedValues(s.depots).filter((d) => d.side === side).map((d) => d.node);
+  return { to: (depots.length > 0 ? nearest(depots) : null) ?? (options[0] as NodeId), basis: 'depot' };
+}
+
+/** The side's road out of a battle, taken by every corps of the side: the attacker's main body's way back, or the defender's line. */
+export const retreatOfSide = (s: GameState, ctx: Context, b: BattleState, side: Side, avoid: NodeId | null = null) =>
+  lineOfRetreat(s, ctx, b.node, side, side === b.attacker ? mainBody(s, b, side) : null, avoid);
+
+/**
+ * Each departing side's road, fixed before either moves (third review). When both leave at once, the attacker keeps
+ * its road, most often the way it came; the defender does not take the same road while it has another, so the two
+ * do not march off down one road together. `aside` is the side turned off it.
+ */
+function departureRoads(s: GameState, ctx: Context, b: BattleState, sides: Side[]): { roads: Map<Side, ReturnType<typeof lineOfRetreat>>; aside: Side | null } {
+  const roads = new Map(sides.map((side) => [side, retreatOfSide(s, ctx, b, side)] as const));
+  const defender = otherSide(b.attacker);
+  const taken = roads.get(b.attacker)?.to ?? null;
+  if (sides.length < 2 || taken === null || roads.get(defender)?.to !== taken) return { roads, aside: null };
+  const other = retreatOfSide(s, ctx, b, defender, taken);
+  if (other === null) return { roads, aside: null };
+  roads.set(defender, other);
+  return { roads, aside: defender };
+}
 
 /** The side's largest force in the battle: its line of retreat is the side's. */
 function mainBody(s: GameState, b: BattleState, side: Side): Force | null {
@@ -202,10 +248,9 @@ function mainBody(s: GameState, b: BattleState, side: Side): Force | null {
  * How the side can leave the field (contract D). Blocked: no neighbouring place free of the enemy. Contested:
  * its retreat road crosses a river, an enemy force stands within `contestMetres` of the retreat place or marches
  * towards it, or an enemy in this battle came along that road. Open otherwise. Political pressure plays no part.
+ * `dest` is the road it takes, its line of retreat unless both sides leave at once (`departureRoads`).
  */
-export function exitStateFor(s: GameState, ctx: Context, b: BattleState, side: Side): ExitState {
-  const lead = mainBody(s, b, side);
-  const dest = lead ? retreatOf(s, ctx, b, lead) : null;
+export function exitStateFor(s: GameState, ctx: Context, b: BattleState, side: Side, dest: NodeId | null = retreatOfSide(s, ctx, b, side)?.to ?? null): ExitState {
   if (dest === null) return 'blocked';
   if (must(edgeBetween(ctx.graph, b.node, dest), `road ${b.node}–${dest}`).crossing !== null) return 'contested';
   const enemy = otherSide(side);
@@ -389,9 +434,16 @@ function casualties(s: GameState, ctx: Context, b: BattleState, sectors: Record<
   return out;
 }
 
-/** Men lost in this battle are recorded per force: the outcome counts battle losses, not sickness (§2.13). */
-function recordLoss(b: BattleState, f: Force, lost: number): void {
-  if (lost > 0) b.losses[f.id] = (b.losses[f.id] ?? 0) + lost;
+/**
+ * Men lost in this battle are recorded per force, and by the sub-step they fell in: the outcome counts battle
+ * losses, not sickness, over days of fighting, not from the day a battle began (§2.13; second review, D4).
+ */
+function recordLoss(s: GameState, b: BattleState, f: Force, lost: number): void {
+  if (lost <= 0) return;
+  b.losses[f.id] = (b.losses[f.id] ?? 0) + lost;
+  const at = String(slotIndex(s.resolution));
+  const slot = (b.lossesAt[at] ??= {});
+  slot[f.id] = (slot[f.id] ?? 0) + lost;
 }
 
 const shake = (f: Force, lost: number, before: number, rules: Rules) => {
@@ -415,7 +467,7 @@ function applyCasualties(s: GameState, ctx: Context, b: BattleState, sec: Sector
     f.horses -= horses;
     s.ledger.menLost.battle += inf + cav;
     s.ledger.horsesLost += horses;
-    recordLoss(b, f, inf + cav);
+    recordLoss(s, b, f, inf + cav);
     lostBy.set(f.id, (lostBy.get(f.id) ?? 0) + inf + cav);
   });
 }
@@ -436,9 +488,10 @@ export function resolveRound(s: GameState, ctx: Context, b: BattleState, decisio
 
   // Breaking off: with an open or blocked exit at once, with a contested one after a round of falling back (D).
   const exits = { fr: exitStateFor(s, ctx, b, 'fr'), ru: exitStateFor(s, ctx, b, 'ru') };
+  // When both sides break off, neither presses the other: both leave at once, each at its own road's cost (D-046).
   const breaking = SIDES.filter((side) => decisions[side].kind === 'breakOff');
-  const leavingNow = breaking.filter((side) => exits[side] !== 'contested');
-  if (leavingNow.length > 0) return endWith(s, ctx, b, breaking.map((side) => ({ side, how: 'withdrew' as const })), exits, false, log);
+  const leavingNow = breaking.length === 2 || breaking.some((side) => exits[side] !== 'contested');
+  if (leavingNow) return endWith(s, ctx, b, breaking.map((side) => ({ side, how: 'withdrew' as const })), exits, false, log);
   b.field.charging = { fr: null, ru: null };
   for (const side of SIDES) if (!breaking.includes(side)) applyKey(s, b, side, decisions[side], now);
   b.field.flank = { fr: flankOf(s, b, 'fr', now), ru: flankOf(s, b, 'ru', now) };
@@ -541,15 +594,15 @@ function abandonGuns(s: GameState, f: Force, permille: number): void {
 }
 
 /** A side leaves the field: in order with a rearguard, routed, or trapped where no road is open (contracts C, D). */
-function leaveField(s: GameState, ctx: Context, b: BattleState, side: Side, how: 'withdrew' | 'routed', exit: ExitState, night: boolean, log: LogEntry[]): Force[] {
+function leaveField(s: GameState, ctx: Context, b: BattleState, side: Side, how: 'withdrew' | 'routed', exit: ExitState, dest: NodeId | null, night: boolean, log: LogEntry[]): Force[] {
   const r = ctx.rules.battle;
   const gone: Force[] = [];
   let trapped = false;
+  // Every corps of the side takes the one road out, at that road's cost (contract D).
   for (const f of sideForces(s, b, side)) {
-    const dest = retreatOf(s, ctx, b, f);
     if (dest === null) {
       trapped = true;
-      recordLoss(b, f, loseMen(s, f, Math.floor((f.men * r.trappedLossPermille) / 1000), 'battle'));
+      recordLoss(s, b, f, loseMen(s, f, Math.floor((f.men * r.trappedLossPermille) / 1000), 'battle'));
       abandonGuns(s, f, 1000);
       note(s, log, 'trapped', { force: f.id, node: b.node });
       continue;
@@ -557,7 +610,7 @@ function leaveField(s: GameState, ctx: Context, b: BattleState, side: Side, how:
     if (how === 'routed') abandonGuns(s, f, r.routGunsAbandonedPermille);
     else {
       const rate = Math.floor((r.rearguardPermille[exit === 'contested' ? 'contested' : 'open'] * (night ? r.nightWithdrawalPermille : 1000)) / 1000);
-      recordLoss(b, f, loseMen(s, f, Math.floor((f.men * rate) / 1000), 'withdrawal'));
+      recordLoss(s, b, f, loseMen(s, f, Math.floor((f.men * rate) / 1000), 'withdrawal'));
     }
     fallBack(s, ctx, f, dest);
     gone.push(f);
@@ -582,8 +635,11 @@ function pursue(s: GameState, ctx: Context, b: BattleState, by: Side, side: Side
   const fresh = (f: Force) => Math.floor((Math.floor((effectiveCavalry(f, ctx.rules) * fatiguePermille(f.fatigue, ctx.rules)) / 1000) * f.cohesion) / 1000);
   // Cavalry kept to screen pursues less, and covers its own side's withdrawal better (§2.10).
   const task = (who: Side, screening: number) => (b.field.cavalryTask[who] === 'screen' ? screening : 1000);
-  const power = Math.floor((sideForces(s, b, by).reduce((n, f) => n + fresh(f), 0) * task(by, r.screeningPursuitPermille)) / 1000);
-  const cover = Math.floor((gone.reduce((n, f) => n + fresh(f), 0) * task(side, r.screeningCoverPermille)) / 1000);
+  // Only cavalry that has deployed pursues, or screens (contract B; third review).
+  const now = slotIndex(s.resolution);
+  const deployed = (f: Force) => (b.fightsFrom[f.id] ?? 0) <= now;
+  const power = Math.floor((activeForces(s, b, by, now).reduce((n, f) => n + fresh(f), 0) * task(by, r.screeningPursuitPermille)) / 1000);
+  const cover = Math.floor((gone.filter(deployed).reduce((n, f) => n + fresh(f), 0) * task(side, r.screeningCoverPermille)) / 1000);
   const screen = routed ? 0 : Math.floor((cover * r.screenPermille[exit === 'contested' ? 'contested' : 'open']) / 1000);
   const men = gone.reduce((n, f) => n + f.men, 0);
   const raw = Math.floor((Math.max(0, power - screen) * (routed ? r.routPursuitPermille : r.pursuitPermille)) / 1000);
@@ -592,7 +648,7 @@ function pursue(s: GameState, ctx: Context, b: BattleState, by: Side, side: Side
   gone.forEach((f, k) => {
     const before = f.men;
     const lost = loseMen(s, f, shares[k] as number, 'battle');
-    recordLoss(b, f, lost);
+    recordLoss(s, b, f, lost);
     shake(f, lost, before, ctx.rules);
   });
   note(s, log, 'pursuit', { battle: b.id, side, by, men: total });
@@ -606,14 +662,20 @@ function pursue(s: GameState, ctx: Context, b: BattleState, by: Side, side: Side
 
 function endWith(s: GameState, ctx: Context, b: BattleState, departures: { side: Side; how: 'withdrew' | 'routed' }[], exits: Record<Side, ExitState>, night: boolean, log: LogEntry[]): void {
   const stays = SIDES.filter((side) => !departures.some((d) => d.side === side));
-  const gone = new Map(departures.map((d) => [d.side, leaveField(s, ctx, b, d.side, d.how, exits[d.side], night, log)] as const));
+  // Each side's road is fixed before either moves; a side turned aside pays the cost of the road it takes.
+  const { roads, aside } = departureRoads(s, ctx, b, departures.map((d) => d.side));
+  const exit = { ...exits };
+  if (aside !== null) exit[aside] = exitStateFor(s, ctx, b, aside, roads.get(aside)?.to ?? null);
+  const gone = new Map(departures.map((d) => [d.side, leaveField(s, ctx, b, d.side, d.how, exit[d.side], roads.get(d.side)?.to ?? null, night, log)] as const));
   const winner = stays.length === 1 ? (stays[0] as Side) : null;
   if (winner !== null && !night && !b.field.pursued) {
     const d = departures[0] as { side: Side; how: 'withdrew' | 'routed' };
-    pursue(s, ctx, b, winner, d.side, d.how === 'routed', exits[d.side], gone.get(d.side) ?? [], log);
+    pursue(s, ctx, b, winner, d.side, d.how === 'routed', exit[d.side], gone.get(d.side) ?? [], log);
   }
   // Recorded after the pursuit, which can turn a withdrawal into a rout (contract C).
-  for (const d of departures) note(s, log, 'fieldResult', { battle: b.id, side: d.side, result: b.field.result[d.side], exit: exits[d.side] });
+  for (const d of departures) {
+    note(s, log, 'fieldResult', { battle: b.id, side: d.side, result: b.field.result[d.side], exit: exit[d.side], to: roads.get(d.side)?.to ?? null, basis: roads.get(d.side)?.basis ?? null, ...(d.side === aside ? { aside: true } : {}) });
+  }
   endBattle(s, b, winner, log);
 }
 

@@ -140,6 +140,35 @@ describe('two columns heading the same way on one road', () => {
   });
 });
 
+describe('a column closed up behind one enemy column, with another ahead of it', () => {
+  // Third review, measuring the retreat rule: Russians closed up behind a fast French corps followed it past a
+  // slower French corps it overtook. Both French corps are on the road before the Russians, so neither is passed.
+  it('when the column it follows overtakes a slower enemy column, the follower is held behind that one', () => {
+    const ctx = createContext(
+      testGround((d) => {
+        d.forces = d.forces.filter((f) => f.id !== 'ru-post');
+        d.convoys = [];
+      }),
+      RULES,
+      { russianCommand: (s: GameState) => void Object.assign(s.forces['ru-main']!, { route: ['C'], pace: 'forced' }) },
+    );
+    const start = newGame(ctx, 3);
+    start.roadSeq = 3;
+    // The slow corps, worn out, 4.3 km ahead, so the fresh corps overtakes it in the last hour; the fresh corps and then the Russians at the start of the road.
+    Object.assign(start.forces['fr-flank']!, { at: 'B', fatigue: 1_000, transit: { edge: 'B-C', to: 'C', metres: 4_300, seq: 0 } });
+    Object.assign(start.forces['fr-main']!, { fatigue: 0, transit: { edge: 'B-C', to: 'C', metres: 0, seq: 1 } });
+    Object.assign(start.forces['ru-main']!, { at: 'B', fatigue: 0, transit: { edge: 'B-C', to: 'C', metres: 0, seq: 2 } });
+    const orders = (['fr-main', 'fr-flank'] as const).map((force) => ({ force, route: ['C'], pace: 'steady' as Pace }));
+    const r = submit(start, { kind: 'orders', turn: 1, orders }, ctx);
+    if (!r.ok) throw new Error(r.reason);
+    const s = stepUntil(r.state, ctx, (x) => x.resolution.stage === 'contacts' && x.resolution.slot === 0);
+    const [slow, fast, ru] = (['fr-flank', 'fr-main', 'ru-main'] as const).map((id) => s.forces[id]!.transit!.metres);
+    expect(fast).toBeGreaterThan(slow!); // the French corps pass each other freely…
+    expect(ru).toBe(slow); // …and the Russians close up behind the slower one
+    expect(contactViolations(s)).toEqual([]);
+  });
+});
+
 describe('the road-order invariant', () => {
   it('flags a column that set out later yet stands further along than an enemy column on the same road', () => {
     const ctx = createContext(ground(NAMINGS[0]));

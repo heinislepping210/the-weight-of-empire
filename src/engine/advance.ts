@@ -7,7 +7,7 @@
 import { decideNightfall, decideRound, deploymentFor } from './ai';
 import { updateIntel } from './intel';
 import { updatePressure } from './russian';
-import { SECTORS, allInReserve, applyPlacements, fallBack, keyFromAction, newField, oncoming, resolveNightfall, resolveRound, retreatNodeFor } from './battle';
+import { SECTORS, allInReserve, applyPlacements, fallBack, keyFromAction, lineOfRetreat, newField, oncoming, resolveNightfall, resolveRound } from './battle';
 import { ISSUE_ORDER, capacityGrams, issueTarget, takenUp, usableWagons, weightGrams, withinCapacity } from './carriage';
 import { lineOfRetreatBlocked } from './outcome';
 import { edgeBetween, neighboursOf, roadDistance, shortestPath, type EdgeDef } from './graph';
@@ -613,7 +613,8 @@ interface March {
  * Each force moves at a steady speed set by its hourly share and the road, so its arrivals at places and its
  * settings-out happen at definite moments. At each moment every arrival is placed before anyone sets out
  * again, so forces reaching a place together meet there. A column that catches up with an enemy column
- * ahead of it closes up and follows at its pace, and reaches the next place just after it. Nothing depends on
+ * ahead of it closes up and follows at its pace, and reaches the next place just after it; it is never led
+ * past a slower enemy column that the one it follows overtakes. Nothing depends on
  * the order of the forces' names, except between forces of one side, which do not block each other.
  */
 export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: number[], hour: number, log: LogEntry[]): void {
@@ -655,9 +656,22 @@ export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: n
     if (!r || r.done || !f.transit) return 0;
     return r.behind && sameRoad(f, r.behind) ? Math.min(r.rate, rateOf(r.behind)) : r.rate;
   };
-  /** The nearest enemy column ahead on the same road, going the same way. */
+  /** The nearest enemy column ahead on the same road, going the same way; of two level with each other, the slower. */
   const aheadOf = (f: Force, t: number): Force | null =>
-    enemiesAhead(f).reduce<Force | null>((best, e) => (best === null || pos(e, t) < pos(best, t) ? e : best), null);
+    enemiesAhead(f).reduce<Force | null>((best, e) => (best === null || pos(e, t) < pos(best, t) || (pos(e, t) === pos(best, t) && rateOf(e) < rateOf(best)) ? e : best), null);
+  /**
+   * The moment the column a follower is closed up behind draws level with a slower enemy column further ahead:
+   * from then on that slower column holds the follower up (third review).
+   */
+  const drawsLevel = (f: Force, lead: Force, now: number): number => {
+    const [at, pace] = [pos(lead, now), rateOf(lead)];
+    let t = Infinity;
+    for (const e of enemiesAhead(f)) {
+      const gap = pos(e, now) - at;
+      if (e !== lead && rateOf(e) < pace && gap >= 0) t = Math.min(t, now + Math.ceil((gap * PER_HOUR) / (pace - rateOf(e))));
+    }
+    return t;
+  };
 
   /** The moment of a force's next event, or Infinity: setting out, reaching the end of its road, or closing up. */
   const nextEvent = (r: March, now: number): number => {
@@ -667,9 +681,9 @@ export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: n
     if (r.behind) {
       const lead = r.behind;
       // Still on this road ahead of it: it follows, unless the column ahead now pulls away faster than it can
-      // march. Once the column ahead has left the road and gone on (or stopped for good), it reaches the end of
-      // the road too, just after it.
-      if (sameRoad(r.f, lead)) return rateOf(lead) > r.rate ? now : Infinity;
+      // march, or draws level with a slower enemy column. Once the column ahead has left the road and gone on
+      // (or stopped for good), it reaches the end of the road too, just after it.
+      if (sameRoad(r.f, lead)) return rateOf(lead) > r.rate ? now : drawsLevel(r.f, lead, now);
       const leadRun = runOf.get(lead.id);
       if (leadRun && !leadRun.done && !lead.transit && leadRun.t0 === now) return Infinity;
       return now;
@@ -692,7 +706,8 @@ export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: n
     const tr = must(f.transit, f.id);
     const here = pos(f, now);
     if (r.behind && sameRoad(f, r.behind)) {
-      // The column ahead pulls away: it goes on at its own pace from where it is.
+      // The column ahead pulls away, or reaches a slower one: it goes on at its own pace from where it is, and
+      // closes up again behind whichever column is now nearest.
       Object.assign(r, { behind: null, t0: now, m0: here });
       tr.metres = here;
       return;
@@ -979,6 +994,7 @@ function resolveEncounter(s: GameState, ctx: Context, enc: Encounter, log: LogEn
     startsAt: nextDaylight(res),
     fightsFrom: {},
     losses: {},
+    lossesAt: {},
     routed: [],
     roundsFought: 0,
     roundsThisSlot: 0,
@@ -1004,7 +1020,8 @@ function tryWithdraw(s: GameState, ctx: Context, node: NodeId, side: Side, ids: 
   const forces = ids.map((id) => must(s.forces[id], id));
   const men = forces.reduce((n, f) => n + f.men, 0);
   const fatigue = Math.floor(forces.reduce((n, f) => n + f.fatigue * f.men, 0) / Math.max(1, men));
-  const dest = retreatNodeFor(s, ctx, node, side);
+  // Along its line, as a defender leaving a battle does (third review).
+  const dest = lineOfRetreat(s, ctx, node, side, null)?.to ?? null;
   const permille = fatigue > e.withdrawMaxFatigue ? 0 : e.withdrawBasePermille - Math.floor(fatigue / 2);
   const res = s.resolution;
   const success = dest !== null && chance(s.dice, ['withdraw', res.turn, res.slot, node], permille);
@@ -1019,19 +1036,18 @@ function tryWithdraw(s: GameState, ctx: Context, node: NodeId, side: Side, ids: 
 
 function minorAction(s: GameState, ctx: Context, node: NodeId, sides: Record<Side, ForceId[]>, men: Record<Side, number>, log: LogEntry[]): void {
   const weaker: Side = men.fr <= men.ru ? 'fr' : 'ru';
-  // A weaker side that marched in falls back the way it came (D-042).
-  const marchedIn = attackerOf(s, node, sides) === weaker;
-  const dests = sides[weaker].map((id) => retreatNodeFor(s, ctx, node, weaker, marchedIn ? must(s.forces[id], id).cameFrom : null));
+  // The weaker side falls back together along its line, as a side leaving a battle does: if it attacked, the way it
+  // came (D-042, third review).
+  const dest = lineOfRetreat(s, ctx, node, weaker, attackerOf(s, node, sides) === weaker ? leadOf(s, sides[weaker]) : null)?.to ?? null;
   const res = s.resolution;
-  sides[weaker].forEach((id, i) => {
+  sides[weaker].forEach((id) => {
     const f = must(s.forces[id], id);
-    const dest = dests[i] ?? null;
     const rate = dest ? ctx.rules.engagement.minorLossPermille : ctx.rules.battle.trappedLossPermille;
     const noise = drawBetween(s.dice, ['minor', res.turn, res.slot, node, id], 500, 1500);
     loseMen(s, f, Math.floor((Math.floor((f.men * rate) / 1000) * noise) / 1000), 'battle');
     if (dest) fallBack(s, ctx, f, dest);
   });
-  note(s, log, 'minorAction', { node, retreated: weaker, to: dests[0] ?? null });
+  note(s, log, 'minorAction', { node, retreated: weaker, to: dest });
 }
 
 // ---------------------------------------------------------------------------------- night

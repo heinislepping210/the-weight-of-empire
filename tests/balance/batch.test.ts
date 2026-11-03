@@ -80,6 +80,8 @@ interface Result {
   /** Sector battles (§3.4b): how each side left the field ('ru:routed'), and by which exit ('ru:contested'). */
   fieldResults: Record<string, number>;
   exits: Record<string, number>;
+  /** Where a side that left the field fell back ('ru:own'): the road it came by, towards its own troops, or towards a depot (D-046). */
+  bases: Record<string, number>;
   positionsLost: { fr: number; ru: number };
   /** Battles in which a Russian main army routed or was trapped. */
   mainBroke: number;
@@ -88,14 +90,20 @@ interface Result {
 }
 
 /** Sector-battle figures for one game (§3.4b), from the battles and the log. */
-function battleFigures(end: GameState, log: LogEntry[], decisive: boolean): Pick<Result, 'fieldResults' | 'exits' | 'positionsLost' | 'mainBroke' | 'decisiveExits'> {
+function battleFigures(end: GameState, log: LogEntry[], decisive: boolean): Pick<Result, 'fieldResults' | 'exits' | 'bases' | 'positionsLost' | 'mainBroke' | 'decisiveExits'> {
   const fieldResults: Record<string, number> = {};
   const exits: Record<string, number> = {};
+  const bases: Record<string, number> = {};
   const positionsLost = { fr: 0, ru: 0 };
   let mainBroke = 0;
   const decisiveExits: string[] = [];
   // Results from the battles themselves, as the evaluator reads them; the exits from the log, where they are recorded.
-  const exitOf = new Map(log.filter((e) => e.kind === 'fieldResult').map((e) => [`${e.detail.battle}:${e.detail.side}`, String(e.detail.exit)] as const));
+  const left = log.filter((e) => e.kind === 'fieldResult');
+  const exitOf = new Map(left.map((e) => [`${e.detail.battle}:${e.detail.side}`, String(e.detail.exit)] as const));
+  for (const e of left) {
+    if (e.detail.basis === null || e.detail.result === 'trapped') continue;
+    for (const key of [String(e.detail.basis), ...(e.detail.aside === true ? ['aside'] : [])]) bases[`${e.detail.side}:${key}`] = (bases[`${e.detail.side}:${key}`] ?? 0) + 1;
+  }
   for (const b of Object.values(end.battles)) {
     for (const side of b.field.positionLost) positionsLost[side]++;
     for (const side of ['fr', 'ru'] as const) {
@@ -110,7 +118,7 @@ function battleFigures(end: GameState, log: LogEntry[], decisive: boolean): Pick
       }
     }
   }
-  return { fieldResults, exits, positionsLost, mainBroke, decisiveExits };
+  return { fieldResults, exits, bases, positionsLost, mainBroke, decisiveExits };
 }
 
 it.skipIf(!enabled)('balance batch', () => {
@@ -231,19 +239,19 @@ it.skipIf(!enabled)('balance batch', () => {
     '',
     '## Sector battles (§2.10; per 100 games)',
     '',
-    'How each side left the field, and by which road (TECHNICAL_ARCHITECTURE §3.4b). A lost position is a tactical defeat, not a rout; only routs and traps count towards a decisive defeat.',
+    'How each side left the field, and by which road (TECHNICAL_ARCHITECTURE §3.4b): back the way an attacker came (line), towards the base, towards its own troops or towards a depot; "turned aside" counts defenders kept off the road the attacker took when both left at once (D-046). A lost position is a tactical defeat, not a rout; only routs and traps count towards a decisive defeat.',
     '',
-    '| Strategy | Battles | Rounds per battle | Positions lost, French / Russian | Russians withdrew / routed / trapped | French withdrew / routed / trapped | Russian exits open / contested / blocked | A Russian main army broke |',
-    '|---|---|---|---|---|---|---|---|',
+    '| Strategy | Battles | Rounds per battle | Positions lost, French / Russian | Russians withdrew / routed / trapped | French withdrew / routed / trapped | Russian exits open / contested / blocked | Russians fell back by line / base / own / depot; turned aside | French fell back by line / base / own / depot; turned aside | A Russian main army broke |',
+    '|---|---|---|---|---|---|---|---|---|---|',
   );
   const per100 = (rs: Result[], f: (r: Result) => number) => Math.round((rs.reduce((n, r) => n + f(r), 0) * 100) / Math.max(1, rs.length));
   for (const name of names) {
     const rs = results[name]!;
-    const n = (key: string, from: 'fieldResults' | 'exits') => per100(rs, (r) => r[from][key] ?? 0);
+    const n = (key: string, from: 'fieldResults' | 'exits' | 'bases') => per100(rs, (r) => r[from][key] ?? 0);
     const battles = rs.reduce((x, r) => x + r.battles, 0);
     const rounds = rs.reduce((x, r) => x + r.rounds, 0);
     lines.push(
-      `| ${name} | ${per100(rs, (r) => r.battles)} | ${(rounds / Math.max(1, battles)).toFixed(1)} | ${per100(rs, (r) => r.positionsLost.fr)} / ${per100(rs, (r) => r.positionsLost.ru)} | ${n('ru:withdrew', 'fieldResults')} / ${n('ru:routed', 'fieldResults')} / ${n('ru:trapped', 'fieldResults')} | ${n('fr:withdrew', 'fieldResults')} / ${n('fr:routed', 'fieldResults')} / ${n('fr:trapped', 'fieldResults')} | ${n('ru:open', 'exits')} / ${n('ru:contested', 'exits')} / ${n('ru:blocked', 'exits')} | ${per100(rs, (r) => r.mainBroke)} |`,
+      `| ${name} | ${per100(rs, (r) => r.battles)} | ${(rounds / Math.max(1, battles)).toFixed(1)} | ${per100(rs, (r) => r.positionsLost.fr)} / ${per100(rs, (r) => r.positionsLost.ru)} | ${n('ru:withdrew', 'fieldResults')} / ${n('ru:routed', 'fieldResults')} / ${n('ru:trapped', 'fieldResults')} | ${n('fr:withdrew', 'fieldResults')} / ${n('fr:routed', 'fieldResults')} / ${n('fr:trapped', 'fieldResults')} | ${n('ru:open', 'exits')} / ${n('ru:contested', 'exits')} / ${n('ru:blocked', 'exits')} | ${n('ru:line', 'bases')} / ${n('ru:base', 'bases')} / ${n('ru:own', 'bases')} / ${n('ru:depot', 'bases')}; ${n('ru:aside', 'bases')} | ${n('fr:line', 'bases')} / ${n('fr:base', 'bases')} / ${n('fr:own', 'bases')} / ${n('fr:depot', 'bases')}; ${n('fr:aside', 'bases')} | ${per100(rs, (r) => r.mainBroke)} |`,
     );
   }
   const decisiveExits = names.flatMap((name) => results[name]!.flatMap((r) => r.decisiveExits));

@@ -213,6 +213,8 @@ export interface BattleState {
   winner: Side | null;
   /** Men each force lost in this battle, its retreat included: killed, wounded and taken (§2.13). */
   losses: Record<ForceId, number>;
+  /** The same losses by the sub-step (`slotIndex`) they fell in, so they are counted when they happen (second review, D4). */
+  lossesAt: Record<string, Record<ForceId, number>>;
   /** Sides that broke in the field or were trapped with no road out; an orderly withdrawal is no rout (§2.13). */
   routed: Side[];
   /** The sectors, the troops in them and the reserve (§2.10). */

@@ -1,6 +1,6 @@
 # Review Brief
 
-For an outside reviewer, human or AI, asked to give feedback on the project as it stands (2 November 2026, rules 0.17.2, milestone M1). It says what exists, what changed since the first independent review, where to look, and what is already known, so a review can go beyond it. The detailed instructions for a second review are in [reviews/SECOND_REVIEW_PROMPT.md](reviews/SECOND_REVIEW_PROMPT.md).
+For an outside reviewer, human or AI, asked to give feedback on the project as it stands (2 November 2026, rules 0.18.0, milestone M1). It says what exists, what changed since the first independent review, where to look, and what is already known, so a review can go beyond it. The detailed instructions for a second review are in [reviews/SECOND_REVIEW_PROMPT.md](reviews/SECOND_REVIEW_PROMPT.md).
 
 ## What the project is
 
@@ -58,6 +58,7 @@ The first review's findings and their status are in [reviews/2026-10-31-independ
 | Sector battles | Three sectors and a reserve, cavalry and guns, four results kept apart, graded exits, pursuit once; contracts tested before the combat code (TECHNICAL_ARCHITECTURE §3.4b) | 0.17.0–0.17.1 | D-043 |
 | Prudichevo road | A track with a ford from the Old Town to the Moscow road (H-022), found missing by the pinning bot | 0.17.2 | D-044 |
 | Stand order | A battle stance whose marshal holds on after losing the position while cohesion lasts | 0.17.2 | D-045 |
+| Third review | A beaten side falls back together along its line (an attacker the way it came, a defender towards its base); both break-offs leave at once, never by one road; an empty line counter-attacks; only deployed cavalry pursues; losses by sub-step ([record](reviews/2026-11-02-third-review.md)) | 0.18.0 | D-046 |
 
 Each change was written test-first: tests that failed on the previous rules.
 
@@ -66,9 +67,9 @@ Each change was written test-first: tests that failed on the previous rules.
 1. This brief, then [PROJECT_VISION](PROJECT_VISION.md) for the goals and the scope limits.
 2. [GAME_DESIGN_DOCUMENT](GAME_DESIGN_DOCUMENT.md) §2: §2.4b directives, §2.6 logistics, §2.12 variation, §2.13 outcomes.
 3. [TECHNICAL_ARCHITECTURE](TECHNICAL_ARCHITECTURE.md) §3.4a: the turn timeline and the contact rule.
-4. [GAMEPLAY_BALANCING](GAMEPLAY_BALANCING.md), from "Contacts corrected" to the end, with the reports in [balance/](balance/). The latest are [rules 0.17.2 with the stand order](balance/2026-11-02-rules-0.17.2-stand.md), [rules 0.17.2 with the Prudichevo road](balance/2026-11-02-rules-0.17.2.md), [rules 0.17.1 with the sector battles](balance/2026-11-02-rules-0.17.1.md), [the sensitivity of four battle values](balance/2026-11-02-sensitivity-0.17.1.md), [rules 0.16.0 with the bots that feed the trap](balance/2026-11-02-rules-0.16.0-feeding-the-trap.md), [the adaptive policy](balance/2026-11-02-adaptive-0.17.1.md), and the what-ifs on [the cut road](balance/2026-11-01-whatif-cutoff.md), [the foraging reach](balance/2026-11-01-whatif-reach.md) and [the line-haul limit](balance/2026-11-02-whatif-haul.md).
+4. [GAMEPLAY_BALANCING](GAMEPLAY_BALANCING.md), from "Contacts corrected" to the end, with the reports in [balance/](balance/). The latest are [rules 0.18.0, how a side leaves the field](balance/2026-11-03-rules-0.18.0.md) with [its supply-stance probe](balance/2026-11-03-supply-stance-0.18.0.md), [rules 0.17.2 with the stand order](balance/2026-11-02-rules-0.17.2-stand.md), [rules 0.17.2 with the Prudichevo road](balance/2026-11-02-rules-0.17.2.md), [rules 0.17.1 with the sector battles](balance/2026-11-02-rules-0.17.1.md), [the sensitivity of four battle values](balance/2026-11-02-sensitivity-0.17.1.md), [rules 0.16.0 with the bots that feed the trap](balance/2026-11-02-rules-0.16.0-feeding-the-trap.md), [the adaptive policy](balance/2026-11-03-adaptive-0.18.0.md), and the what-ifs on [the cut road](balance/2026-11-01-whatif-cutoff.md), [the foraging reach](balance/2026-11-01-whatif-reach.md) and [the line-haul limit](balance/2026-11-02-whatif-haul.md).
 5. [HISTORICAL_RESEARCH](HISTORICAL_RESEARCH.md) and [HISTORICAL_ASSUMPTIONS](HISTORICAL_ASSUMPTIONS.md): sources, and the status of every claim (H-, L- and G- entries).
-6. [DECISIONS](DECISIONS.md) D-029 to D-042.
+6. [DECISIONS](DECISIONS.md) D-029 to D-046.
 7. Code:
    - `src/engine/advance.ts`: turn resolution, about 900 lines.
    - `battle.ts`, `carriage.ts`, `directive.ts` (the staff planner), `outcome.ts` and `rules.ts` (every rule value).
@@ -80,14 +81,14 @@ Each change was written test-first: tests that failed on the previous rules.
 ## Already known (no need to report, but deeper analysis and fixes are welcome)
 
 - **Not built yet:**
-  - the painted living map (M2), sector battles (§2.10), events and the after-action report;
+  - the painted living map (M2), the illustrated battlefield (the sector battles are built, in a plain panel), events and the after-action report;
   - real browser saves and version checks on load (review stage E, an M3 criterion);
   - road capacity and column length;
   - raids on convoys, and a cost (garrison) for founding a depot;
   - the supply line's delivery rate in "sustainable" (*T₁*), and cut supply lines in "secure".
-- **Balance findings among the tested bots, documented in GAMEPLAY_BALANCING (rules 0.16.0):**
-  - Only holding the Moscow road at Valutino to the end wins: the holding southern envelopment wins 35% of its games, all costly, because its army has outrun its wagon trains and cannot be fed there. Lifting the 80 km line-haul limit changes that in 2 games of 1,000 (what-if, 2 November). Leaving the Guard at the main depot while the corps make the swing wins decisively in 6.4% of games; halting groups for their wagon trains does worse. Every approach that does not hold Valutino ends, at best, in Limited Success. Until 0.13.0 the southern envelopment won 82% of its games by cutting the Moscow road, but the Russians were still cut off at the end in under 2%; since 0.14.0 a cut counts only if it lasts (D-039).
-  - No tested approach has produced a decisive defeat in battle, under the placeholder model or under the sector battles (0.17.1): Russian main armies now break in up to 32 battles per 100 games, but never after losing 30% within four days, and none was ever trapped.
+- **Balance findings among the tested bots, documented in GAMEPLAY_BALANCING (rules 0.17.2):**
+  - Only holding the Moscow road at Valutino to the end wins regularly. With its block standing (D-045), the holding southern envelopment wins 21% of its games, all costly; leaving the Guard at Vitebsk wins decisively in 4.8%. The army at Valutino has outrun its wagon trains and is mostly unfed there (lifting the 80 km line-haul limit changes that in 2 games of 1,000). Every approach that does not hold Valutino ends, at best, in Limited Success.
+  - No tested approach has produced a decisive defeat in battle. Russian main armies break in up to 20 battles per 100 games (with the stand order), but never after losing 30% within four days, and none was ever trapped, even by a bot that sets out to pin them (GAMEPLAY_BALANCING, "Pinning").
   - No halt consolidates, at any foraging reach tested, because the placeholder depot stocks cannot feed the army for 20 days. Research on the 1812 magazines is pending.
   - The adaptive policy gains nothing over the best fixed approach.
   - Two of the "competent" bot variants are not yet competent.
@@ -95,6 +96,8 @@ Each change was written test-first: tests that failed on the previous rules.
 - **Open measures:** F3 by openings (branch the first two directives with a shared continuation); an adaptive policy that re-decides every turn with the full French observations, with nested resampling of its learning. (Scenario-clustered intervals and a noise-adjusted variance split are in the batch since D-041.)
 - **Most rule values are still game assumptions.** Only march speeds, wagon loads, rations, hunger, horses per wagon and carrying have been checked against sources, and those only as ranges; the foraging reach was misread at first and corrected in 0.12.0.
 - **Roads are provisional:** straight-line distance × 1.25 (G-007).
+- **Narrow windows:** below 900 px wide the map, kept in view while scrolling, slides over the orders panel and hides the commit button. A fix exists locally and is not yet pushed; use a window at least 900 px wide.
+- **Open puzzle:** the pinning attack does much better keeping its depots than bringing them forward, alone among the bots; not yet explained.
 
 ## Scope limits (please don't suggest these)
 

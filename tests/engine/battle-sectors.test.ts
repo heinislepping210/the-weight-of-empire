@@ -332,6 +332,7 @@ describe('C. four results, kept apart', () => {
     const after = round(s, ctx, { fr: holdAll, ru: breakOff });
     expect(after.b.field.result.ru).toBe('withdrew');
     expect(after.b.routed).toEqual([]);
+    // Along its line: towards its base, the depot at F by way of C, not the Cossack post at E (third review).
     expect(after.s.forces['ru-main']!.transit?.to).toBe('C');
   });
 

@@ -2,7 +2,7 @@
 // reading only the state, never the other side's hidden decision (contract B, TECHNICAL_ARCHITECTURE §3.4b).
 // Strategic Russian decisions live in russian.ts.
 
-import { FIELD_TEMPLATES, SECTORS, allInReserve, exitStateFor, reserveMen, sideTotals, type Deployment } from './battle';
+import { FIELD_TEMPLATES, SECTORS, activeForces, allInReserve, exitStateFor, reserveMen, sideTotals, type Deployment } from './battle';
 import type { Context } from './scenario';
 import { nextDaylight, slotIndex } from './time';
 import type { Allocation, BattleState, FieldTemplateId, ForceId, GameState, KeyDecision, NightChoice, SectorIndex, SectorOrder, Side } from './types';
@@ -60,6 +60,10 @@ export function decideRound(s: GameState, ctx: Context, b: BattleState, side: Si
   if (done && exitStateFor(s, ctx, b, side) !== 'blocked') return { kind: 'breakOff' };
   // How far each sector has gone against this side: positive is bad.
   const against = (i: SectorIndex) => (side === 'fr' ? -b.field.control[i] : b.field.control[i]);
+  // With nobody left in the line, the reserve goes in where the ground is least lost: a side staying on the
+  // field fights for it rather than waiting (third review).
+  const inLine = activeForces(s, b, side, now).some((f) => SECTORS.some((i) => (b.field.alloc[f.id]?.sectors[i].inf ?? 0) + (b.field.alloc[f.id]?.sectors[i].cav ?? 0) > 0));
+  if (!inLine && reserveMen(s, b, side, now) > 0) return { kind: 'commitReserve', sector: [...SECTORS].sort((x, y) => against(x) - against(y) || x - y)[0] as SectorIndex };
   // A sector already lost is given up; one giving way gets the reserve.
   const wavering = SECTORS.filter((i) => against(i) === 1);
   if (reserveMen(s, b, side, now) > 0 && wavering.length > 0) return { kind: 'commitReserve', sector: wavering[0] as SectorIndex };

@@ -45,6 +45,8 @@ function battle(s: GameState, id: string, day: number, lossPermille: number, win
     lastNight: day,
     winner,
     losses,
+    // Fought out on the day it began.
+    lossesAt: { [String(day * 2)]: losses },
     // The Russians broke: an orderly withdrawal is no decisive defeat (D-037, tested in second-review.test.ts).
     routed: winner === 'fr' ? ['ru'] : [],
     field: idleField(),

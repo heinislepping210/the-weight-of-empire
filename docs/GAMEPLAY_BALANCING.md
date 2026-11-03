@@ -636,3 +636,29 @@ Added on your decision (D-045): a fourth battle stance. When most of a side's me
 - **Against the map before the road** (0.17.1), the trap wins somewhat less (Costly Victory 20.6% against 29.4% for the holding envelopment) but decisively as often with the Guard at the base (4.8%). The road gives the Russians a way to leave Smolensk, so fewer of them end up shut in.
 - **Still no decisive defeat in battle, and no army trapped.** The families are unchanged (they do not stand); the scenario oracle gains 0.16 ranks (0.11 to 0.21).
 
+## How a side leaves the field (rules 0.18.0, 3 November 2026)
+
+The third review's fixes (D-046), with the retreat rule you chose after we measured three readings of "along its line": the base line (G-023). An attacker goes back the way it came; otherwise a side falls back towards its base (for the Russians Dorogobuzh on the Moscow road, for the French the depots they started with), then towards its own troops, then a depot. Both sides breaking off leave at once, and never by one road; a column is never led past a slower enemy column. Reports: [the batch, 1,000 scenarios × 3 sets of dice](balance/2026-11-03-rules-0.18.0.md), [the adaptive policy](balance/2026-11-03-adaptive-0.18.0.md), [the supply-stance probe](balance/2026-11-03-supply-stance-0.18.0.md). Zero invariant violations in the batch's 42,000 games.
+
+| Strategy, every game (0.17.2 with stand → 0.18.0) | Decisive Success | Costly Victory | Operational Success | Limited Success | Inconclusive | Repulse |
+|---|---|---|---|---|---|---|
+| southern-envelopment-hold | 0.0% → 0.0% | 20.6% → 20.3% | 0.0% → 0.0% | 1.3% → 1.4% | 26.6% → 26.0% | 50.8% → 51.5% |
+| southern-envelopment-guard-at-base | 4.8% → 5.2% | 15.6% → 14.6% | 9.5% → 11.9% | 1.5% → 1.4% | 24.6% → 23.5% | 44.0% → 43.3% |
+| southern-envelopment-wait-for-trains | 0.2% → 0.2% | 20.4% → 19.3% | 0.0% → 0.0% | 13.8% → 14.3% | 34.0% → 39.6% | 30.8% → 25.2% |
+| concentrated-push | 0.0% → 0.0% | 0.0% → 0.0% | 0.0% → 0.0% | 97.9% → 96.6% | 0.0% → 0.0% | 0.0% → 2.5% |
+| pinning-attack | 0.0% → 0.0% | 0.0% → 0.0% | 0.0% → 0.0% | 74.9% → 74.7% | 0.0% → 0.0% | 25.1% → 25.3% |
+
+**The three readings we measured** (the same batch, before the two road fixes):
+
+| Reading | Holding envelopment, Repulse | Guard at the base, Decisive Success | Pinning, Limited Success | What went wrong |
+|---|---|---|---|---|
+| A: any side the way it came, else its own troops, else a depot (as first approved) | 63.1% | 1.8% | 98.0% | Russians beaten at Smolensk fled to Krasnyi, and from the north bank to Rudnia, into the French rear |
+| B: only an attacker the way it came, else its own troops, else a depot | 50.8% | 4.7% | 73.9% | French corps drifted to a stray detachment: from Rudnia to Porechye in 185 of 200 pinning games |
+| C: only an attacker the way it came, else towards its base (chosen) | 51.5% | 5.2% | 74.7% | none seen |
+
+**Reading:**
+- **The depot puzzle is gone.** In the paired probe the pinning attack ends at the same rank whether it brings its depots forward or keeps them (100% of seeds, against 77.5%). It does so at the rate it had bringing them forward (Limited Success 74.9% either way), not the 97.6% it had keeping them. Keeping them had worked through the captured Smolensk magazine: under the old rule a French corps beaten on the north bank fell back to its nearest depot, and after the capture that was Smolensk, an empty town it then held (178 times in 200 games). With a forward depot it went to Porechye instead. Now a captured magazine is not a base, and the corps falls back towards Vitebsk either way.
+- **The trap is as it was.** The three envelopments that stand at their block end within a point or two of 0.17.2 (Guard at the base: Decisive Success 5.2% against 4.8%). The plan waiting for its trains ends Inconclusive more often (39.6% against 34.0%) and in Repulse less often (25.2% against 30.8%).
+- **The retreats follow the lines of communications.** French corps fall back towards Vitebsk (Rudnia to Liozno, the north bank to Rudnia). Russians fall back along the Moscow road: from the Old Town to Valutino, and from Valutino to Dorogobuzh. A Russian army that attacked a block goes back the way it came. Two sides leaving at once rarely want the same road: a defender was turned aside in about 4 battles per 100 games of the rush and 1 or fewer elsewhere.
+- **Still no decisive defeat in battle, and no army trapped.** The families stay balanced (F3: push 37.8%, bait and converge 38.9%, southern envelopment 23.3%). The scenario oracle gains 0.15 ranks (0.09 to 0.21), and the adaptive policy is 0.03 ranks behind the best fixed approach (0.02 to 0.05).
+- **Open:** the base comes before the side's own troops. So in about 20 of 800 probed games (rush, concentrated push), a French corps beaten on the north bank went to Rudnia although a French corps held Smolensk across the bridge. That is defensible, since Rudnia is its road home, but a playtest may find joining the friends in the town more natural.

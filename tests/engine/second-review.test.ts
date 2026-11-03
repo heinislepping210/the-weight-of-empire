@@ -147,7 +147,7 @@ describe('6. a decisive defeat means the Russians broke, not that they withdrew 
     const b: BattleState = {
       id: '8.0.0', node: 'smolensk-north', attacker: 'fr', sides: { fr: ['fr-vanguard'], ru: ['ru-1st', 'ru-2nd'] }, phase: 'over',
       startsAt: { turn: 8, slot: 0 }, fightsFrom: {}, roundsFought: 9, roundsThisSlot: 0, awaiting: null, hidden: null, lastNight: 14,
-      winner: 'fr', losses: { 'ru-1st': lost }, routed, field: idleField(),
+      winner: 'fr', losses: { 'ru-1st': lost }, lossesAt: { '28': { 'ru-1st': lost } }, routed, field: idleField(),
     };
     s.battles[b.id] = b;
     return evaluate(start, s, ctx);

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { BattleDecision, Context, GameState, KeyDecision, Placement, SectorIndex, Status } from '../engine';
 import { when } from '../engine';
-import { FIELD_TEMPLATES, SECTORS, exitStateFor, reserveMen, retreatNodeFor } from '../engine/battle';
+import { FIELD_TEMPLATES, SECTORS, exitStateFor, reserveMen, retreatOfSide } from '../engine/battle';
 import { slotIndexOf } from '../engine';
 import { condition } from './OrdersPanel';
 import { thousands } from './names';
@@ -27,8 +27,7 @@ export function BattlePanel({ s, ctx, status, onDecide }: Props) {
   const ours = b.sides.fr.map((id) => s.forces[id]).filter((f) => f !== undefined);
   const now = slotIndexOf(s.resolution);
   const exit = exitStateFor(s, ctx, b, 'fr');
-  const lead = ours.reduce<(typeof ours)[number] | null>((a, f) => (a === null || f.men > a.men ? f : a), null);
-  const road = lead ? retreatNodeFor(s, ctx, b.node, 'fr', b.attacker === 'fr' ? lead.cameFrom : null) : null;
+  const road = retreatOfSide(s, ctx, b, 'fr')?.to ?? null;
   const roadName = road ? (ctx.graph.nodes.get(road)?.name ?? road) : null;
   const reserve = reserveMen(s, b, 'fr', now);
   const reserveCav = b.sides.fr.reduce((n, id) => n + ((b.fightsFrom[id] ?? 0) <= now ? (b.field.alloc[id]?.reserve.cav ?? 0) : 0), 0);

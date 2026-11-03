@@ -56,6 +56,10 @@ const GOLDEN: Record<string, string> = {
   '0.17.1': '322ab15672e0bec3',
   // The road by the Prudichevo ford from Smolensk's Old Town to Valutino (H-022, D-044).
   '0.17.2': 'e4f859a50da6e294',
+  // Third review: a beaten side falls back together along its line (an attacker the way it came, a defender
+  // towards its base), both sides breaking off leave at once and never by one road, a stand with an empty line
+  // counter-attacks, only deployed cavalry pursues or screens, no column led past a slower enemy (D-046).
+  '0.18.0': 'ace0bdbfd267a81a',
 };
 
 /**
@@ -77,6 +81,7 @@ const GOLDEN_VITEBSK: Record<string, string> = {
   '0.17.0': '4e36c8f97b470641',
   '0.17.1': '85c3bf612566b3ff',
   '0.17.2': '6b6b838b705d899c',
+  '0.18.0': '78bd0b273d8bc56e',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */
