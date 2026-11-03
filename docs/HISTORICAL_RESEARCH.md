@@ -211,6 +211,25 @@ The reviewer found three historical claims to check: the Prudichevo crossing (H-
 - **Guns differ less, and both ways.** The Guard has more field guns in the return (154, with line horse companies attached to its reserve) than at Borodino (109); Davout, Eugène and the southern group have fewer field and regimental guns than the game gives them (the game's were set at 4.6 guns per 1,000 men).
 - **Not adopted.** Any change to the ranges changes battles, and the date of the figures is in doubt. Read the 15 August return first, then propose ranges with measured effects.
 
+**The return of 15 August settles the dating, and raises a question about the start.** Nafziger's order of battle for 15 August 1812 (812HDA, 17 pages, from the same archived collection) is patchier: no VIII Corps, many units without figures, often men without officers. So it was not added up by group; instead every unit listed with figures on both dates was compared, men only, matched within its division:
+
+| Formation | Units matched | Men, 1 August → 15 August |
+|---|---|---|
+| Imperial Guard | 21 | 22,781 → 19,536 (−14%) |
+| I Corps (Davout) | 17 | 46,201 → 38,163 (−17%) |
+| III Corps (Ney) | 12 | 16,942 → 13,726 (−19%) |
+| IV Corps (Eugène) | 16 | 27,549 → 19,468 (−29%) |
+| V Corps (Poniatowski) | 15 | 27,626 → 18,999 (−31%) |
+| I–III Reserve Cavalry Corps | 35 | 22,179 → 15,918 (−28%) |
+| IV Reserve Cavalry Corps | 7 | 4,474 → 3,032 (−32%) |
+| **All matched** | **123** | **167,752 → 128,842 (−23%)** |
+
+A few units grew (the 25th Line, 2,004 to 2,918; detachments rejoining), and they are counted as they stand.
+- **Applying each formation's change to its 1 August total** (VIII Corps at the overall rate, since the later return omits it) gives about **203,700 for the five groups in mid-August**. That is inside the game's 162,000–213,000 and near the 180,000 usually given (H-009). So the 1 August return fits its date, and the game's ranges fit the middle of the month.
+- **But the game starts on 5 August.** Between the two returns, the same groups would have stood at about **246,000** on 5 August (a straight line between 262,600 and 203,700). The game's Russians start at their early-August strength (121,000 on 6 August, Foord p. 118, inside the game's 121,000–144,000), while its French start at about their mid-August strength: some three quarters of what the returns give for that day. The game's own hunger and sickness then take the French lower still.
+- **The vanguard's cavalry** would be about 22,000–23,000 in mid-August by the same reckoning, against the game's 13,000–17,000 at the start.
+- **For your decision, later:** keep the French ranges as they are (they follow the usual mid-August figure, and the balance rests on them); measure a start at the 5 August strengths as a what-if first, then decide; or correct only the composition (the vanguard's cavalry). Any of these changes battles and the ending, so nothing changes without a measurement and your choice.
+
 **The battle figures (H-020): re-cited with their scopes.** Foord (1914) gives page-cited figures that differ from the encyclopedias' in what they count:
 - **Krasnyi, 14 August:** Neverovsky's square of about 5,000 (9 battalions, his cavalry and 8 guns behind the ravine, a battalion and 2 guns in the town) lost about 1,500 men, half of them prisoners, and 8 guns; the French loss "did not appear to exceed 800" (pp. 127–128). No French strength is given.
 - **Smolensk, 16–17 August:** on the 16th Raevsky held the city with "scarcely 13,000 men" and 72 guns, his own count, probably infantry and artillery only (p. 131). On the 17th about 19,000 Russians faced the assault of some 55,000 French infantry (p. 140), out of over 120,000 French before the city (p. 138); Dokhturov's whole force "probably hardly exceeded 30,000", 55 battalions engaged (p. 143); the two Russian armies counted 121,000 with some 650 guns before the operations (p. 118). Losses: about 6,000 Russian on the 17th and 7,000 for both days, about 12,000 French (pp. 143–144).
@@ -219,5 +238,5 @@ The reviewer found three historical claims to check: the Prudichevo crossing (H-
 
 **A local rearguard as a control.** The reviewer asked for a local rearguard action and a closed exit to be tested apart. On the engine's test ground, a division of 6,500 (1,200 cavalry, 14 guns) caught in the open by 20,000 (15,000 cavalry), with its road open, got away in order in 52 of 60 sets of dice and routed in 8, always by its own road, losing a median 6.8% of its men and 1 gun. Neverovsky also got away, but lost about a quarter of his men and half his guns. The game lets such a rearguard off more lightly than Krasnyi did; that is recorded, not tuned (no band is a target). With every road out held, the same division never got away in order. Both are now tests (`third-review.test.ts`, section 7).
 
-Sources consulted: Foord (1914), Project Gutenberg #57185, pp. 118–155; *Voennaya entsiklopediya* (Sytin, 1911–1915), vol. 5, "Valutina gora", via Russian Wikisource; Nafziger, "French Grande Armée, 1 August 1812" (812HAB), via the Wayback Machine copy of the US Army Combined Arms Research Library's collection; Wikidata Q13635925 (Lubino).
+Sources consulted: Foord (1914), Project Gutenberg #57185, pp. 118–155; *Voennaya entsiklopediya* (Sytin, 1911–1915), vol. 5, "Valutina gora", via Russian Wikisource; Nafziger, "French Grande Armée, 1 August 1812" (812HAB) and "Grande Armée, 15 August 1812" (812HDA), via the Wayback Machine copies of the US Army Combined Arms Research Library's collection; Wikidata Q13635925 (Lubino).
 

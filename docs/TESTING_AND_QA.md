@@ -10,7 +10,7 @@ Automated tests, browser checks and human playtests. Fairness testing is describ
 - **Browser tests (Playwright):** full playthrough, battle, report, reload mid-turn and mid-battle, corrupted-save recovery, share link, phone/tablet/desktop screenshots, reduced motion.
 - **Accessibility:** axe checks; keyboard play of the whole Challenge, including a list-based alternative to the map; contrast; pattern + icon alongside colour.
 - **Performance:** scripted pan/zoom FPS measurement; bundle-size budget check.
-- **Human playtests:** I'll give you a one-page script (think-aloud play, an observation sheet, 6 questions afterwards). **Round 1: 2 testers, ~Day 15. Round 2: the other 2, ~Day 19**, so the second round tests the fixes with fresh eyes. The playtest summary screen records completion time and decisions for each tester (§1.2). I won't invent feedback; only what you report counts.
+- **Human playtests:** I'll give you a one-page script (think-aloud play, an observation sheet, 6 questions afterwards). **Round 1: 2 testers, ~Day 15. Round 2: the other 2, ~Day 19**, so the second round tests the fixes with fresh eyes. The playtest summary screen records completion time and decisions for each tester (§1.2). I won't invent feedback; only what you report counts. Before those rounds, a short targeted playtest answers the third review's questions about Stand, retreats and the verdict ([script](playtests/2026-11-03-targeted-playtest.md)).
 
 ## Timeline tests (§3.4a)
 
