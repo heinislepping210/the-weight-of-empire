@@ -7,7 +7,7 @@
 export type CutOffCredit = 'stands' | 'atEnd' | 'graded';
 
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.17.0';
+export const RULES_VERSION = '0.17.1';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -191,6 +191,16 @@ export const RULES = {
     routGunsAbandonedPermille: 500,
     /** An enemy force this close by road to a side's retreat place contests it (contract D). */
     contestMetres: 15_000,
+    /** A charge multiplies what the charging horsemen are worth that round. */
+    chargePermille: 1500,
+    /** A side that came along two or more roads strikes the enemy's thinnest sector in the flank. */
+    flankPermille: 1300,
+    /** Cavalry set to screen pursues at this share, and covers its own side's withdrawal this much better. */
+    screeningPursuitPermille: 500,
+    screeningCoverPermille: 1500,
+    /** Under political pressure at a key place, the Russian marshal breaks off only below these cohesions (§2.9). */
+    mustStandCohesion: 300,
+    mustStandNightCohesion: 400,
     /** The staff's reserve, as a share of each force's infantry and cavalry. */
     reservePermille: 250,
     /** The marshal breaks off below this cohesion, or withdraws at nightfall below the second. */

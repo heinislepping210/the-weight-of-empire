@@ -48,7 +48,8 @@ const ENGAGEMENTS = ['seek', 'accept', 'avoid'];
 const POSTURES = ['dispersed', 'concentrated'];
 const ROUND_ACTIONS = ['press', 'hold', 'withdraw'];
 const NIGHT_CHOICES = ['stay', 'withdraw'];
-const KEY_KINDS = ['continue', 'commitReserve', 'pressAll', 'holdAll', 'breakOff'];
+const KEY_KINDS = ['continue', 'commitReserve', 'pressAll', 'holdAll', 'breakOff', 'massGuns', 'charge', 'cavalry'];
+const CAVALRY_TASKS = ['pursue', 'screen'];
 const PLACEMENTS: unknown[] = [0, 1, 2, 'reserve', 'staff'];
 
 // ---------------------------------------------------------------------------------------- API
@@ -147,7 +148,9 @@ function validate(s: GameState, input: Input, ctx: Context): string | null {
     if (d.action === undefined && d.key === undefined) return 'a round decision needs an action or a key decision';
     if (d.action !== undefined && !ROUND_ACTIONS.includes(d.action)) return `unknown battle action ${d.action}`;
     if (d.key !== undefined && !KEY_KINDS.includes(d.key.kind)) return `unknown key decision ${d.key.kind}`;
-    if (d.key?.kind === 'commitReserve' && !(SECTORS as readonly number[]).includes(d.key.sector)) return `unknown sector ${d.key.sector}`;
+    const k = d.key;
+    if ((k?.kind === 'commitReserve' || k?.kind === 'massGuns' || k?.kind === 'charge') && !(SECTORS as readonly number[]).includes(k.sector)) return `unknown sector ${k.sector}`;
+    if (k?.kind === 'cavalry' && !CAVALRY_TASKS.includes(k.task)) return `unknown cavalry task ${k.task}`;
   }
   if (d.kind === 'deploy' && d.placements) {
     const b = must(s.battles[input.battleId], input.battleId);
@@ -963,8 +966,9 @@ function resolveEncounter(s: GameState, ctx: Context, enc: Encounter, log: LogEn
   const res = s.resolution;
   const id = `${res.turn}.${res.slot}.${res.battleSeq}`;
   res.battleSeq += 1;
-  // The staff of each side deploys on the field: the open-field template for now (§2.10).
-  const field = newField('open', { fr: deploymentFor(s, ctx, { sides, attacker }, 'fr', 'open'), ru: deploymentFor(s, ctx, { sides, attacker }, 'ru', 'open') });
+  // The staff of each side deploys on the place's battlefield: Smolensk's walls, or open ground (§2.10).
+  const template = ctx.scenario.battlefields?.[enc.node] ?? 'open';
+  const field = newField(template, { fr: deploymentFor(s, ctx, { sides, attacker }, 'fr', template), ru: deploymentFor(s, ctx, { sides, attacker }, 'ru', template) });
   s.battles[id] = {
     id,
     node: enc.node,

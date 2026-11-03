@@ -457,3 +457,101 @@ describe('decisions', () => {
     }
   });
 });
+
+describe('extensions (step 5): Smolensk, the guns, the cavalry, flanks and pressure', () => {
+  it('a place with its own battlefield uses it: Smolensk has walls, suburbs and bridges, and the walls hold better than open ground', () => {
+    const lossAt = (template: 'open' | 'smolensk') => {
+      const ctx = ground((d) => {
+        if (template === 'smolensk') d.battlefields = { B: 'smolensk' };
+      });
+      const { s, b } = firstRound(ctx);
+      expect(b.field.template).toBe(template);
+      const defender = b.attacker === 'fr' ? 'ru' : 'fr';
+      const after = round(s, ctx, { [b.attacker]: pressAll, [defender]: holdAll } as Record<Side, KeyDecision>);
+      return s.forces[`${defender}-main`]!.men - after.s.forces[`${defender}-main`]!.men;
+    };
+    expect(lossAt('smolensk')).toBeLessThan(lossAt('open'));
+  });
+
+  it('massing the guns puts every deployed gun of the side into one sector, each gun still counted once', () => {
+    const ctx = ground();
+    const { s } = firstRound(ctx);
+    const after = round(s, ctx, { fr: { kind: 'massGuns', sector: 2 }, ru: holdAll });
+    const a = after.b.field.alloc['fr-main']!;
+    expect([a.sectors[0].guns, a.sectors[1].guns, a.reserve.guns]).toEqual([0, 0, 0]);
+    expect(a.sectors[2].guns).toBe(after.s.forces['fr-main']!.guns);
+  });
+
+  it('a charge sends the reserve cavalry into a sector, where it strikes harder than the same horsemen merely sent in', () => {
+    const ctx = ground();
+    const { s } = firstRound(ctx);
+    const reserveCav = Object.values(s.battles)[0]!.field.alloc['fr-main']!.reserve.cav;
+    expect(reserveCav).toBeGreaterThan(0);
+    const charged = round(s, ctx, { fr: { kind: 'charge', sector: 0 }, ru: holdAll });
+    expect(charged.b.field.alloc['fr-main']!.reserve.cav).toBe(0);
+    // The same horsemen sent in without the shock of a charge.
+    const probe = structuredClone(s);
+    const pa = Object.values(probe.battles)[0]!.field.alloc['fr-main']!;
+    pa.sectors[0].cav += pa.reserve.cav;
+    pa.reserve.cav = 0;
+    const walked = round(probe, ctx, { fr: { kind: 'continue' }, ru: holdAll });
+    const ruLost = (x: { s: GameState }) => s.forces['ru-main']!.men - x.s.forces['ru-main']!.men;
+    expect(ruLost(charged)).toBeGreaterThan(ruLost(walked));
+  });
+
+  it('cavalry set to screen pursues less but covers its own retreat better than cavalry set to pursue', () => {
+    const pursuitBy = (task: 'pursue' | 'screen') => {
+      const ctx = ground((d) => {
+        forceInit(d, 'ru-main').cohesion = 340;
+      });
+      const { s } = firstRound(ctx);
+      Object.values(s.battles)[0]!.field.cavalryTask.fr = task;
+      const r = go(s, decide(s, { kind: 'delegate' }), ctx);
+      return Number(r.log.find((e) => e.kind === 'pursuit')?.detail.men ?? 0);
+    };
+    expect(pursuitBy('screen')).toBeLessThan(pursuitBy('pursue'));
+    const screened = (task: 'pursue' | 'screen') => {
+      const ctx = ground();
+      const { s } = firstRound(ctx);
+      Object.values(s.battles)[0]!.field.cavalryTask.ru = task;
+      const after = round(s, ctx, { fr: holdAll, ru: breakOff });
+      return Number(after.log.find((e) => e.kind === 'pursuit')?.detail.men ?? 0);
+    };
+    expect(screened('screen')).toBeLessThan(screened('pursue'));
+  });
+
+  it('a side that came along two roads strikes the enemy\'s thinnest sector in the flank', () => {
+    const inflicted = (twoRoads: boolean) => {
+      const ctx = ground((d) => {
+        forceInit(d, 'fr-flank').at = 'B';
+      });
+      const { s } = firstRound(ctx);
+      s.forces['fr-main']!.cameFrom = 'A';
+      s.forces['fr-flank']!.cameFrom = twoRoads ? 'C' : 'A';
+      const after = round(s, ctx, { fr: pressAll, ru: holdAll });
+      return { lost: s.forces['ru-main']!.men - after.s.forces['ru-main']!.men, flank: after.b.field.flank.fr };
+    };
+    const one = inflicted(false);
+    const two = inflicted(true);
+    expect(one.flank).toBeNull();
+    expect(two.flank).not.toBeNull();
+    expect(two.lost).toBeGreaterThan(one.lost);
+  });
+
+  it('under political pressure at a key place the Russian marshal holds on after losing the position, while cohesion lasts', () => {
+    const decision = (pressure: number) => {
+      const ctx = ground((d) => {
+        d.keyPlaces = ['B'];
+      });
+      const { s, b } = firstRound(ctx);
+      s.russianCommand.pressure = pressure;
+      b.field.positionLost = ['ru'];
+      s.forces['ru-main']!.cohesion = 600;
+      return { round: decideRound(s, ctx, b, 'ru'), exit: exitStateFor(s, ctx, b, 'ru') };
+    };
+    expect(decision(0).round).toEqual(breakOff);
+    expect(decision(100).round).not.toEqual(breakOff);
+    // Willingness only: the road is the same either way.
+    expect(decision(100).exit).toBe(decision(0).exit);
+  });
+});

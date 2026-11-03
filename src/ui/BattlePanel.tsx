@@ -31,6 +31,8 @@ export function BattlePanel({ s, ctx, status, onDecide }: Props) {
   const road = lead ? retreatNodeFor(s, ctx, b.node, 'fr', b.attacker === 'fr' ? lead.cameFrom : null) : null;
   const roadName = road ? (ctx.graph.nodes.get(road)?.name ?? road) : null;
   const reserve = reserveMen(s, b, 'fr', now);
+  const reserveCav = b.sides.fr.reduce((n, id) => n + ((b.fightsFrom[id] ?? 0) <= now ? (b.field.alloc[id]?.reserve.cav ?? 0) : 0), 0);
+  const guns = (i: SectorIndex) => b.sides.fr.reduce((n, id) => n + (b.field.alloc[id]?.sectors[i].guns ?? 0), 0);
 
   /** Men of one side in a sector, ours exact, theirs as the scouts see them: to the nearest thousand. */
   const menIn = (side: 'fr' | 'ru', i: SectorIndex | 'reserve') =>
@@ -67,7 +69,9 @@ export function BattlePanel({ s, ctx, status, onDecide }: Props) {
               <span className="track" aria-label={`Control: ${b.field.control[i] > 0 ? 'ours' : b.field.control[i] < 0 ? 'theirs' : 'contested'}, ${b.field.control[i]}`}>
                 {track(b.field.control[i])}
               </span>
-              <span>Ours: {thousands(menIn('fr', i))} · {ORDER_NAMES[b.field.orders.fr[i]]}</span>
+              <span>
+                Ours: {thousands(menIn('fr', i))}, {guns(i)} guns · {ORDER_NAMES[b.field.orders.fr[i]]}
+              </span>
               <span>Theirs: {seen(menIn('ru', i))}</span>
             </div>
           ))}
@@ -78,6 +82,11 @@ export function BattlePanel({ s, ctx, status, onDecide }: Props) {
           </div>
         </div>
       </div>
+      <p className="muted">
+        Our cavalry is set to {b.field.cavalryTask.fr === 'pursue' ? 'pursue a beaten enemy' : 'screen our own withdrawal'}.
+        {b.field.flank.fr !== null ? ` Coming along two roads, we strike ${sectors[b.field.flank.fr].name} in the flank.` : ''}
+        {b.field.flank.ru !== null ? ` The enemy, coming along two roads, strikes ${sectors[b.field.flank.ru].name} in the flank.` : ''}
+      </p>
       {b.field.positionLost.length > 0 && <p className="warning">{b.field.positionLost.includes('fr') ? 'We have lost the position: two sectors are in their hands.' : 'They have lost the position: two sectors are in our hands.'}</p>}
 
       <h3>Our corps</h3>
@@ -128,18 +137,6 @@ export function BattlePanel({ s, ctx, status, onDecide }: Props) {
             <button type="button" className="primary" onClick={() => key({ kind: 'continue' })}>
               Continue the plan
             </button>
-            <span className="inline">
-              <button type="button" disabled={reserve === 0} onClick={() => key({ kind: 'commitReserve', sector: reserveTo })}>
-                Send the reserve to
-              </button>
-              <select aria-label="Sector for the reserve" value={reserveTo} onChange={(e) => setReserveTo(Number(e.target.value) as SectorIndex)} disabled={reserve === 0}>
-                {SECTORS.map((i) => (
-                  <option key={i} value={i}>
-                    {sectors[i].name}
-                  </option>
-                ))}
-              </select>
-            </span>
             <button type="button" onClick={() => key({ kind: 'pressAll' })}>
               Press everywhere
             </button>
@@ -148,6 +145,30 @@ export function BattlePanel({ s, ctx, status, onDecide }: Props) {
             </button>
             <button type="button" onClick={() => key({ kind: 'breakOff' })}>
               {exit === 'blocked' ? 'Break off (trapped)' : 'Break off'}
+            </button>
+          </div>
+          <div className="choices">
+            <label className="inline">
+              At
+              <select aria-label="Sector" value={reserveTo} onChange={(e) => setReserveTo(Number(e.target.value) as SectorIndex)}>
+                {SECTORS.map((i) => (
+                  <option key={i} value={i}>
+                    {sectors[i].name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="button" disabled={reserve === 0} onClick={() => key({ kind: 'commitReserve', sector: reserveTo })}>
+              send in the reserve
+            </button>
+            <button type="button" onClick={() => key({ kind: 'massGuns', sector: reserveTo })}>
+              mass the guns
+            </button>
+            <button type="button" disabled={reserveCav === 0} onClick={() => key({ kind: 'charge', sector: reserveTo })}>
+              charge with the reserve cavalry
+            </button>
+            <button type="button" onClick={() => key({ kind: 'cavalry', task: b.field.cavalryTask.fr === 'pursue' ? 'screen' : 'pursue' })}>
+              {b.field.cavalryTask.fr === 'pursue' ? 'Keep the cavalry back to screen' : 'Set the cavalry to pursue'}
             </button>
           </div>
           <div className="choices">

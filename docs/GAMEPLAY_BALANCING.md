@@ -532,3 +532,35 @@ Can a player feed the army that holds Valutino by planning for it? Two more vari
 - **"Uneven stocks at the end" is 71.5% for this bot, by construction:** the Guard sits at Vitebsk with full packs while the corps at Valutino go hungry.
 - **Reading the scenario is worth more with these choices.** An oracle choosing per scenario on its other rolls now gains 0.49 ranks over the best fixed approach (0.44 to 0.55), up from 0.26; the two-figure adaptive policy still gains 0.01.
 - **The families are unchanged** (F3: push 37%, bait and converge 36%, southern envelopment 27%). F1 and F2 count only the families, so they are unchanged too.
+
+## Sector battles (rules 0.17.0–0.17.1, 2 November 2026; `sector-battles` branch)
+
+The placeholder round model is replaced by the sector battles of §2.10 (D-043; contracts in TECHNICAL_ARCHITECTURE §3.4b). Reports: [the batch, 1,000 scenarios × 3 sets of dice](balance/2026-11-02-rules-0.17.1.md), [the adaptive policy](balance/2026-11-02-adaptive-0.17.1.md), [the supply-stance probe](balance/2026-11-02-supply-stance-0.17.1.md), [the sensitivity of four battle values](balance/2026-11-02-sensitivity-0.17.1.md). Zero invariant violations in 39,000 games, with every man, horse and gun of a force in battle checked at every pause.
+
+**Endings, before and after** (the 0.16.0 figures are from [the report with the bots that feed the trap](balance/2026-11-02-rules-0.16.0-feeding-the-trap.md); same bots, scenarios and dice):
+
+| Strategy | Decisive Success | Costly Victory | Operational Success | Limited Success | Inconclusive | Repulse | Operational Collapse |
+|---|---|---|---|---|---|---|---|
+| concentrated-push | 0.0% → 0.0% | 0.0% → 0.0% | 0.0% → 0.0% | 98.8% → 96.6% | 0.0% → 0.0% | 0.9% → 1.0% | 0.3% → 2.5% |
+| southern-envelopment | 0.0% → 0.0% | 9.2% → 9.6% | 0.1% → 0.0% | 51.0% → 48.6% | 16.4% → 13.2% | 22.8% → 27.1% | 0.4% → 1.4% |
+| bait-and-converge | 0.0% → 0.0% | 0.0% → 0.0% | 0.0% → 0.0% | 96.8% → 91.8% | 0.2% → 2.5% | 3.0% → 5.7% | 0.0% → 0.0% |
+| southern-envelopment-hold | 0.1% → 0.1% | 35.1% → 29.4% | 0.0% → 0.0% | 2.0% → 3.7% | 29.7% → 23.6% | 32.8% → 42.5% | 0.3% → 0.7% |
+| southern-envelopment-guard-at-base | 6.4% → 4.8% | 24.5% → 21.1% | 7.7% → 7.4% | 1.1% → 2.1% | 31.7% → 25.8% | 28.6% → 38.7% | 0.0% → 0.0% |
+| concentrated-strike | 0.0% → 0.0% | 0.0% → 0.0% | 0.0% → 0.0% | 71.2% → 71.7% | 11.9% → 11.2% | 16.9% → 17.1% | 0.0% → 0.0% |
+
+**Reading:**
+- **A Russian main army can now break in battle,** in up to 30 battles per 100 games for the trap (28 for the holding envelopment, 30 with the Guard at the base, 16 for the original southern envelopment). Under the placeholder model it never did.
+- **But no tested approach has produced a decisive battle defeat** in 39,000 games. A main army breaks when it is already worn by hunger, earlier fights and the shock of lost sectors, after modest losses in that battle; a decisive defeat also needs 30% of its strength lost within four days in battles the French won. Heavy losses and lost ground ending in an orderly withdrawal, the pattern of Borodino (H-018), is what the model produces by default.
+- **No army was ever trapped.** The bots never close every road out of a battlefield. The Russians' road out is contested more often than open (142 against 82 per 100 games for the holding envelopment), which makes their withdrawals costlier, but blocking needs a player, or a bot, that sets out to pin.
+- **The trap wins a little less often.** The Russian armies that attack the block at Valutino now sometimes break it: the French routed in 16 battles per 100 games of the holding envelopment, and Repulse rose to 42.5%. The original families stay balanced (F3: push 38%, bait and converge 35%, southern envelopment 28%).
+- **Reading the scenario still matters, and no simple policy does it:** an oracle choosing per scenario on its other rolls would gain 0.36 ranks (0.30 to 0.43); the two-figure adaptive policy gains nothing.
+- **Battles last most of a day:** 3.6 to 5.1 rounds of two hours on average for the purposeful bots, 2.5 to 3.0 for the halts and random play. In the traced games, large corps overran small detachments in two or three rounds.
+
+**The four values with the largest effects, measured** (500 seeds per variant, the same dice): what a contested exit costs, the pursuit rate, the flank and the shock of a lost position.
+- None moves any ending by more than 2.6 percentage points (13 games in 500), and none produces a single decisive defeat.
+- The shock of a lost position moves the most: at 40, 80 or 120 cohesion, a Russian main army broke in 21, 31 or 39 battles per 100 games of the holding envelopment, the French routed in 22, 32 or 45 per 100 games of the concentrated push, and the push collapsed in 1.2%, 2.8% or 4.4% of games.
+- The pursuit rate moves French routs (the push: 25, 32 or 42 per 100 games, halved to doubled), not the endings. The contested exit's cost and the flank barely register at the bots' level; a player who uses them may feel them more.
+- **Recommendation: keep all four placeholders.** No source supports another value, and none changes what the bots achieve. Whether a decisive defeat is reachable is a question of pinning, not of these numbers.
+
+**Next steps (for your decision):** a bot that sets out to pin a Russian army (close its roads out before attacking); your playtest of the sector battles; and research for the battle values, none of which is sourced yet.
+

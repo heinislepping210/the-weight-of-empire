@@ -122,7 +122,7 @@ A turn is 2 days: **four daylight sub-steps** of 6 hours (06:00–12:00 and 12:0
       - **The attacker** (D-038) is the side that marched into a place the enemy already held; if both arrived during the sub-step, the later arrival. Arriving at the same moment, or neither having marched in: the side seeking battle, then the side not avoiding it; failing that, a draw for that place and sub-step. Never a fixed side, and never the forces' names (until 0.13.0, a tie went to the French). Before a major battle, the defender tries to withdraw. If it can't or won't, the battle is set up at the end of the sub-step — this is when you deploy — and its rounds are fought from the start of the next daylight sub-step.
    - **Falling back takes time** (D-031). A force that withdraws, loses a minor action or retreats from a battle leaves the place at once, but onto the road towards its retreat place, at the start of that road. It marches the rest of the way in the following sub-steps, at its own pace (a resting force falls back at a steady pace). A road on which an enemy column is coming the other way is not a line of retreat.
    - **Which way** (D-042): towards the side's own depots, by a road with no enemy column coming the other way; but a force of the side that marched in falls back the way it came (`Force.cameFrom`) when that road is open. Until 0.16.0 an army that attacked a block and lost could fall back past it, onto the very road the block was holding.
-5. **Battle rounds.** Each round takes 2 hours and uses only the ammunition the force carries at that moment. A battle ends when a side breaks or withdraws, or at nightfall. Ammunition can only be topped up by wagons that are already at the battlefield at a sub-step boundary.
+5. **Battle rounds** (sector battles from rules 0.17.0, §3.4b). Each round takes 2 hours and uses only the ammunition the force carries at that moment. A battle ends when a side breaks or withdraws, or at nightfall. Ammunition can only be topped up by wagons that are already at the battlefield at a sub-step boundary.
 6. **Accrual.** Food and fodder gathered by foraging join the force's stock at the end of the sub-step. Foraging yields less while marching and nothing while fighting. Fatigue rises with the activity. Deliveries received during the sub-step join the stock now. A convoy at its home depot loads now and sets out in the next sub-step. Last, a depot held only by the enemy changes hands, part of its stores burned (D-029).
 
 **Implementation:** `src/engine/advance.ts`. Each stage above is one function. `stepOnce` runs a single stage so tests can watch the timeline between pauses.
@@ -178,13 +178,15 @@ Borodino (H-018) is the negative control. A cohesive army that has lost two sect
 | Contested | the retreat road crosses a river; an enemy force stands within `contestMetres` of the retreat place or marches towards it; or an enemy in this battle came along that road | breaking off takes a disengagement round: the side falls back in every sector for that round, then leaves at its end with a larger rearguard loss, its cavalry screen counting for more |
 | Blocked | no neighbouring place is free of the enemy and of enemy columns coming the other way | no orderly withdrawal: it fights on, and if it breaks or breaks off it is trapped |
 
-- Several approach roads block nothing by themselves (the flank effect comes later, in step 5 of the plan).
+- Several approach roads block nothing by themselves. A side whose forces came along two or more roads strikes the enemy's thinnest sector in the flank (`field.flank`, recomputed each round, so a reinforcement arriving by another road creates it).
 - Political pressure changes only the Russian marshal's willingness to withdraw. It never closes a road.
 
 **Decisions.**
 - The marshal (`decideRound`, `decideNightfall`, `src/engine/ai.ts`) answers for the Russians and for any French decision left to it. It reads only the state, never `b.hidden`.
 - A player may leave the whole battle to the marshal (`delegateBattle`). The rounds then resolve without stopping, and the next pause, at nightfall, offers command back.
 - The old `{ kind: 'round', action }` input stays valid: press maps to press everywhere, hold to hold everywhere, withdraw to break off.
+- The key decisions of a round (`KeyDecision`): continue the plan; send in the reserve (it counter-attacks there); press or hold everywhere; break off; mass the guns in one sector; charge with the reserve cavalry in one sector; set the cavalry to pursue or to screen. Each moves troops only between places on the field, so contract A holds.
+- **Battlefields by place** (`ScenarioDef.battlefields`): Smolensk's walled Old Town has its own template (the walls, the suburbs, the bridges); everywhere else is open ground (the ridge, the village, the woods).
 
 ## 3.5 Persistence
 *Status (31 October 2026): designed, not built.* The engine can resume from any saved state, and the tests check this. But the browser does not yet save a campaign: "Save for comparison" in the prototype stores only a summary for the comparison screen. Real saves are an M3 criterion (DEVELOPMENT_ROADMAP.md).

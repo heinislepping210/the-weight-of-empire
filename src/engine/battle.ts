@@ -54,6 +54,15 @@ export const FIELD_TEMPLATES: Record<FieldTemplateId, { name: string; sectors: [
       { name: 'the woods', defencePermille: 1250, cavalryPermille: 400, gunsPermille: 600 },
     ],
   },
+  // The walled Old Town of Smolensk (H-006): the walls, the suburbs outside them, the bridges over the Dnieper.
+  smolensk: {
+    name: 'Smolensk',
+    sectors: [
+      { name: 'the walls', defencePermille: 1800, cavalryPermille: 200, gunsPermille: 1000 },
+      { name: 'the suburbs', defencePermille: 1400, cavalryPermille: 400, gunsPermille: 800 },
+      { name: 'the bridges', defencePermille: 1300, cavalryPermille: 300, gunsPermille: 1100 },
+    ],
+  },
 };
 
 // ------------------------------------------------------------------------------ allocation (A)
@@ -92,6 +101,9 @@ export function newField(template: FieldTemplateId, plans: Record<Side, Deployme
     alloc: { ...plans.fr.alloc, ...plans.ru.alloc },
     orders: { fr: plans.fr.orders, ru: plans.ru.orders },
     mainEffort: { fr: plans.fr.mainEffort, ru: plans.ru.mainEffort },
+    cavalryTask: { fr: 'pursue', ru: 'pursue' },
+    charging: { fr: null, ru: null },
+    flank: { fr: null, ru: null },
     positionLost: [],
     pursued: false,
     result: { fr: null, ru: null },
@@ -213,7 +225,8 @@ export function exitStateFor(s: GameState, ctx: Context, b: BattleState, side: S
 // ------------------------------------------------------------------------------- decisions
 
 export function keyLabel(k: KeyDecision): string {
-  return k.kind === 'commitReserve' ? `commitReserve:${k.sector}` : k.kind;
+  if (k.kind === 'commitReserve' || k.kind === 'massGuns' || k.kind === 'charge') return `${k.kind}:${k.sector}`;
+  return k.kind === 'cavalry' ? `cavalry:${k.task}` : k.kind;
 }
 
 /** The old army-wide orders, still accepted (§3.4b). */
@@ -240,7 +253,38 @@ function applyKey(s: GameState, b: BattleState, side: Side, k: KeyDecision, now:
     }
     // Sent in to counter-attack: it presses there, or keeps up the assault.
     if (orders[k.sector] !== 'assault') orders[k.sector] = 'press';
+  } else if (k.kind === 'massGuns' || k.kind === 'charge') {
+    // Every deployed gun, or the reserve's horsemen, into one sector: each counted once (contract A).
+    for (const f of activeForces(s, b, side, now)) {
+      const a = must(b.field.alloc[f.id], `allocation of ${f.id}`);
+      const into = a.sectors[k.sector];
+      if (k.kind === 'charge') {
+        into.cav += a.reserve.cav;
+        a.reserve = { ...a.reserve, cav: 0 };
+        continue;
+      }
+      for (const from of [...a.sectors, a.reserve]) {
+        if (from === into) continue;
+        into.guns += from.guns;
+        from.guns = 0;
+      }
+    }
+    if (k.kind === 'charge') b.field.charging[side] = k.sector;
+  } else if (k.kind === 'cavalry') {
+    b.field.cavalryTask[side] = k.task;
   }
+}
+
+/**
+ * The enemy sector a side strikes in the flank: having come along two or more roads, it hits the enemy where
+ * the enemy's line is thinnest. Several approach roads block nothing by themselves (contract D).
+ */
+function flankOf(s: GameState, b: BattleState, side: Side, now: number): SectorIndex | null {
+  const roads = new Set(activeForces(s, b, side, now).filter((f) => f.men > 0 && f.cameFrom !== null).map((f) => f.cameFrom));
+  if (roads.size < 2) return null;
+  const enemyIn = (i: SectorIndex) => activeForces(s, b, otherSide(side), now).reduce((n, f) => n + (b.field.alloc[f.id]?.sectors[i].inf ?? 0) + (b.field.alloc[f.id]?.sectors[i].cav ?? 0), 0);
+  const held = SECTORS.filter((i) => enemyIn(i) > 0);
+  return held.length === 0 ? null : ([...held].sort((x, y) => enemyIn(x) - enemyIn(y) || x - y)[0] as SectorIndex);
 }
 
 // ---------------------------------------------------------------------------------- a round (B)
@@ -262,10 +306,11 @@ interface SectorSide {
   contingents: Contingent[];
 }
 
-/** The fighting worth of one force's troops in a sector: men, mounted cavalry and guns, readiness, cohesion, fatigue and quality. */
-function worthOf(f: Force, t: Troops, at: SectorTemplate, rules: Rules): number {
+/** The fighting worth of one force's troops in a sector: men, mounted cavalry (more in a charge) and guns, readiness, cohesion, fatigue and quality. */
+function worthOf(f: Force, t: Troops, at: SectorTemplate, rules: Rules, charging: boolean): number {
   const mounted = f.cavalry === 0 ? 0 : Math.floor((t.cav * effectiveCavalry(f, rules)) / f.cavalry);
-  const menWorth = t.inf + (t.cav - mounted) + Math.floor((mounted * at.cavalryPermille) / 1000) + Math.floor((t.guns * rules.battle.gunValue * at.gunsPermille) / 1000);
+  const horse = Math.floor((Math.floor((mounted * at.cavalryPermille) / 1000) * (charging ? rules.battle.chargePermille : 1000)) / 1000);
+  const menWorth = t.inf + (t.cav - mounted) + horse + Math.floor((t.guns * rules.battle.gunValue * at.gunsPermille) / 1000);
   const ready = Math.max(0, 1000 - f.gathering * rules.posture.readinessLossPerSlotPermille);
   const steady = Math.floor((Math.floor((menWorth * ready) / 1000) * (500 + Math.floor(f.cohesion / 2))) / 1000);
   return Math.floor((Math.floor((steady * fatiguePermille(f.fatigue, rules)) / 1000) * f.quality) / 1000);
@@ -285,7 +330,7 @@ function snapshot(s: GameState, ctx: Context, b: BattleState, orders: Record<Sid
         const t = must(b.field.alloc[f.id], `allocation of ${f.id}`).sectors[i];
         if (t.inf + t.cav + t.guns === 0) continue;
         const ammoNeed = Math.floor(((t.inf + t.cav) * r.ammoPerThousandMen[order]) / 1000) + t.guns * r.ammoPerGun;
-        contingents.push({ f, inf: t.inf, cav: t.cav, guns: t.guns, worth: worthOf(f, t, at, ctx.rules), ammoNeed });
+        contingents.push({ f, inf: t.inf, cav: t.cav, guns: t.guns, worth: worthOf(f, t, at, ctx.rules, b.field.charging[side] === i), ammoNeed });
       }
       per[side] = { order, men: contingents.reduce((n, c) => n + c.inf + c.cav, 0), power: 0, contingents };
     }
@@ -318,7 +363,8 @@ function snapshot(s: GameState, ctx: Context, b: BattleState, orders: Record<Sid
       const ammo = needed === 0 ? 1000 : r.noAmmoPowerPermille + Math.floor(((1000 - r.noAmmoPowerPermille) * Math.min(got, needed)) / needed);
       const defence = side === b.attacker ? 1000 : template.sectors[i].defencePermille;
       const ordered = Math.floor((worth * r.orderPowerPermille[sec.order]) / 1000);
-      const placed = Math.floor((Math.floor((ordered * defence) / 1000) * ammo) / 1000);
+      const flanked = b.field.flank[side] === i ? Math.floor((ordered * r.flankPermille) / 1000) : ordered;
+      const placed = Math.floor((Math.floor((flanked * defence) / 1000) * ammo) / 1000);
       sec.power = penalised[side] ? Math.floor((placed * (1000 - r.delegatePenaltyPermille)) / 1000) : placed;
     });
   }
@@ -393,7 +439,9 @@ export function resolveRound(s: GameState, ctx: Context, b: BattleState, decisio
   const breaking = SIDES.filter((side) => decisions[side].kind === 'breakOff');
   const leavingNow = breaking.filter((side) => exits[side] !== 'contested');
   if (leavingNow.length > 0) return endWith(s, ctx, b, breaking.map((side) => ({ side, how: 'withdrew' as const })), exits, false, log);
+  b.field.charging = { fr: null, ru: null };
   for (const side of SIDES) if (!breaking.includes(side)) applyKey(s, b, side, decisions[side], now);
+  b.field.flank = { fr: flankOf(s, b, 'fr', now), ru: flankOf(s, b, 'ru', now) };
   const orders = { fr: [...b.field.orders.fr], ru: [...b.field.orders.ru] } as Record<Side, SectorOrder[]>;
   for (const side of breaking) orders[side] = ['fallBack', 'fallBack', 'fallBack'];
 
@@ -532,8 +580,11 @@ function pursue(s: GameState, ctx: Context, b: BattleState, by: Side, side: Side
   const r = ctx.rules.battle;
   b.field.pursued = true;
   const fresh = (f: Force) => Math.floor((Math.floor((effectiveCavalry(f, ctx.rules) * fatiguePermille(f.fatigue, ctx.rules)) / 1000) * f.cohesion) / 1000);
-  const power = sideForces(s, b, by).reduce((n, f) => n + fresh(f), 0);
-  const screen = routed ? 0 : Math.floor((gone.reduce((n, f) => n + fresh(f), 0) * r.screenPermille[exit === 'contested' ? 'contested' : 'open']) / 1000);
+  // Cavalry kept to screen pursues less, and covers its own side's withdrawal better (§2.10).
+  const task = (who: Side, screening: number) => (b.field.cavalryTask[who] === 'screen' ? screening : 1000);
+  const power = Math.floor((sideForces(s, b, by).reduce((n, f) => n + fresh(f), 0) * task(by, r.screeningPursuitPermille)) / 1000);
+  const cover = Math.floor((gone.reduce((n, f) => n + fresh(f), 0) * task(side, r.screeningCoverPermille)) / 1000);
+  const screen = routed ? 0 : Math.floor((cover * r.screenPermille[exit === 'contested' ? 'contested' : 'open']) / 1000);
   const men = gone.reduce((n, f) => n + f.men, 0);
   const raw = Math.floor((Math.max(0, power - screen) * (routed ? r.routPursuitPermille : r.pursuitPermille)) / 1000);
   const total = Math.min(raw, Math.floor((men * r.maxPursuitPermille) / 1000));

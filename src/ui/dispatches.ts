@@ -22,7 +22,24 @@ export function dispatches(entries: readonly LogEntry[], s: GameState, ctx: Cont
   // The French decision of a round, in words; the Russian one stays hidden (§2.8).
   const decision = (battle: unknown, label: unknown) => {
     const [kind, at] = String(label).split(':');
-    return kind === 'commitReserve' ? `sent the reserve to ${sector(battle, at)}` : kind === 'pressAll' ? 'pressed everywhere' : kind === 'holdAll' ? 'held everywhere' : kind === 'breakOff' ? 'broke off the fight' : 'kept to the plan';
+    switch (kind) {
+      case 'commitReserve':
+        return `sent the reserve to ${sector(battle, at)}`;
+      case 'massGuns':
+        return `massed the guns at ${sector(battle, at)}`;
+      case 'charge':
+        return `charged with the cavalry at ${sector(battle, at)}`;
+      case 'cavalry':
+        return at === 'screen' ? 'kept the cavalry back to screen' : 'set the cavalry to pursue';
+      case 'pressAll':
+        return 'pressed everywhere';
+      case 'holdAll':
+        return 'held everywhere';
+      case 'breakOff':
+        return 'broke off the fight';
+      default:
+        return 'kept to the plan';
+    }
   };
   const about = (n: unknown) => (Number(n) < 100 ? 'few' : `about ${(Math.round(Number(n) / 100) * 100).toLocaleString('en-GB')}`);
   const out: Dispatch[] = [];

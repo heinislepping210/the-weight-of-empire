@@ -223,6 +223,8 @@ The Russians decide at the same time, and their choices are hidden until resolve
 
 **In Challenge mode**, the staff proposes a deployment for the battlefield, and you accept it or move formations between sectors. After that, each round asks for at most one key decision — where to commit the reserve, whether to press or hold, or whether to break off — with "continue the plan" as the default. A typical battle takes 3–4 decisions and about 2 minutes. Minor actions (rearguards, raids, skirmishes below a size threshold) resolve without stopping.
 
+*Built so far (rules 0.17.1; contracts in TECHNICAL_ARCHITECTURE §3.4b):* the open field and Smolensk's walled Old Town as templates; each force's infantry, cavalry and guns allocated across three sectors and a reserve; Assault, Press, Hold and Fall back per sector, with a five-step control track; the round's one key decision (continue the plan, send in the reserve, press or hold everywhere, mass the guns, charge, set the cavalry to pursue or screen, break off); the four results of a battle kept apart; exits open, contested or blocked; pursuit; the flank of a side that came along two roads; the whole battle left to the marshal until nightfall, at no penalty. Not yet: the illustrated battlefield (M2/M3), scouting that reveals only part of the enemy's deployment (the panel shows estimates rounded to the nearest thousand), care of the wounded, stores taken or burned in battle, and more templates.
+
 ## 2.11 Events
 - Events are data. Each has: trigger conditions on the game state, a weight, an **optional warning one turn ahead**, effects, optional response choices, cooldowns, a category label (*inspired by documented conditions* / *simulated*), and a historical note.
 - First ~10 events:

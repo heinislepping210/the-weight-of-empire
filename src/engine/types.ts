@@ -145,7 +145,15 @@ export type KeyDecision =
   | { kind: 'commitReserve'; sector: SectorIndex }
   | { kind: 'pressAll' }
   | { kind: 'holdAll' }
-  | { kind: 'breakOff' };
+  | { kind: 'breakOff' }
+  /** Every deployed gun of the side into one sector (§2.10, concentrate artillery). */
+  | { kind: 'massGuns'; sector: SectorIndex }
+  /** The reserve cavalry charges in one sector this round. */
+  | { kind: 'charge'; sector: SectorIndex }
+  /** The cavalry's standing task: pursue a beaten enemy, or screen the army's own withdrawal. */
+  | { kind: 'cavalry'; task: CavalryTask };
+
+export type CavalryTask = 'pursue' | 'screen';
 
 /** How a side can leave the field (contract D). */
 export type ExitState = 'open' | 'contested' | 'blocked';
@@ -156,7 +164,7 @@ export type FieldResult = 'withdrew' | 'routed' | 'trapped';
 /** Where a player sends one of their forces at deployment: a sector, the reserve, or as the staff planned. */
 export type Placement = SectorIndex | 'reserve' | 'staff';
 
-export type FieldTemplateId = 'open';
+export type FieldTemplateId = 'open' | 'smolensk';
 
 export interface BattleField {
   template: FieldTemplateId;
@@ -167,6 +175,12 @@ export interface BattleField {
   orders: Record<Side, [SectorOrder, SectorOrder, SectorOrder]>;
   /** The side's main effort: the sector the staff attacks in, or null for a defence. */
   mainEffort: Record<Side, SectorIndex | null>;
+  /** Each side's cavalry task (§2.10). */
+  cavalryTask: Record<Side, CavalryTask>;
+  /** The sector a side's cavalry charges in this round, if any. */
+  charging: Record<Side, SectorIndex | null>;
+  /** The enemy sector a side strikes in the flank, having come along two or more roads; recomputed each round. */
+  flank: Record<Side, SectorIndex | null>;
   /** Sides that have lost two of the three sectors: a tactical defeat, not a rout. */
   positionLost: Side[];
   /** Pursuit has been resolved: it happens once per battle (contract B). */

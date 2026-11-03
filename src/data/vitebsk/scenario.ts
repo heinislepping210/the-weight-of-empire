@@ -72,6 +72,8 @@ export function vitebskDecision(): ScenarioDef {
     // Places of Smolensk province, the "old Russian" soil whose loss raised pressure on Barclay (G-014).
     pressurePlaces: ['rudnia', 'porechye', 'krasnyi', 'smolensk', 'smolensk-north', 'valutino', 'dorogobuzh'],
     keyPlaces: ['smolensk', 'smolensk-north'],
+    // The walled Old Town (H-006); the north-bank suburb is fought over as open ground for now (G-022).
+    battlefields: { smolensk: 'smolensk' },
     // The Moscow road eastwards: the Russian line of retreat.
     exitPlaces: ['dorogobuzh'],
     // §2.13: Valutino (Lubino) or Dorogobuzh on the Moscow road; to verify against the period road network.

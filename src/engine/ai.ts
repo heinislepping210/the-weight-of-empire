@@ -46,20 +46,27 @@ export function deploymentFor(s: GameState, ctx: Context, b: Pick<BattleState, '
 
 /**
  * The marshal's key decision for a round. He breaks off once the position is lost or cohesion runs low, if a
- * road is open; sends the reserve to counter-attack where the line is giving way, never into a sector already lost; presses with clearly more men, and stops
- * attacking with clearly fewer.
+ * road is open; sends the reserve to counter-attack where the line is giving way, never into a sector already
+ * lost; keeps his cavalry back to screen when the day is going badly; charges where the enemy is giving way;
+ * presses with clearly more men, and stops attacking with clearly fewer.
  */
 export function decideRound(s: GameState, ctx: Context, b: BattleState, side: Side): KeyDecision {
   const r = ctx.rules.battle;
   const now = slotIndex(s.resolution);
   const mine = sideTotals(s, b, side, now);
   const theirs = sideTotals(s, b, otherSide(side), now);
-  if (exitStateFor(s, ctx, b, side) !== 'blocked' && (b.field.positionLost.includes(side) || mine.cohesion < r.withdrawCohesion)) return { kind: 'breakOff' };
+  const standing = mustStand(s, ctx, b, side);
+  const done = standing ? mine.cohesion < r.mustStandCohesion : b.field.positionLost.includes(side) || mine.cohesion < r.withdrawCohesion;
+  if (done && exitStateFor(s, ctx, b, side) !== 'blocked') return { kind: 'breakOff' };
   // How far each sector has gone against this side: positive is bad.
   const against = (i: SectorIndex) => (side === 'fr' ? -b.field.control[i] : b.field.control[i]);
   // A sector already lost is given up; one giving way gets the reserve.
   const wavering = SECTORS.filter((i) => against(i) === 1);
   if (reserveMen(s, b, side, now) > 0 && wavering.length > 0) return { kind: 'commitReserve', sector: wavering[0] as SectorIndex };
+  const shaky = b.field.positionLost.includes(side) || mine.cohesion < r.nightWithdrawCohesion;
+  if (shaky && b.field.cavalryTask[side] !== 'screen') return { kind: 'cavalry', task: 'screen' };
+  const yielding = SECTORS.filter((i) => against(i) === -1);
+  if (!shaky && yielding.length > 0 && reserveCavalry(b, side, now) > 0) return { kind: 'charge', sector: yielding[0] as SectorIndex };
   if (mine.men * 1000 >= theirs.men * r.pressOddsPermille) return { kind: 'pressAll' };
   if (side === b.attacker && theirs.men * 1000 >= mine.men * r.pressOddsPermille) return { kind: 'holdAll' };
   return { kind: 'continue' };
@@ -69,9 +76,23 @@ export function decideRound(s: GameState, ctx: Context, b: BattleState, side: Si
 export function decideNightfall(s: GameState, ctx: Context, b: BattleState, side: Side): NightChoice {
   const r = ctx.rules.battle;
   if (exitStateFor(s, ctx, b, side) === 'blocked') return 'stay';
-  if (b.field.positionLost.includes(side)) return 'withdraw';
   const dawn = slotIndex(nextDaylight(s.resolution));
   const mine = sideTotals(s, b, side, dawn);
+  if (mustStand(s, ctx, b, side)) return mine.cohesion < r.mustStandNightCohesion ? 'withdraw' : 'stay';
+  if (b.field.positionLost.includes(side)) return 'withdraw';
   const theirs = sideTotals(s, b, otherSide(side), dawn);
   return mine.cohesion < r.nightWithdrawCohesion || mine.men * 1000 < theirs.men * r.nightOddsPermille ? 'withdraw' : 'stay';
+}
+
+/**
+ * The Russian command under political pressure must stand at a key place (§2.9): the marshal holds on there
+ * after losing the position, while cohesion lasts. Willingness only: it never closes a road (contract D).
+ */
+function mustStand(s: GameState, ctx: Context, b: BattleState, side: Side): boolean {
+  return side === 'ru' && (ctx.scenario.keyPlaces ?? []).includes(b.node) && s.russianCommand.pressure >= ctx.rules.russian.mustStandPressure;
+}
+
+/** Horsemen still in the side's reserve, deployed forces only. */
+function reserveCavalry(b: BattleState, side: Side, now: number): number {
+  return b.sides[side].reduce((n, id) => n + ((b.fightsFrom[id] ?? 0) <= now ? (b.field.alloc[id]?.reserve.cav ?? 0) : 0), 0);
 }

@@ -3,7 +3,7 @@ import { updateIntel } from './intel';
 import { planRussianTurn } from './russian';
 import { drawBetween } from './rng';
 import { RULES, type Rules } from './rules';
-import type { Convoy, Depot, District, Engagement, Force, ForceId, GameState, LogEntry, NodeId, Pace, Posture, RoadCondition, Side, Supplies } from './types';
+import type { Convoy, Depot, District, Engagement, FieldTemplateId, Force, ForceId, GameState, LogEntry, NodeId, Pace, Posture, RoadCondition, Side, Supplies } from './types';
 import { emptySupplies } from './util';
 
 /** A fixed number, or an inclusive range drawn once per game from the seed (scenario variation, §2.12). */
@@ -67,6 +67,8 @@ export interface ScenarioDef {
   pressurePlaces?: NodeId[];
   /** Places that count as "taking the objective ground" in the outcome (§2.13). */
   keyPlaces?: NodeId[];
+  /** The battlefield template of a place, where it is not open ground (§2.10). */
+  battlefields?: Record<NodeId, FieldTemplateId>;
   /** Ends of the Russian line of retreat (§2.13). */
   exitPlaces?: NodeId[];
   /**

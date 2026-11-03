@@ -13,7 +13,7 @@
 
 import { expect, it } from 'vitest';
 import { ENDING_NAMES, ENDING_RANK, RULES, RULES_VERSION, createContext, evaluate } from '../../src/engine';
-import type { EndingId, GameState, Rules, RussianResult } from '../../src/engine';
+import type { EndingId, GameState, LogEntry, Rules, RussianResult } from '../../src/engine';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
 import { keyHash } from '../../src/engine/rng';
 import { play } from '../fixtures/driver';
@@ -75,6 +75,38 @@ interface Result {
   costlyEscape: boolean;
   /** One French group ends with at least 7.5 days of food in hand while another has under one (second review, B3). */
   uneven: boolean;
+  /** Sector battles (§3.4b): how each side left the field ('ru:routed'), and by which exit ('ru:contested'). */
+  fieldResults: Record<string, number>;
+  exits: Record<string, number>;
+  positionsLost: { fr: number; ru: number };
+  /** Battles in which a Russian main army routed or was trapped. */
+  mainBroke: number;
+  /** In a decisive defeat, the exits of the Russian breaks that counted towards it. */
+  decisiveExits: string[];
+}
+
+/** Sector-battle figures for one game (§3.4b), from the battles and the log. */
+function battleFigures(end: GameState, log: LogEntry[], decisive: boolean): Pick<Result, 'fieldResults' | 'exits' | 'positionsLost' | 'mainBroke' | 'decisiveExits'> {
+  const fieldResults: Record<string, number> = {};
+  const exits: Record<string, number> = {};
+  const positionsLost = { fr: 0, ru: 0 };
+  let mainBroke = 0;
+  const decisiveExits: string[] = [];
+  for (const e of log) {
+    if (e.kind !== 'fieldResult') continue;
+    const key = `${e.detail.side}:${e.detail.result}`;
+    fieldResults[key] = (fieldResults[key] ?? 0) + 1;
+    const exit = `${e.detail.side}:${e.detail.exit}`;
+    exits[exit] = (exits[exit] ?? 0) + 1;
+    const b = end.battles[String(e.detail.battle)];
+    const main = b !== undefined && b.sides.ru.some((id) => end.mainArmies.includes(id));
+    if (e.detail.side === 'ru' && main && e.detail.result !== 'withdrew') {
+      mainBroke++;
+      if (decisive && b?.winner === 'fr') decisiveExits.push(String(e.detail.exit));
+    }
+  }
+  for (const b of Object.values(end.battles)) for (const side of b.field.positionLost) positionsLost[side]++;
+  return { fieldResults, exits, positionsLost, mainBroke, decisiveExits };
 }
 
 it.skipIf(!enabled)('balance batch', () => {
@@ -121,6 +153,7 @@ it.skipIf(!enabled)('balance batch', () => {
           const days = Object.values(run.final.forces).filter((f) => f.side === 'fr' && f.men > 0).map((f) => f.stock.food / f.men);
           return Math.max(...days) >= 7.5 && Math.min(...days) < 1;
         })(),
+        ...battleFigures(run.final, log, o.russian === 'decisivelyDefeated'),
       });
     }
   }
@@ -188,6 +221,32 @@ it.skipIf(!enabled)('balance batch', () => {
       `| ${name} | ${mean(rs.map((r) => r.founded)).toFixed(2)} | ${mean(rs.map((r) => r.depotsLost)).toFixed(2)} | ${pct(rs.filter((r) => r.tookSmolensk).length, rs.length)} | ${Math.round(mean(rs.map((r) => r.lineFood))).toLocaleString('en-GB')} | ${Math.round(mean(rs.map((r) => r.burnedFood))).toLocaleString('en-GB')} | ${Math.round(mean(rs.map((r) => r.abandonedFood))).toLocaleString('en-GB')} / ${Math.round(mean(rs.map((r) => r.abandonedFodder))).toLocaleString('en-GB')} | ${(mean(rs.map((r) => r.trainHorsesLostPermille)) / 10).toFixed(1)}% | ${pct(rs.filter((r) => r.uneven).length, rs.length)} |`,
     );
   }
+
+  lines.push(
+    '',
+    '## Sector battles (§2.10; per 100 games)',
+    '',
+    'How each side left the field, and by which road (TECHNICAL_ARCHITECTURE §3.4b). A lost position is a tactical defeat, not a rout; only routs and traps count towards a decisive defeat.',
+    '',
+    '| Strategy | Battles | Rounds per battle | Positions lost, French / Russian | Russians withdrew / routed / trapped | French withdrew / routed / trapped | Russian exits open / contested / blocked | A Russian main army broke |',
+    '|---|---|---|---|---|---|---|---|',
+  );
+  const per100 = (rs: Result[], f: (r: Result) => number) => Math.round((rs.reduce((n, r) => n + f(r), 0) * 100) / Math.max(1, rs.length));
+  for (const name of names) {
+    const rs = results[name]!;
+    const n = (key: string, from: 'fieldResults' | 'exits') => per100(rs, (r) => r[from][key] ?? 0);
+    const battles = rs.reduce((x, r) => x + r.battles, 0);
+    const rounds = rs.reduce((x, r) => x + r.rounds, 0);
+    lines.push(
+      `| ${name} | ${per100(rs, (r) => r.battles)} | ${(rounds / Math.max(1, battles)).toFixed(1)} | ${per100(rs, (r) => r.positionsLost.fr)} / ${per100(rs, (r) => r.positionsLost.ru)} | ${n('ru:withdrew', 'fieldResults')} / ${n('ru:routed', 'fieldResults')} / ${n('ru:trapped', 'fieldResults')} | ${n('fr:withdrew', 'fieldResults')} / ${n('fr:routed', 'fieldResults')} / ${n('fr:trapped', 'fieldResults')} | ${n('ru:open', 'exits')} / ${n('ru:contested', 'exits')} / ${n('ru:blocked', 'exits')} | ${per100(rs, (r) => r.mainBroke)} |`,
+    );
+  }
+  const decisiveExits = names.flatMap((name) => results[name]!.flatMap((r) => r.decisiveExits));
+  const count = (e: string) => decisiveExits.filter((x) => x === e).length;
+  lines.push(
+    '',
+    `**Decisive defeats in battle:** ${names.map((name) => `${name} ${results[name]!.filter((r) => r.russian === 'decisivelyDefeated').length}`).filter((x) => !x.endsWith(' 0')).join(', ') || 'none'}. The Russian breaks that counted towards them left by an open road ${count('open')} times, a contested one ${count('contested')} times, and were trapped with no road ${count('blocked')} times.`,
+  );
 
   // F1/F2/F3 on the first roll of each seed (the seed's own dice), comparable with earlier reports.
   const first = (name: string, seed: number) => results[name]![seed * DICE]!;
