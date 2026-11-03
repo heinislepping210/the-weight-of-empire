@@ -1,63 +1,79 @@
-# Targeted playtest: can you predict stand, retreat and the verdict?
+# Targeted playtest: can you predict what the game will do?
 
-About 25 minutes. One player (you, or a tester) and, if you can, an observer who only writes things down. Asked for by the third review ([record](../reviews/2026-11-02-third-review.md), "recommended next phase", point 3). Only what you report counts; nothing here is filled in by me.
+About 30 minutes of play. The test is whether you can predict what the game does from what the screen shows, not whether you win. Play one campaign with the opening below, and before each of the moments A–E, write down what you expect and what on the screen you base it on. Then write down what happened.
 
-## What it answers
+If you can, have an observer who only takes notes. Observers: don't help; if the player asks what something will do, ask back "What do you think it will do?"
 
-1. Can a player predict which of their corps will stand and which will retreat?
-2. Can a player predict what a retreat does to a block on the enemy's road?
-3. Can a player explain why holding a place ends in Limited Success?
+## Setup
 
-And two open items: where a French corps beaten on Smolensk's north bank should fall back (GAMEPLAY_BALANCING, 0.18.0, "Open"), and whether the map covers the orders in a narrow window (your layout fix, not yet committed).
+- **Record** the build you play (the commit, if you run it from the repository) and the time you start setting up.
+- Run the game: in the project folder, `npm ci` once, then `npm run dev`, and open the address it prints (normally http://localhost:5173). Node.js 22.12 or later, or 24 LTS.
+- Type **13** in **Seed** and press **New game**. Record the time: play starts now.
 
-## Setup (2 minutes)
+## The opening (scripted; record any deviation and why)
 
-- Open the game. In the project folder run `npm run dev`, then open http://127.0.0.1:5173 in a browser.
-- Type **13** in Seed and press **New game**. Write down the time.
-- Fight at least the first battle yourself: **Deploy and command the battle**. After that you may leave battles to the marshal.
+**Turn 1:** change only these, and leave everything else as the screen offers it:
+- **Objective:** Smolensk (Old Town)
+- **Route:** Via Liubavichi and Rasasna (174 km from Liozno)
+- **Pace:** Steady · **Groups that halt:** Dispersed · **Battle:** Accept · **Supply:** Keep the depots (these are the defaults)
+- No orders for single groups. Then **Commit orders for the next two days**.
 
-## The plan to play
+**Each later turn:** keep these orders until French troops hold Smolensk (Old Town) or reach Valutino. From then on: **Objective** Valutino and **Battle** Stand, to the end.
 
-The holding envelopment, the one plan that wins among the tested bots:
-- **Objective** Smolensk (the Old Town); **Route** the one by Rasasna; **Pace** Steady; **Battle** Accept. Then **Commit orders for the next two days**.
-- Once you hold Smolensk, or reach Valutino: **Objective** Valutino, **Battle** Stand, and keep it to the end.
-- Change anything you like, but say why out loud.
+**Battles:** command the first one yourself (**Deploy and command the battle**, then **Continue the plan** each round). You may leave later battles to the marshal (**Deploy and leave the battle to the marshal**).
 
 ## Predict, then look
 
-Write each prediction on the sheet *before* you click, then what happened.
+For each moment, fill a row of the sheet *before* you click: your prediction, the evidence on screen you relied on (quote the wording), and how confident you are. Afterwards fill in what happened and its status:
+- **confirmed:** it happened as predicted;
+- **contradicted:** something else happened;
+- **not triggered:** the moment never came;
+- **couldn't verify:** it came, but the screen never showed the answer.
 
-- **A. Before each battle's first round:** "If we lose the position here, will our marshal hold on or break off?" Then read the line about Stand orders in the battle panel, and watch what he does.
-- **B. Before committing orders, when one of your groups may fight next:** "If it is beaten, which place will it fall back to?" In the battle, the panel names your road out; afterwards the dispatches say where it went.
-- **C. When the Russians are beaten near your block:** "Can they get away, and by which road?" The battle panel shows only your own road, not theirs, so this is your guess from the map; the dispatches tell you afterwards.
-- **D. At the end, before reading the verdict:** "Which ending, and why?" Then **Save for comparison**, open **Compare runs**, and read the verdict and its **Why** list.
-- **E. Only if it happens:** a French corps is beaten on Smolensk's north bank while French troops hold the Old Town. "Where should it go: back to Rudnia, or across the bridge into the town?" Then where it went.
+**A. Stand.** In a battle, after reading the battle panel (at the deployment or at a round) and before you deploy, continue or leave it to the marshal: "If the French lose the position in this battle, will the marshal hold on or break off?" Quote the panel wording you relied on. If you command the battle yourself, or the position never falls, the answer can't be checked: mark it couldn't verify.
 
-Once during the game, narrow the window below 900 pixels: can you still reach **Commit orders for the next two days** without the map sliding over it?
+**B. A French corps falling back.** Pick one named French group that is likely to fight soon.
+1. On the orders screen, before committing: "If this group is beaten, where will it fall back to?"
+2. In the battle, after the panel shows the road out: the same question again.
+
+If it does fall back, compare both answers with the dispatch. Otherwise mark both not triggered.
+
+**C. A Russian army leaving.** Before resolving a battle in which the Russians may be beaten near your troops: "Can they leave? Where might they go? Will your position still matter afterwards?" "I can't tell from the screen" is a valid answer: if you give it, write down what information was missing. Score only what you can check on the map, in the dispatches or at the end.
+
+**D. The ending.** Before committing the last turn's orders (turn 10): "Which ending do you expect, how confident are you, and which two facts will decide it?" Then read the end screen. Write, in your own words, why the game ended as it did. Keep the ending's name apart from your explanation; you may understand what happened without knowing what the game calls it.
+
+**E. A French corps beaten on Smolensk's north bank.** Only if a battle begins on the north bank (the St Petersburg suburb) while French troops hold the Old Town. Before reading the road line in the battle panel, answer two separate questions:
+1. "Where do you expect our troops there to go if they are beaten?"
+2. "Where would you order them to go, and why?"
+
+If it never happens, mark not triggered.
+
+## The narrow window (if you are testing the layout)
+
+Set the browser window to 800 pixels high. At each width below, scroll until **Commit orders for the next two days** is in view, and note whether the map or its legend covers it: **901, 900, 899, 768 and 390 pixels.** At 900 pixels, also click the button and check that the orders were committed (the date at the top moves on two days). A single check at one width can miss the fault.
 
 ## Sheet
 
-Start time: ____  End time: ____
+Build: ____ · Setup started: ____ · Play started: ____ · Play ended: ____
 
-| # | Date in the game | Kind (A–E) | Your prediction | What happened | Right? |
-|---|---|---|---|---|---|
-| 1 | | | | | |
-| 2 | | | | | |
-| 3 | | | | | |
-| 4 | | | | | |
-| 5 | | | | | |
-| 6 | | | | | |
+| # | Date in the game | Step (A–E) | Prediction | Evidence on screen (quote it) | Confidence (low / medium / high) | What happened | Status |
+|---|---|---|---|---|---|---|---|
+| 1 | | | | | | | |
+| 2 | | | | | | | |
+| 3 | | | | | | | |
+| 4 | | | | | | | |
+| 5 | | | | | | | |
+| 6 | | | | | | | |
 
-- Decisions you made in battle: ____ ; of those, how many you could explain afterwards ("I did X because Y"): ____
-- "I could predict what my orders would do", 1–5: ____
-- "I felt in command", 1–5: ____ (the M3 target is a median of at least 4 on both)
-- Narrow window: the map covered the orders? yes / no
+Add rows as needed.
+
+- Deviations from the opening, with reasons:
+- Decisions made in battle: ____ ; how many you could explain afterwards ("I did X because Y"): ____
+- "I could predict what my orders would do", 1–5: ____ · "I felt in command", 1–5: ____ (an agent marks these as an agent's observations)
+- Narrow window: covered at 901 / 900 / 899 / 768 / 390? Did the click at 900 commit the orders?
+- Console errors, wrong numbers, or text that contradicted what then happened (with the date in the game):
 - What surprised you, one line each:
 
-## For the observer
+## Optional, after the sheet is done
 
-Don't help. If the player asks what something will do, ask back: "What do you think it will do?" Note the moments the player hesitates or is surprised, with the date in the game.
-
-## Afterwards
-
-Send me the sheet, or tell me what happened. I'll record it in the third review's record. The Stand, retreat or verdict text changes only where the predictions show a gap, and only with your approval.
+Compare shows the verdict side by side once two runs are saved: **Save for comparison**, start seed 13 again, play a quick second game to its end (for example, tick **Declare a halt** on the first turn and commit each turn), save it, and open **Compare runs**.

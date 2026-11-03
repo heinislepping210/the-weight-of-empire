@@ -103,15 +103,20 @@ button:disabled {
   align-items: start;
 }
 
+.map-wrap {
+  position: sticky;
+  top: 8px;
+}
+
 @media (max-width: 900px) {
   .layout {
     grid-template-columns: 1fr;
   }
-}
 
-.map-wrap {
-  position: sticky;
-  top: 8px;
+  /* One column: a map kept in view would slide over the orders below it. */
+  .map-wrap {
+    position: static;
+  }
 }
 
 .map {

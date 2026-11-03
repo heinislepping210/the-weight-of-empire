@@ -96,7 +96,7 @@ Each change was written test-first: tests that failed on the previous rules.
 - **Open measures:** F3 by openings (branch the first two directives with a shared continuation); an adaptive policy that re-decides every turn with the full French observations, with nested resampling of its learning; plausible novice controls for F6. (Scenario-clustered intervals are in the batch since D-041; F3's ties and regret, and variance components that allow for the dice every bot shares on a roll, since D-047.)
 - **Most rule values are still game assumptions.** Only march speeds, wagon loads, rations, hunger, horses per wagon and carrying have been checked against sources, and those only as ranges; the foraging reach was misread at first and corrected in 0.12.0.
 - **Roads are provisional:** straight-line distance × 1.25 (G-007).
-- **Narrow windows:** below 900 px wide the map, kept in view while scrolling, slides over the orders panel and hides the commit button. A fix exists locally and is not yet pushed; use a window at least 900 px wide.
+- **Narrow windows, fixed:** at 900 px wide and below, the map no longer stays in view while scrolling, so it no longer slides over the orders panel; the commit button was clear and worked at 901, 900, 899, 768 and 390 px (window 800 px high).
 - **The pinning and depot puzzle is explained and gone** (0.18.0, D-046): a forward depot turned the retreat of a corps beaten on Smolensk's north bank. Under the base line the pinning attack ends at the same rank whichever way it keeps its depots, on every seed.
 
 ## Scope limits (please don't suggest these)
