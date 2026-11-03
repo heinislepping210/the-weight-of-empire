@@ -128,4 +128,5 @@ it.skipIf(env.BALANCE !== '1')('adaptive policy on held-out seeds', () => {
     '*The intervals redraw the held-out scenarios only; they do not repeat the learning on the training seeds, so they understate the uncertainty of the learned choices.*',
   ];
   console.log(['ADAPTIVE-REPORT-START', ...lines, 'ADAPTIVE-REPORT-END'].join('\n'));
-}, 3_600_000);
+  // 45,000 games ran just over an hour beside the other probes (third review); a time limit is not a result.
+}, 10_800_000);

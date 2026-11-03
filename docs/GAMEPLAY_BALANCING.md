@@ -662,3 +662,55 @@ The third review's fixes (D-046), with the retreat rule you chose after we measu
 - **The retreats follow the lines of communications.** French corps fall back towards Vitebsk (Rudnia to Liozno, the north bank to Rudnia). Russians fall back along the Moscow road: from the Old Town to Valutino, and from Valutino to Dorogobuzh. A Russian army that attacked a block goes back the way it came. Two sides leaving at once rarely want the same road: a defender was turned aside in about 4 battles per 100 games of the rush and 1 or fewer elsewhere.
 - **Still no decisive defeat in battle, and no army trapped.** The families stay balanced (F3: push 37.8%, bait and converge 38.9%, southern envelopment 23.3%). The scenario oracle gains 0.15 ranks (0.09 to 0.21), and the adaptive policy is 0.03 ranks behind the best fixed approach (0.02 to 0.05).
 - **Open:** the base comes before the side's own troops. So in about 20 of 800 probed games (rush, concentrated push), a French corps beaten on the north bank went to Rudnia although a French corps held Smolensk across the bridge. That is defensible, since Rudnia is its road home, but a playtest may find joining the friends in the town more natural.
+
+## The experiment, reported as the third review asked (rules 0.18.0, 3 November 2026)
+
+No rule changed (D-047). The batch now reports F3 with its ties, F4 with a split that allows for the dice every bot shares, the pinning attacks stage by stage, and how often a Russian army is blocked in without being trapped. Two pinning bots that plan by search were added beside the first. Reports: [the batch, 1,000 scenarios × 3 sets of dice](balance/2026-11-03-rules-0.18.0-reporting.md), [the adaptive policy](balance/2026-11-03-adaptive-0.18.0-reporting.md), [the supply-stance probe](balance/2026-11-03-supply-stance-0.18.0-reporting.md). Zero invariant violations in the batch's 48,000 games, and every bot that did not change ends exactly as in the 0.18.0 reports.
+
+**F3: the families tie, and the tie hides a trade.** First roll of each of the 1,000 seeds:
+
+| Family | Best alone | Best, shared | All three equal | Last alone | F3 share (ties split) | Regret on fresh rolls |
+|---|---|---|---|---|---|---|
+| concentrated-push | 0.4% | 45.2% | 44.5% | 3.0% | 37.8% | 0.13 |
+| southern-envelopment | 7.4% | 2.1% | 44.5% | 44.7% | 23.3% | 0.68 |
+| bait-and-converge | 0.9% | 46.3% | 44.5% | 0.6% | 38.9% | 0.08 |
+
+- **Two or more families share the best ending on 91% of seeds, all three on 45%.** The push and bait and converge share it at Limited Success; neither is best alone on 1% of seeds. Only the southern envelopment is ever clearly best (7.4%), and it is last alone on 45%. F3's target (none above 50%) is met by the split shares, but they describe ties, not choices.
+- **Within a shared best, the two differ in kind.** Bait and converge loses the fewest French men on 84% of those seeds; the push costs the Russian main armies the most on 75%. The tied ending is a cheaper or a bloodier Limited Success.
+- **Looking at one roll of a scenario teaches nothing a fixed choice does not.** Always bait and converge loses 0.08 ranks on the scenario's fresh rolls against the family best on those rolls; choosing on each seed the family best on its first roll loses 0.13, no better than always the push.
+
+**F4: the earlier adjustment was wrong in principle and nearly right here.**
+
+| Share of the ending's variance, 15 purposeful bots | Raw, descriptive | Components, model-dependent | Earlier adjustment |
+|---|---|---|---|
+| strategy | 19.4% | 19.4% (18.4–20.8) | 19.4% |
+| scenario | 6.1% | 5.1% (4.5–5.6) | 5.4% |
+| which strategy suits which scenario | 53.5% | 44.1% (41.9–45.8) | 43.7% |
+| dice, shared by every bot on a roll | 21.0% (all dice) | 1.1% (0.9–1.4) | 31.5% (all dice) |
+| dice, each bot's own | | 30.3% (28.9–31.7) | |
+
+- **The dice the bots share on a roll explain about 1%.** Every bot gets the same dice on a scenario's roll, which the earlier adjustment did not allow for; but the bots fight different battles at different times, so their dice rarely meet. On test data with strongly shared dice the earlier adjustment is off by about 9 points; here by under half a point.
+- **F4's target is met in every reading:** strategy 19.4% against scenario 5–6%. The largest part is still which strategy suits which scenario.
+- **The strategy share depends on which bots are counted.** With the 13 bots of the 0.18.0 report it was 22.3% raw; the two new pinning bots lower it.
+
+**Wins come from the scenario more than from the dice.** When a holding envelopment wins on a scenario's first roll, it wins again on most of that scenario's fresh rolls: waiting for its trains 93%, the Guard at the base 64%, holding Valutino 61%, the plain envelopment 47%. The envelopments' road cuts come back on 82–99% of fresh rolls. A win is mostly a property of the scenario, something a player could learn to see. The adaptive policy, reading two figures at the first decision, still sees none of it: 0.03 ranks behind the best fixed approach (0.02 to 0.05), where a scenario oracle gains 0.15 (0.09 to 0.21), as in 0.18.0.
+
+**Pinning, stage by stage: no bot closes the roads around an army.**
+
+| Bot | Complete plan | Every road held at once | A main army there then | A striker in battle there | Limited Success / Repulse | French routed per 100 games |
+|---|---|---|---|---|---|---|
+| pinning-attack (first; re-plans every turn) | 100% | 54.3% | 0.9% | 0% | 74.7% / 25.3% | 13 |
+| pinning-attack-search (plan kept, roads first) | 99.9% | 0.2% | 0% | 0% | 59.3% / 40.6% | 27 |
+| pinning-fix-first (plan kept, strike first) | 99.9% | 1.0% | 0.6% | 0% | 73.4% / 26.5% | 35 |
+
+- **The first bot's closed roads mostly surround an empty place.** It re-plans on the latest sighting every turn, and holds every road out of a place the army has already left; with a main army really inside, in 9 games of 1,000, and no striker reached it then. The review suspected this of its "closable" test.
+- **Planned and kept, a plan lasts 4 or 5 turns at most** (1.7 to 1.9 plans a game) before the army moves on. The Russian armies move or strike every 1 to 3 turns; closing four roads takes longer.
+- **Keeping the plan costs the bot that closes first:** its corps march apart to roads they never all reach, and the Russians strike them in turn (Repulse 40.6% against 25.3%).
+- **Striking first does not pin them either.** Its battles last longer (5.7 rounds against 3.4) and its corps cut the Russian road on 5% of first rolls (0.1% for the first bot), but it wins in 1 game of 1,000.
+- So the trap fails at the second stage, not the last: the army is not there when the roads close. That comes from how the Russian command moves, not from the bots' search.
+
+**Blocked in at a pause, and never trapped.** A Russian main army stood at some pause with no road out free of the French in 45% of the concentrated strike's games, 9–13% of the envelopments' and 2–6% of the pinning attacks'. None was trapped in battle in 48,000 games. A column on a road counts as blocking it, and columns move on, so the likely reading is that a road closed at a pause is open again by the time the army loses a battle; we have not traced these games one by one.
+
+**Supply stance:** the new pinning bots end at the same rank on 100% (search) and 97.1% (strike first) of seeds whichever way they keep their depots.
+
+**Reading:** the review's method questions are answered without changing the earlier picture: among the tested bots only holding Valutino wins; the families tie at Limited Success; reading the situation at the first decision gains nothing. The pinning question is sharper. A Russian army in this model does not stay where it can be surrounded. Whether that is right for the Russian command at Smolensk, which in 1812 held the town through two days of battle before leaving, is a question for the history audit and the playtest, not for the bots.

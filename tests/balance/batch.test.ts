@@ -15,10 +15,12 @@ import { expect, it } from 'vitest';
 import { ENDING_NAMES, ENDING_RANK, RULES, RULES_VERSION, createContext, evaluate } from '../../src/engine';
 import type { EndingId, GameState, LogEntry, Rules, RussianResult } from '../../src/engine';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
+import { lineOfRetreat } from '../../src/engine/battle';
 import { keyHash } from '../../src/engine/rng';
-import { play } from '../fixtures/driver';
+import { play, type Run } from '../fixtures/driver';
 import { violations } from '../fixtures/invariants';
-import { BOTS, FAMILIES } from './bots';
+import { freshRegret, standing, varianceSplit, withinTies } from './analysis';
+import { BOTS, FAMILIES, PIN_STAGES, pinStages, pinTraceOf } from './bots';
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 /** What-if map: BALANCE_SCENARIO=candidate-roads adds the roads not yet adopted (MAP_AND_GEOGRAPHY.md). */
@@ -87,7 +89,20 @@ interface Result {
   mainBroke: number;
   /** In a decisive defeat, the exits of the Russian breaks that counted towards it. */
   decisiveExits: string[];
+  /** A Russian main army had no road out at some pause, whether or not it was then trapped (third review). */
+  blockedIn: boolean;
+  /** A pinning attack's stages (`pinStages`), plans adopted and the most turns one was kept; null for other bots. */
+  pin: { stages: Record<(typeof PIN_STAGES)[number], boolean>; plans: number; longest: number } | null;
 }
+
+/** A Russian main army standing at a place with no road out, at an order or deployment pause (contract D's "blocked"). */
+const blockedIn = (run: Run, ctx: Parameters<typeof lineOfRetreat>[1]) =>
+  run.states.some((s) =>
+    s.mainArmies.some((id) => {
+      const f = s.forces[id];
+      return f !== undefined && f.men > 0 && f.transit === null && lineOfRetreat(s, ctx, f.at, 'ru', null) === null;
+    }),
+  );
 
 /** Sector-battle figures for one game (§3.4b), from the battles and the log. */
 function battleFigures(end: GameState, log: LogEntry[], decisive: boolean): Pick<Result, 'fieldResults' | 'exits' | 'bases' | 'positionsLost' | 'mainBroke' | 'decisiveExits'> {
@@ -130,7 +145,9 @@ it.skipIf(!enabled)('balance batch', () => {
   for (const name of names) {
     results[name] = [];
     for (let seed = 1; seed <= SEEDS; seed++) for (let roll = 0; roll < DICE; roll++) {
-      const run = play(ctx, seed, (BOTS[name] as (c: typeof ctx) => ReturnType<(typeof BOTS)[string]>)(ctx), 5_000, diceFor(seed, roll));
+      const policy = (BOTS[name] as (c: typeof ctx) => ReturnType<(typeof BOTS)[string]>)(ctx);
+      const run = play(ctx, seed, policy, 5_000, diceFor(seed, roll));
+      const trace = pinTraceOf(policy);
       for (const v of violations(run)) problems.push(`${name} seed ${seed} roll ${roll}: ${v}`);
       const o = evaluate(run.states[0]!, run.final, ctx);
       const log = run.logs.flat();
@@ -166,6 +183,8 @@ it.skipIf(!enabled)('balance batch', () => {
           return Math.max(...days) >= 7.5 && Math.min(...days) < 1;
         })(),
         ...battleFigures(run.final, log, o.russian === 'decisivelyDefeated'),
+        blockedIn: blockedIn(run, ctx),
+        pin: trace ? { stages: pinStages(run, trace), plans: trace.plans, longest: trace.longest } : null,
       });
     }
   }
@@ -208,16 +227,16 @@ it.skipIf(!enabled)('balance batch', () => {
     '',
     '## The Russian main armies (share of games)',
     '',
-    `Cut-off credit: \`${rules.outcome.cutOffCredit}\`. "Road cut" counts games in which the line of retreat was held long enough at some point; of those, still cut off at the end, or broken out after losing at least ${rules.outcome.damagedLossPermille / 10}% of their strength in battle after the cut.`,
+    `Cut-off credit: \`${rules.outcome.cutOffCredit}\`. "Road cut" counts games in which the line of retreat was held long enough at some point; of those, still cut off at the end, or broken out after losing at least ${rules.outcome.damagedLossPermille / 10}% of their strength in battle after the cut. "Blocked in" counts games in which a main army stood, at some order or deployment pause, at a place with no road out free of the French (contract D), whether or not it was then trapped in battle (third review).`,
     '',
-    '| Strategy | Decisively defeated | Cut off | Forced out | Damaged | Intact | Road cut | Still cut off at the end | Broke out at a heavy cost |',
-    '|---|---|---|---|---|---|---|---|---|',
+    '| Strategy | Decisively defeated | Cut off | Forced out | Damaged | Intact | Road cut | Still cut off at the end | Broke out at a heavy cost | Blocked in at a pause |',
+    '|---|---|---|---|---|---|---|---|---|---|',
   );
   for (const name of names) {
     const rs = results[name]!;
     const share = (test: (r: Result) => boolean) => pct(rs.filter(test).length, rs.length);
     lines.push(
-      `| ${name} | ${(['decisivelyDefeated', 'cutOff', 'forcedOut', 'damaged', 'intact'] as const).map((x) => share((r) => r.russian === x)).join(' | ')} | ${share((r) => r.roadCut)} | ${share((r) => r.stillCutOff)} | ${share((r) => r.costlyEscape)} |`,
+      `| ${name} | ${(['decisivelyDefeated', 'cutOff', 'forcedOut', 'damaged', 'intact'] as const).map((x) => share((r) => r.russian === x)).join(' | ')} | ${share((r) => r.roadCut)} | ${share((r) => r.stillCutOff)} | ${share((r) => r.costlyEscape)} | ${share((r) => r.blockedIn)} |`,
     );
   }
 
@@ -261,53 +280,45 @@ it.skipIf(!enabled)('balance batch', () => {
     `**Decisive defeats in battle:** ${names.map((name) => `${name} ${results[name]!.filter((r) => r.russian === 'decisivelyDefeated').length}`).filter((x) => !x.endsWith(' 0')).join(', ') || 'none'}. The Russian breaks that counted towards them left by an open road ${count('open')} times, a contested one ${count('contested')} times, and were trapped with no road ${count('blocked')} times.`,
   );
 
-  // F1/F2/F3 on the first roll of each seed (the seed's own dice), comparable with earlier reports.
-  const first = (name: string, seed: number) => results[name]![seed * DICE]!;
-  const decisive = (name: string, seed: number) => first(name, seed).ending === 'decisiveSuccess';
-  let anyFamilyDecisive = 0;
-  const bestShare: Record<string, number> = Object.fromEntries(FAMILIES.map((f) => [f, 0]));
-  for (let i = 0; i < SEEDS; i++) {
-    if (FAMILIES.some((f) => decisive(f, i))) anyFamilyDecisive++;
-    const best = Math.min(...FAMILIES.map((f) => first(f, i).rank));
-    const winners = FAMILIES.filter((f) => first(f, i).rank === best);
-    for (const w of winners) bestShare[w]! += 1 / winners.length;
+  // The pinning attacks stage by stage (third review): where a trap is lost, not only whether it was won.
+  const pinners = names.filter((name) => results[name]!.some((r) => r.pin !== null));
+  if (pinners.length > 0) {
+    lines.push(
+      '',
+      '## Pinning attacks, stage by stage (share of games)',
+      '',
+      'Each stage counts only games that reached the one before: a complete plan (a corps on every road out of a place where an army was seen, and one left to strike); every road held at once; a Russian main army really there then; a striker in a battle there, going on then or begun later; the Russians leaving that battle (withdrawn, routed or trapped); their road out blocked then. The first bot re-plans every turn; the other two keep a plan while the army is still seen there.',
+      '',
+      '| Bot | Complete plan | Every road held at once | A main army there then | A striker in battle there | The Russians left that battle | Their road out blocked | Decisive defeat | Plans adopted per game; most turns one was kept |',
+      '|---|---|---|---|---|---|---|---|---|',
+    );
+    for (const name of pinners) {
+      const rs = results[name]!;
+      const reached = (stage: (typeof PIN_STAGES)[number]) => pct(rs.filter((r) => r.pin!.stages[stage]).length, rs.length);
+      const kept = rs.some((r) => r.pin!.plans > 0) ? `${mean(rs.map((r) => r.pin!.plans)).toFixed(2)}; ${Math.max(...rs.map((r) => r.pin!.longest))}` : '—';
+      lines.push(`| ${name} | ${PIN_STAGES.map(reached).join(' | ')} | ${pct(rs.filter((r) => r.russian === 'decisivelyDefeated').length, rs.length)} | ${kept} |`);
+    }
   }
 
-  // F4: two-way analysis of variance with replication (strategy × scenario seed, DICE rolls per cell).
-  const strategies = names.filter((n) => n !== 'random');
+  // F1/F2/F3 on the first roll of each seed (the seed's own dice), comparable with earlier reports.
+  const first = (name: string, seed: number) => results[name]![seed * DICE]!;
   const allSeeds = Array.from({ length: SEEDS }, (_, i) => i);
-  /**
-   * Shares of the ending's variance, over a sample of scenarios (with repeats, for the bootstrap). The raw
-   * shares are descriptive: each cell's mean over a few rolls still carries dice noise, which inflates the
-   * strategy, scenario and above all the interaction terms. The adjusted shares take out what that noise
-   * is expected to add (two-way analysis with replication) and count it with the dice (second review, F1).
-   */
-  const split = (rankOf: (e: EndingId) => number, seeds: number[] = allSeeds) => {
-    const x = (n: string, seed: number, roll: number) => rankOf(results[n]![seed * DICE + roll]!.ending);
-    const cell = (n: string, seed: number) => mean(Array.from({ length: DICE }, (_, r) => x(n, seed, r)));
-    const cells = new Map(strategies.map((n) => [n, seeds.map((i) => cell(n, i))]));
-    const grand = mean(strategies.flatMap((n) => cells.get(n)!));
-    const ss = { strategy: 0, scenario: 0, cells: 0, dice: 0 };
-    for (const n of strategies) ss.strategy += seeds.length * DICE * (mean(cells.get(n)!) - grand) ** 2;
-    seeds.forEach((_, k) => (ss.scenario += strategies.length * DICE * (mean(strategies.map((n) => cells.get(n)![k]!)) - grand) ** 2));
-    for (const n of strategies) seeds.forEach((i, k) => {
-      const c = cells.get(n)![k]!;
-      ss.cells += DICE * (c - grand) ** 2;
-      for (let r = 0; r < DICE; r++) ss.dice += (x(n, i, r) - c) ** 2;
-    });
-    const total = Math.max(1e-12, ss.cells + ss.dice);
-    const interaction = ss.cells - ss.strategy - ss.scenario;
-    const [a, b] = [strategies.length, seeds.length];
-    const noise = DICE > 1 ? ss.dice / (a * b * (DICE - 1)) : 0;
-    const adj = { strategy: Math.max(0, ss.strategy - (a - 1) * noise), scenario: Math.max(0, ss.scenario - (b - 1) * noise), interaction: Math.max(0, interaction - (a - 1) * (b - 1) * noise) };
-    return {
-      strategy: ss.strategy / total,
-      scenario: ss.scenario / total,
-      interaction: interaction / total,
-      dice: ss.dice / total,
-      adjusted: { strategy: adj.strategy / total, scenario: adj.scenario / total, interaction: adj.interaction / total, dice: 1 - (adj.strategy + adj.scenario + adj.interaction) / total },
-    };
-  };
+  // The three families of §2.13 apart from the other purposeful bots, variants of them and later approaches, and
+  // apart from the controls (third review).
+  const CONTROLS = ['prudent-halt', 'supplied-halt', 'random'];
+  const otherBots = names.filter((n) => !FAMILIES.includes(n) && !CONTROLS.includes(n));
+  const decisiveOn = (group: string[]) => allSeeds.filter((i) => group.some((n) => first(n, i).ending === 'decisiveSuccess')).length;
+  // F3: who was best alone, who shared it and who was last, beside the earlier share with ties split (third review).
+  const byRank = (f: string, i: number) => first(f, i).rank;
+  const st = standing(FAMILIES, byRank, allSeeds);
+  const fewestLost = withinTies(FAMILIES, byRank, (f, i) => first(f, i).frMen, allSeeds);
+  const mostInflicted = withinTies(FAMILIES, byRank, (f, i) => -first(f, i).ruMain, allSeeds);
+  const fresh = freshRegret(FAMILIES, (f, i, r) => results[f]![i * DICE + r]!.rank, allSeeds, DICE);
+
+  // F4 over every purposeful bot (the random control left out): roll r of a scenario gives every bot the same
+  // dice, so the split separates the dice shared by all bots on a roll from each bot's own (`varianceSplit`).
+  const strategies = names.filter((n) => n !== 'random');
+  const split = (rankOf: (e: EndingId) => number, seeds: number[] = allSeeds) => varianceSplit((k, i, r) => rankOf(results[strategies[k]!]![i * DICE + r]!.ending), strategies.length, seeds, DICE);
   const f4 = split((e) => ENDING_RANK[e]);
   // The same split with Costly Victory and Operational Success no longer tied: how much the ranks' spacing matters.
   const SPREAD: Record<EndingId, number> = { decisiveSuccess: 1, costlyVictory: 2, operationalSuccess: 3, limitedSuccess: 4, successfulConsolidation: 4, inconclusive: 5, precariousHalt: 5, repulse: 6, collapse: 7 };
@@ -316,9 +327,6 @@ it.skipIf(!enabled)('balance batch', () => {
   // other rolls are held apart from the first, and scenarios with a tie on either side are counted on their
   // own, so that neither shared rolls nor ties make the best look more stable than it is (second review).
   const stability = { agree: 0, differ: 0, tied: 0, overlap: 0 };
-  // Regret: how many ranks worse, on the other rolls, the approach best on the first roll does than the
-  // approach best on those other rolls (ties on the first roll averaged).
-  let regret = 0;
   if (DICE > 1) {
     const bestOf = (score: (f: string) => number) => {
       const top = Math.min(...FAMILIES.map(score));
@@ -326,9 +334,7 @@ it.skipIf(!enabled)('balance batch', () => {
     };
     for (let i = 0; i < SEEDS; i++) {
       const onFirst = bestOf((f) => first(f, i).rank);
-      const others = (f: string) => mean(Array.from({ length: DICE - 1 }, (_, r) => results[f]![i * DICE + r + 1]!.rank));
-      const onOthers = bestOf(others);
-      regret += mean(onFirst.map(others)) - Math.min(...FAMILIES.map(others));
+      const onOthers = bestOf((f) => mean(Array.from({ length: DICE - 1 }, (_, r) => results[f]![i * DICE + r + 1]!.rank)));
       if (onFirst.some((f) => onOthers.includes(f))) stability.overlap++;
       if (onFirst.length > 1 || onOthers.length > 1) stability.tied++;
       else if (onFirst[0] === onOthers[0]) stability.agree++;
@@ -338,29 +344,23 @@ it.skipIf(!enabled)('balance batch', () => {
   const untied = stability.agree + stability.differ;
 
   // Uncertainty: a bootstrap over scenarios, keeping each scenario's strategies and rolls together (second
-  // review, F5). The 27,000 games are not independent results: they are 1,000 scenarios, each played many ways.
-  const boot: { meanRank: Record<string, number[]>; best: Record<string, number[]>; raw: Record<string, number[]>; adjusted: Record<string, number[]> } = {
+  // review, F5). The games are not independent results: they are 1,000 scenarios, each played many ways.
+  const COMPONENTS = ['strategy', 'scenario', 'interaction', 'sharedDice', 'ownDice'] as const;
+  const boot: { meanRank: Record<string, number[]>; best: Record<string, number[]>; raw: Record<string, number[]>; components: Record<string, number[]> } = {
     meanRank: Object.fromEntries(FAMILIES.map((f) => [f, []])),
     best: Object.fromEntries(FAMILIES.map((f) => [f, []])),
     raw: { strategy: [], scenario: [], interaction: [], dice: [] },
-    adjusted: { strategy: [], scenario: [], interaction: [], dice: [] },
+    components: Object.fromEntries(COMPONENTS.map((k) => [k, []])),
   };
   for (let b = 0; b < BOOT; b++) {
     const sample = allSeeds.map((k) => keyHash(1812, ['boot', b, k]) % SEEDS);
     for (const f of FAMILIES) boot.meanRank[f]!.push(mean(sample.flatMap((i) => Array.from({ length: DICE }, (_, r) => results[f]![i * DICE + r]!.rank))));
-    const shares: Record<string, number> = Object.fromEntries(FAMILIES.map((f) => [f, 0]));
-    for (const i of sample) {
-      const top = Math.min(...FAMILIES.map((f) => first(f, i).rank));
-      const winners = FAMILIES.filter((f) => first(f, i).rank === top);
-      for (const w of winners) shares[w]! += 1 / winners.length;
-    }
+    const shares = standing(FAMILIES, byRank, sample).credit;
     for (const f of FAMILIES) boot.best[f]!.push(shares[f]! / SEEDS);
     if (DICE > 1) {
       const s = split((e) => ENDING_RANK[e], sample);
-      for (const k of ['strategy', 'scenario', 'interaction', 'dice'] as const) {
-        boot.raw[k]!.push(s[k]);
-        boot.adjusted[k]!.push(s.adjusted[k]);
-      }
+      for (const k of ['strategy', 'scenario', 'interaction', 'dice'] as const) boot.raw[k]!.push(s.raw[k]);
+      for (const k of COMPONENTS) boot.components[k]!.push(s.components![k]);
     }
   }
   /** The middle 95% of the bootstrap replicates. */
@@ -373,18 +373,72 @@ it.skipIf(!enabled)('balance batch', () => {
   const halt = results['prudent-halt']!;
   const random = results.random!;
   lines.push('', '## Fairness diagnostics (targets are diagnostics, not quotas)', '');
-  lines.push(`- **F1 (fair-policy part):** at least one approach family reaches Decisive Success on ${pct(anyFamilyDecisive, SEEDS)} of seeds (target ≥ 60%). No oracle search yet.`);
-  lines.push(`- **F2:** Decisive Success rate per family: ${FAMILIES.map((f) => `${f} ${pct(results[f]!.filter((r) => r.ending === 'decisiveSuccess').length, results[f]!.length)}`).join(', ')} (target ≈ 25% each).`);
-  lines.push(`- **F3:** share of seeds on which each family does best: ${FAMILIES.map((f) => `${f} ${pct(bestShare[f]!, SEEDS)}`).join(', ')} (target: none above 50%).`);
   const share = (v: number) => `${(v * 100).toFixed(1)}%`;
+  const list = (credit: Record<string, number>, of: number) => FAMILIES.map((f) => `${f} ${pct(credit[f]!, of)}`).join(', ');
+  const othersDecisive = otherBots.map((n) => [n, results[n]!.filter((r) => r.ending === 'decisiveSuccess').length / results[n]!.length] as const).filter(([, v]) => v > 0);
   lines.push(
-    DICE > 1
-      ? `- **F4:** variance of the ending rank explained by the strategy ${share(f4.strategy)}, by the scenario ${share(f4.scenario)}, by which strategy suits which scenario ${share(f4.interaction)}, and by the dice ${share(f4.dice)} (${DICE} sets of dice per scenario; target: strategy above scenario). These raw shares carry dice noise in the cell means; with that noise counted with the dice: strategy ${share(f4.adjusted.strategy)}, scenario ${share(f4.adjusted.scenario)}, interaction ${share(f4.adjusted.interaction)}, dice ${share(f4.adjusted.dice)}. With the ranks spread out (Costly Victory above Operational Success), raw: strategy ${share(f4spread.strategy)}, scenario ${share(f4spread.scenario)}, interaction ${share(f4spread.interaction)}, dice ${share(f4spread.dice)}. Where one approach is best on a scenario's first roll and one is best on its other ${DICE - 1} rolls, they are the same on ${pct(stability.agree, untied)} of ${untied} scenarios; ${pct(stability.tied, SEEDS)} of scenarios have a tie for best on one side or both, and the approaches best on each side overlap on ${pct(stability.overlap, SEEDS)}. Choosing on the first roll costs on average ${(regret / SEEDS).toFixed(2)} ranks on the other rolls (regret).`
-      : `- **F4:** variance of the ending rank explained by the strategy ${share(f4.strategy)}, by the seed ${share(f4.scenario)}, interaction and dice together ${share(f4.interaction)} (target: strategy above seed). Run with BALANCE_DICE=3 to separate the dice.`,
+    `- **F1 (fair-policy part):** at least one approach family reaches Decisive Success on ${pct(decisiveOn(FAMILIES), SEEDS)} of seeds (target ≥ 60%); with the other purposeful bots as well (variants of the families and later approaches), ${pct(decisiveOn([...FAMILIES, ...otherBots]), SEEDS)}. These are fixed bots, chosen with every seed in view; a selection judged on held-out seeds is in the adaptive report. No oracle search yet.`,
   );
+  lines.push(
+    `- **F2:** Decisive Success rate per family: ${FAMILIES.map((f) => `${f} ${pct(results[f]!.filter((r) => r.ending === 'decisiveSuccess').length, results[f]!.length)}`).join(', ')} (target ≈ 25% each). Among the other purposeful bots: ${othersDecisive.map(([n, v]) => `${n} ${share(v)}`).join(', ') || 'none'}.`,
+  );
+  lines.push(
+    `- **F3:** share of seeds on which each family does best, ties split evenly: ${list(st.credit, SEEDS)} (target: none above 50%). Two or more share the best on ${pct(st.bestTied, SEEDS)} of seeds, all three on ${pct(st.allTied, SEEDS)}; who is best alone, who shares it and who is last are under "F3 in detail".`,
+  );
+  if (DICE > 1) {
+    const c = f4.components!;
+    lines.push(
+      `- **F4:** variance of the ending rank over the ${strategies.length} purposeful bots, ${DICE} sets of dice per scenario (target: strategy above scenario). *Raw, descriptive* (sums of squares; a cell's mean over ${DICE} rolls still carries dice noise): strategy ${share(f4.raw.strategy)}, scenario ${share(f4.raw.scenario)}, which strategy suits which scenario ${share(f4.raw.interaction)}, dice ${share(f4.raw.dice)}. *Components, model-dependent* (every bot gets the same dice on a roll, so the dice shared by all bots on a roll are split from each bot's own; checked on data with known parts in analysis.test.ts): strategy ${share(c.strategy)}, scenario ${share(c.scenario)}, interaction ${share(c.interaction)}, dice shared by all bots ${share(c.sharedDice)}, each bot's own dice ${share(c.ownDice)}. The earlier adjustment, which took the dice as independent across bots, gives strategy ${share(f4.pooled.strategy)}, scenario ${share(f4.pooled.scenario)}, interaction ${share(f4.pooled.interaction)}, dice ${share(f4.pooled.dice)}: with shared dice it takes them out of the interaction and leaves them in the scenario. With the ranks spread out (Costly Victory above Operational Success), raw: strategy ${share(f4spread.raw.strategy)}, scenario ${share(f4spread.raw.scenario)}, interaction ${share(f4spread.raw.interaction)}, dice ${share(f4spread.raw.dice)}. Where one family is best on a scenario's first roll and one is best on its other ${DICE - 1} rolls, they are the same on ${pct(stability.agree, untied)} of ${untied} scenarios; ${pct(stability.tied, SEEDS)} of scenarios have a tie for best on one side or both.`,
+    );
+  } else {
+    lines.push(`- **F4:** variance of the ending rank explained by the strategy ${share(f4.raw.strategy)}, by the seed ${share(f4.raw.scenario)}, interaction and dice together ${share(f4.raw.interaction)} (target: strategy above seed). Run with BALANCE_DICE=3 to separate the dice.`);
+  }
   lines.push(`- **F5:** the prudent halt, declared on the first turn before any victory, ends in: ${endings.filter((e) => halt.some((r) => r.ending === e)).map((e) => `${ENDING_NAMES[e]} ${pct(halt.filter((r) => r.ending === e).length, halt.length)}`).join(', ')} (target: never Decisive Success; a victory won before a later halt stands, D-035).`);
   lines.push(`- **F6:** random play reaches Decisive Success in ${pct(random.filter((r) => r.ending === 'decisiveSuccess').length, random.length)} of games (target < 5%).`);
   lines.push('', `*F1 and F3 use each seed's first roll; F2, F5 and F6 count every game. "The dice" decide battles, withdrawals, road priority and burned stores; weather and scouting errors are part of the scenario. Bots: ${names.join(', ')}.*`);
+
+  // F3 in detail (third review): ties split evenly cannot say which family to choose.
+  lines.push(
+    '',
+    '## F3 in detail (first roll of each seed; a lower rank is better)',
+    '',
+    `Each seed counts once for each family, in one column. Regret: ranks lost on the seed's other ${Math.max(0, DICE - 1)} rolls against the family that did best on those same rolls.`,
+    '',
+    '| Family | Best alone | Best, shared | All three equal | Between | Last, shared | Last alone | F3 share (ties split) | Regret on fresh rolls |',
+    '|---|---|---|---|---|---|---|---|---|',
+    ...FAMILIES.map((f) => `| ${f} | ${pct(st.bestAlone[f]!, SEEDS)} | ${pct(st.bestShared[f]!, SEEDS)} | ${pct(st.allTied, SEEDS)} | ${pct(st.middle[f]!, SEEDS)} | ${pct(st.lastShared[f]!, SEEDS)} | ${pct(st.lastAlone[f]!, SEEDS)} | ${pct(st.credit[f]!, SEEDS)} | ${fresh ? fresh.always[f]!.toFixed(2) : 'n/a'} |`),
+    '',
+    `Where two or more families share the best ending (${fewestLost.scenarios} seeds), the one that loses the fewest French men: ${list(fewestLost.credit, fewestLost.scenarios)}; the one that costs the Russian main armies most: ${list(mostInflicted.credit, mostInflicted.scenarios)} (ties split).${fresh ? ` Choosing on each seed the family best on its first roll loses ${fresh.firstLook.toFixed(2)} ranks on the fresh rolls, against ${FAMILIES.map((f) => `${fresh.always[f]!.toFixed(2)} for always ${f}`).join(', ')}.` : ''}`,
+  );
+
+  // Which mechanisms each bot reached, and whether it reached them again on the same scenario with fresh dice (third
+  // review): a mechanism a scenario allows comes back on fresh rolls; one the dice gave does not.
+  if (DICE > 1) {
+    const won = (r: Result) => r.rank <= ENDING_RANK.operationalSuccess;
+    lines.push(
+      '',
+      '## Mechanisms reached, and again on fresh rolls',
+      '',
+      `For each bot: the share of seeds on which its first roll cut the Russian road or won (Decisive Success, Costly Victory or Operational Success), and, on those seeds, how often its other ${DICE - 1} rolls did the same. Bots whose first rolls did neither are listed below the table.`,
+      '',
+      '| Bot | Road cut, first roll | Then road cut on fresh rolls | Then won on fresh rolls | Won, first roll | Then won on fresh rolls |',
+      '|---|---|---|---|---|---|',
+    );
+    const neither: string[] = [];
+    for (const name of names.filter((n) => n !== 'random')) {
+      const freshOf = (i: number) => Array.from({ length: DICE - 1 }, (_, r) => results[name]![i * DICE + r + 1]!);
+      const cut = allSeeds.filter((i) => first(name, i).roadCut);
+      const wins = allSeeds.filter((i) => won(first(name, i)));
+      if (cut.length === 0 && wins.length === 0) {
+        neither.push(name);
+        continue;
+      }
+      const again = (seeds: number[], test: (r: Result) => boolean) => (seeds.length === 0 ? '—' : pct(seeds.flatMap(freshOf).filter(test).length, seeds.length * (DICE - 1)));
+      lines.push(`| ${name} | ${pct(cut.length, SEEDS)} | ${again(cut, (r) => r.roadCut)} | ${again(cut, won)} | ${pct(wins.length, SEEDS)} | ${again(wins, won)} |`);
+    }
+    if (neither.length > 0) lines.push('', `Neither on any first roll: ${neither.join(', ')}.`);
+  }
+
   if (BOOT > 1) {
     const rank = (v: number) => v.toFixed(2);
     lines.push(
@@ -393,16 +447,24 @@ it.skipIf(!enabled)('balance batch', () => {
       '',
       'Each replicate redraws the scenarios with replacement, keeping every strategy and every roll of a scenario together.',
       '',
-      '| Family | Mean ending rank | Share of seeds on which it does best (F3) |',
+      '| Family | Mean ending rank | Share of seeds on which it does best (F3, ties split) |',
       '|---|---|---|',
-      ...FAMILIES.map((f) => `| ${f} | ${rank(mean(results[f]!.map((r) => r.rank)))} (${interval(boot.meanRank[f]!, rank)}) | ${pct(bestShare[f]!, SEEDS)} (${interval(boot.best[f]!, share)}) |`),
+      ...FAMILIES.map((f) => `| ${f} | ${rank(mean(results[f]!.map((r) => r.rank)))} (${interval(boot.meanRank[f]!, rank)}) | ${pct(st.credit[f]!, SEEDS)} (${interval(boot.best[f]!, share)}) |`),
     );
     if (DICE > 1) {
+      const c = f4.components!;
+      const both = (k: 'strategy' | 'scenario' | 'interaction') => `| ${k} | ${share(f4.raw[k])} (${interval(boot.raw[k]!, share)}) | ${share(c[k])} (${interval(boot.components[k]!, share)}) |`;
+      const diceAll = boot.components.sharedDice!.map((v, k) => v + boot.components.ownDice![k]!);
       lines.push(
         '',
-        '| Variance share (F4) | Raw | Noise-adjusted |',
+        '| Variance share (F4) | Raw, descriptive | Components, model-dependent |',
         '|---|---|---|',
-        ...(['strategy', 'scenario', 'interaction', 'dice'] as const).map((k) => `| ${k} | ${share(f4[k])} (${interval(boot.raw[k]!, share)}) | ${share(f4.adjusted[k])} (${interval(boot.adjusted[k]!, share)}) |`),
+        both('strategy'),
+        both('scenario'),
+        both('interaction'),
+        `| dice | ${share(f4.raw.dice)} (${interval(boot.raw.dice!, share)}) | ${share(c.sharedDice + c.ownDice)} (${interval(diceAll, share)}) |`,
+        `| of which shared by every bot on a roll | — | ${share(c.sharedDice)} (${interval(boot.components.sharedDice!, share)}) |`,
+        `| of which each bot's own | — | ${share(c.ownDice)} (${interval(boot.components.ownDice!, share)}) |`,
       );
     }
   }
@@ -410,4 +472,5 @@ it.skipIf(!enabled)('balance batch', () => {
   console.log(['BALANCE-REPORT-START', ...lines, 'BALANCE-REPORT-END'].join('\n'));
   // Integrity is a gate; the fairness diagnostics above are not.
   expect(problems.slice(0, 20)).toEqual([]);
-}, 3_600_000);
+  // 48,000 games ran just over an hour beside the other probes (third review); a time limit is not a result.
+}, 10_800_000);

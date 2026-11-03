@@ -58,7 +58,7 @@ The first review's findings and their status are in [reviews/2026-10-31-independ
 | Sector battles | Three sectors and a reserve, cavalry and guns, four results kept apart, graded exits, pursuit once; contracts tested before the combat code (TECHNICAL_ARCHITECTURE §3.4b) | 0.17.0–0.17.1 | D-043 |
 | Prudichevo road | A track with a ford from the Old Town to the Moscow road (H-022), found missing by the pinning bot | 0.17.2 | D-044 |
 | Stand order | A battle stance whose marshal holds on after losing the position while cohesion lasts | 0.17.2 | D-045 |
-| Third review | A beaten side falls back together along its line (an attacker the way it came, a defender towards its base); both break-offs leave at once, never by one road; an empty line counter-attacks; only deployed cavalry pursues; losses by sub-step; in the interface, Stand explained, the verdict in Compare and a deployment preview ([record](reviews/2026-11-02-third-review.md)) | 0.18.0 | D-046 |
+| Third review | A beaten side falls back together along its line (an attacker the way it came, a defender towards its base); both break-offs leave at once, never by one road; an empty line counter-attacks; only deployed cavalry pursues; losses by sub-step; in the interface, Stand explained, the verdict in Compare and a deployment preview; in the experiment, F3 with its ties and regret, variance components that allow for shared dice, pinning bots that plan by search, counted stage by stage ([record](reviews/2026-11-02-third-review.md)) | 0.18.0 | D-046, D-047 |
 
 Each change was written test-first: tests that failed on the previous rules.
 
@@ -88,16 +88,16 @@ Each change was written test-first: tests that failed on the previous rules.
   - the supply line's delivery rate in "sustainable" (*T₁*), and cut supply lines in "secure".
 - **Balance findings among the tested bots, documented in GAMEPLAY_BALANCING (rules 0.17.2):**
   - Only holding the Moscow road at Valutino to the end wins regularly. With its block standing (D-045), the holding southern envelopment wins 21% of its games, all costly; leaving the Guard at Vitebsk wins decisively in 4.8%. The army at Valutino has outrun its wagon trains and is mostly unfed there (lifting the 80 km line-haul limit changes that in 2 games of 1,000). Every approach that does not hold Valutino ends, at best, in Limited Success.
-  - No tested approach has produced a decisive defeat in battle. Russian main armies break in up to 20 battles per 100 games (with the stand order), but never after losing 30% within four days, and none was ever trapped, even by a bot that sets out to pin them (GAMEPLAY_BALANCING, "Pinning").
+  - No tested approach has produced a decisive defeat in battle. Russian main armies break in up to 20 battles per 100 games (with the stand order), but never after losing 30% within four days, and none was ever trapped, even by a bot that sets out to pin them (GAMEPLAY_BALANCING, "Pinning"). Counted stage by stage, three pinning bots, two of them planning by search, almost always make a complete plan, but the army is gone before every road is held: around a main army really there, in at most 0.9% of games (D-047).
   - No halt consolidates, at any foraging reach tested, because the placeholder depot stocks cannot feed the army for 20 days. Research on the 1812 magazines is pending.
   - The adaptive policy gains nothing over the best fixed approach.
   - Two of the "competent" bot variants are not yet competent.
 - **The foraging reach was corrected** to 11 km (G-019, D-037), after the source turned out to give the widths of foraging squares, not radii.
-- **Open measures:** F3 by openings (branch the first two directives with a shared continuation); an adaptive policy that re-decides every turn with the full French observations, with nested resampling of its learning. (Scenario-clustered intervals and a noise-adjusted variance split are in the batch since D-041.)
+- **Open measures:** F3 by openings (branch the first two directives with a shared continuation); an adaptive policy that re-decides every turn with the full French observations, with nested resampling of its learning; plausible novice controls for F6. (Scenario-clustered intervals are in the batch since D-041; F3's ties and regret, and variance components that allow for the dice every bot shares on a roll, since D-047.)
 - **Most rule values are still game assumptions.** Only march speeds, wagon loads, rations, hunger, horses per wagon and carrying have been checked against sources, and those only as ranges; the foraging reach was misread at first and corrected in 0.12.0.
 - **Roads are provisional:** straight-line distance × 1.25 (G-007).
 - **Narrow windows:** below 900 px wide the map, kept in view while scrolling, slides over the orders panel and hides the commit button. A fix exists locally and is not yet pushed; use a window at least 900 px wide.
-- **Open puzzle:** the pinning attack does much better keeping its depots than bringing them forward, alone among the bots; not yet explained.
+- **The pinning and depot puzzle is explained and gone** (0.18.0, D-046): a forward depot turned the retreat of a corps beaten on Smolensk's north bank. Under the base line the pinning attack ends at the same rank whichever way it keeps its depots, on every seed.
 
 ## Scope limits (please don't suggest these)
 
