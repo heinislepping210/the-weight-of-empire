@@ -92,20 +92,22 @@ function battleFigures(end: GameState, log: LogEntry[], decisive: boolean): Pick
   const positionsLost = { fr: 0, ru: 0 };
   let mainBroke = 0;
   const decisiveExits: string[] = [];
-  for (const e of log) {
-    if (e.kind !== 'fieldResult') continue;
-    const key = `${e.detail.side}:${e.detail.result}`;
-    fieldResults[key] = (fieldResults[key] ?? 0) + 1;
-    const exit = `${e.detail.side}:${e.detail.exit}`;
-    exits[exit] = (exits[exit] ?? 0) + 1;
-    const b = end.battles[String(e.detail.battle)];
-    const main = b !== undefined && b.sides.ru.some((id) => end.mainArmies.includes(id));
-    if (e.detail.side === 'ru' && main && e.detail.result !== 'withdrew') {
-      mainBroke++;
-      if (decisive && b?.winner === 'fr') decisiveExits.push(String(e.detail.exit));
+  // Results from the battles themselves, as the evaluator reads them; the exits from the log, where they are recorded.
+  const exitOf = new Map(log.filter((e) => e.kind === 'fieldResult').map((e) => [`${e.detail.battle}:${e.detail.side}`, String(e.detail.exit)] as const));
+  for (const b of Object.values(end.battles)) {
+    for (const side of b.field.positionLost) positionsLost[side]++;
+    for (const side of ['fr', 'ru'] as const) {
+      const result = b.field.result[side];
+      if (result === null) continue;
+      fieldResults[`${side}:${result}`] = (fieldResults[`${side}:${result}`] ?? 0) + 1;
+      const exit = exitOf.get(`${b.id}:${side}`) ?? 'unknown';
+      exits[`${side}:${exit}`] = (exits[`${side}:${exit}`] ?? 0) + 1;
+      if (side === 'ru' && result !== 'withdrew' && b.sides.ru.some((id) => end.mainArmies.includes(id))) {
+        mainBroke++;
+        if (decisive && b.winner === 'fr') decisiveExits.push(exit);
+      }
     }
   }
-  for (const b of Object.values(end.battles)) for (const side of b.field.positionLost) positionsLost[side]++;
   return { fieldResults, exits, positionsLost, mainBroke, decisiveExits };
 }
 

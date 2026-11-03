@@ -607,12 +607,13 @@ function pursue(s: GameState, ctx: Context, b: BattleState, by: Side, side: Side
 function endWith(s: GameState, ctx: Context, b: BattleState, departures: { side: Side; how: 'withdrew' | 'routed' }[], exits: Record<Side, ExitState>, night: boolean, log: LogEntry[]): void {
   const stays = SIDES.filter((side) => !departures.some((d) => d.side === side));
   const gone = new Map(departures.map((d) => [d.side, leaveField(s, ctx, b, d.side, d.how, exits[d.side], night, log)] as const));
-  for (const d of departures) note(s, log, 'fieldResult', { battle: b.id, side: d.side, result: b.field.result[d.side], exit: exits[d.side] });
   const winner = stays.length === 1 ? (stays[0] as Side) : null;
   if (winner !== null && !night && !b.field.pursued) {
     const d = departures[0] as { side: Side; how: 'withdrew' | 'routed' };
     pursue(s, ctx, b, winner, d.side, d.how === 'routed', exits[d.side], gone.get(d.side) ?? [], log);
   }
+  // Recorded after the pursuit, which can turn a withdrawal into a rout (contract C).
+  for (const d of departures) note(s, log, 'fieldResult', { battle: b.id, side: d.side, result: b.field.result[d.side], exit: exits[d.side] });
   endBattle(s, b, winner, log);
 }
 

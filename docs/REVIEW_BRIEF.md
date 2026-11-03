@@ -32,7 +32,7 @@ For an outside reviewer, human or AI, asked to give feedback on the project as i
   - supply judged group by group;
   - a table of campaign states fixing what each ending means.
 - **Balance tooling:**
-  - thirteen bots and a 1,000-seed batch that fails on any invariant violation;
+  - fourteen bots and a 1,000-seed batch that fails on any invariant violation;
   - replays with fresh dice and a split of the ending's variance;
   - a paired supply-stance probe, and an adaptive policy judged on held-out seeds;
   - what-if runs with rule overrides.
@@ -85,7 +85,7 @@ Each change was written test-first: tests that failed on the previous rules.
   - the supply line's delivery rate in "sustainable" (*T₁*), and cut supply lines in "secure".
 - **Balance findings among the tested bots, documented in GAMEPLAY_BALANCING (rules 0.16.0):**
   - Only holding the Moscow road at Valutino to the end wins: the holding southern envelopment wins 35% of its games, all costly, because its army has outrun its wagon trains and cannot be fed there. Lifting the 80 km line-haul limit changes that in 2 games of 1,000 (what-if, 2 November). Leaving the Guard at the main depot while the corps make the swing wins decisively in 6.4% of games; halting groups for their wagon trains does worse. Every approach that does not hold Valutino ends, at best, in Limited Success. Until 0.13.0 the southern envelopment won 82% of its games by cutting the Moscow road, but the Russians were still cut off at the end in under 2%; since 0.14.0 a cut counts only if it lasts (D-039).
-  - No tested approach has produced a decisive defeat in battle, under the placeholder model or under the sector battles (0.17.1): Russian main armies now break in up to 30 battles per 100 games, but never after losing 30% within four days, and none was ever trapped.
+  - No tested approach has produced a decisive defeat in battle, under the placeholder model or under the sector battles (0.17.1): Russian main armies now break in up to 32 battles per 100 games, but never after losing 30% within four days, and none was ever trapped.
   - No halt consolidates, at any foraging reach tested, because the placeholder depot stocks cannot feed the army for 20 days. Research on the 1812 magazines is pending.
   - The adaptive policy gains nothing over the best fixed approach.
   - Two of the "competent" bot variants are not yet competent.

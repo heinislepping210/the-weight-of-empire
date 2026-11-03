@@ -549,10 +549,10 @@ The placeholder round model is replaced by the sector battles of §2.10 (D-043; 
 | concentrated-strike | 0.0% → 0.0% | 0.0% → 0.0% | 0.0% → 0.0% | 71.2% → 71.7% | 11.9% → 11.2% | 16.9% → 17.1% | 0.0% → 0.0% |
 
 **Reading:**
-- **A Russian main army can now break in battle,** in up to 30 battles per 100 games for the trap (28 for the holding envelopment, 30 with the Guard at the base, 16 for the original southern envelopment). Under the placeholder model it never did.
+- **A Russian main army can now break in battle,** in up to 32 battles per 100 games for the trap (32 for the holding envelopment and for the Guard at the base, 19 for the original southern envelopment). Under the placeholder model it never did. *Corrected the same day:* the first report took each battle's result from the log entry written before the pursuit, which can turn a withdrawal into a rout, so it undercounted routs (28, 30 and 16 here). The battle table was rerun counting from the battles themselves; the endings did not change.
 - **But no tested approach has produced a decisive battle defeat** in 39,000 games. A main army breaks when it is already worn by hunger, earlier fights and the shock of lost sectors, after modest losses in that battle; a decisive defeat also needs 30% of its strength lost within four days in battles the French won. Heavy losses and lost ground ending in an orderly withdrawal, the pattern of Borodino (H-018), is what the model produces by default.
 - **No army was ever trapped.** The bots never close every road out of a battlefield. The Russians' road out is contested more often than open (142 against 82 per 100 games for the holding envelopment), which makes their withdrawals costlier, but blocking needs a player, or a bot, that sets out to pin.
-- **The trap wins a little less often.** The Russian armies that attack the block at Valutino now sometimes break it: the French routed in 16 battles per 100 games of the holding envelopment, and Repulse rose to 42.5%. The original families stay balanced (F3: push 38%, bait and converge 35%, southern envelopment 28%).
+- **The trap wins a little less often.** The Russian armies that attack the block at Valutino now sometimes break it: the French routed in 26 battles per 100 games of the holding envelopment, and Repulse rose to 42.5%. The original families stay balanced (F3: push 38%, bait and converge 35%, southern envelopment 28%).
 - **Reading the scenario still matters, and no simple policy does it:** an oracle choosing per scenario on its other rolls would gain 0.36 ranks (0.30 to 0.43); the two-figure adaptive policy gains nothing.
 - **Battles last most of a day:** 3.6 to 5.1 rounds of two hours on average for the purposeful bots, 2.5 to 3.0 for the halts and random play. In the traced games, large corps overran small detachments in two or three rounds.
 
@@ -563,4 +563,20 @@ The placeholder round model is replaced by the sector battles of §2.10 (D-043; 
 - **Kept, all four (your decision at checkpoint B).** No source supports another value, and none changes what the bots achieve. Whether a decisive defeat is reachable is a question of pinning, not of these numbers.
 
 **Next steps (for your decision):** a bot that sets out to pin a Russian army (close its roads out before attacking); your playtest of the sector battles; and research for the battle values, none of which is sourced yet.
+
+## Pinning (bot, rules 0.17.1, 2 November 2026)
+
+Can a Russian army be trapped? A **pinning attack** (`pinning-attack`): a corps on every road out of the place where the largest Russian army seen stands, routed round it, never through; once every road is held, the corps to spare strike. It prefers an army whose roads out can all be reached without passing through it. Report: [the batch, 1,000 scenarios × 3 sets of dice](balance/2026-11-02-rules-0.17.1.md), which includes it.
+
+| Strategy | Operational Success | Limited Success | Repulse | Battles the French lost, per game | French routed per 100 games | A Russian main army broke per 100 games | Russians trapped |
+|---|---|---|---|---|---|---|---|
+| pinning-attack | 0.1% | 58.6% | 41.3% | 2.0 | 16 | 0 | 0 |
+
+**Reading:**
+- **Not one Russian army was trapped** in 3,000 games, and no main army broke.
+- **Spreading out to close the roads invites defeat in detail.** The corps stand days apart on roads up to 109 km long, and the Russian armies do not stay to be surrounded: in a traced game they struck one corps at Krasnyi, returned to Smolensk, and left by Valutino. The French lost two battles a game, nearly as many as the plain concentrated push.
+- **Waiting for an army to stand still does not help.** A variant that pinned only an army seen at the same place on two turns running, keeping the corps together until then, never began: Smolensk's Old Town is 82 km from Rudnia, beyond the scouts' 60 km, and the Russians struck the waiting army instead (200 seeds: Repulse 69%, no army trapped). It was not kept.
+- **The map makes the main position impossible to close.** The road east, to Valutino and Dorogobuzh, hangs off Smolensk's north bank alone, so a Russian army standing there always keeps its road out, and no French force can reach Valutino without going through it. In 1812 there were other ways east: Junot was sent across the Dnieper at Prudichevo towards Lubino, and Barclay regained the Moscow road near Lubino by a side road (H-022, MAP_AND_GEOGRAPHY.md). Neither is in the network yet.
+
+**For your decision:** trace and add a way east of Smolensk that does not pass through the north bank (the Prudichevo crossing to Lubino, the side road from the Porechye road), then test the trap and the pinning again. Without one, a decisive defeat in battle is out of reach on this map, and the fed trap at Valutino is the only road to Decisive Success.
 

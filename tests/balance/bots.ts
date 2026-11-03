@@ -3,8 +3,8 @@
 // They are tuned once for all seeds, never per seed.
 
 import { axesTo, leadGroup, ordersFrom, planDirective, planLogistics } from '../../src/engine';
-import type { Axis, Context, Directive, ForceId, GameState, GroupOrder, LogisticsOrders, LogisticsStance, NodeId } from '../../src/engine';
-import { roadDistance, shortestPath } from '../../src/engine/graph';
+import type { Axis, Context, Directive, Force, ForceId, GameState, GroupOrder, LogisticsOrders, LogisticsStance, NodeId } from '../../src/engine';
+import { neighboursOf, pathMetres, roadDistance, shortestPath } from '../../src/engine/graph';
 import { randomPolicy, type Policy } from '../fixtures/driver';
 
 // By default every bot brings its supply base forward, as a competent staff would (§2.6); the paired
@@ -142,6 +142,14 @@ const BASE_BOTS: Record<string, (ctx: Context) => Policy> = {
     };
   },
 
+  /**
+   * A pinning attack (after the sector battles, D-043): close every road out of the place where a Russian army
+   * stands, one corps on each, and strike with the corps to spare once every road is held, so that a beaten army
+   * has nowhere to go (contract D). It goes for the largest army seen whose roads out can all be reached without
+   * passing through it, else the largest seen, else Smolensk's north bank; corps go round the enemy, never through.
+   */
+  'pinning-attack': (ctx) => ({ orders: (s) => pinningOrders(s, ctx), ...delegate }),
+
   /** A halt prepared first: outlying groups move to depots for two turns, then the halt is declared. */
   'supplied-halt': (ctx) => ({
     orders: (s, turn) => (turn >= 3 || s.halted ? orders(s, ctx, { posture: 'dispersed', engagement: 'accept' }) : toStations(s, ctx)),
@@ -167,6 +175,52 @@ function holdingEnvelopment(ctx: Context, heldBack: (s: GameState) => ForceId[])
     },
     ...delegate,
   };
+}
+
+/** The road from `from` to `to` that does not pass through `around`, as the places after `from`; null if there is none. */
+const routeAround = (ctx: Context, from: NodeId, to: NodeId, around: NodeId) => shortestPath(ctx.graph, from, to, new Set([around]));
+
+/** Places one road from `node`: the ways out of it. */
+const waysOut = (ctx: Context, node: NodeId) => neighboursOf(ctx.graph, node).map((n) => n.node).sort();
+
+/** The pinning attack's orders for this turn: a corps on every road out, then the rest strike (French knowledge only). */
+function pinningOrders(s: GameState, ctx: Context): GroupOrder[] {
+  const french = Object.values(s.forces).filter((f) => f.side === 'fr' && f.men > 0).sort((a, b) => (a.id < b.id ? -1 : 1));
+  const free = french.filter((f) => f.battle === null);
+  const from = (f: Force) => (f.transit ? f.transit.to : f.at);
+  const seen = Object.values(s.intel.fr).filter((x) => s.resolution.turn - x.turn <= 1 && x.men >= 30_000).sort((a, b) => b.men - a.men || (a.at < b.at ? -1 : 1));
+  const closable = (node: NodeId) => waysOut(ctx, node).every((e) => free.some((f) => from(f) !== node && routeAround(ctx, from(f), e, node) !== null));
+  const target = (seen.find((x) => closable(x.at)) ?? seen[0])?.at ?? 'smolensk-north';
+  chosen.set(s, { ...base, objective: target });
+
+  // The nearest corps to each road out, closest pairs first; a corps on its way finishes the road it is on.
+  const exits = waysOut(ctx, target);
+  const pairs = free
+    .filter((f) => from(f) !== target)
+    .flatMap((f) => exits.map((e) => ({ f, e, path: routeAround(ctx, from(f), e, target) })))
+    .filter((p): p is { f: Force; e: NodeId; path: NodeId[] } => p.path !== null)
+    .map((p) => ({ ...p, metres: pathMetres(ctx.graph, from(p.f), p.path) }))
+    .sort((a, b) => a.metres - b.metres || (a.f.id < b.f.id ? -1 : a.f.id > b.f.id ? 1 : a.e < b.e ? -1 : 1));
+  const holds = new Map<ForceId, NodeId>();
+  for (const p of pairs) if (!holds.has(p.f.id) && ![...holds.values()].includes(p.e)) holds.set(p.f.id, p.e);
+  // The corps to spare wait on their nearest road out until every road is held.
+  const waits = new Map<ForceId, NodeId>();
+  for (const p of pairs) if (!holds.has(p.f.id) && !waits.has(p.f.id)) waits.set(p.f.id, p.e);
+  const standing = (f: Force, at: NodeId) => f.transit === null && f.at === at;
+  const closed = exits.every((e) => free.some((f) => holds.get(f.id) === e && standing(f, e)));
+
+  return french.map((f): GroupOrder => {
+    if (f.battle !== null) return { force: f.id };
+    const head = (path: NodeId[]) => (f.transit ? [f.transit.to, ...path] : path);
+    const station = holds.get(f.id) ?? waits.get(f.id);
+    const striking = !holds.has(f.id) && (station === undefined || (closed && standing(f, station)));
+    if (striking) {
+      const path = from(f) === target ? [] : (shortestPath(ctx.graph, from(f), target) ?? []);
+      return { force: f.id, route: head(path), pace: 'steady', engagement: 'seek' };
+    }
+    const path = routeAround(ctx, from(f), station as NodeId, target) ?? [];
+    return { force: f.id, route: head(path), pace: 'steady', posture: 'concentrated', engagement: 'accept' };
+  });
 }
 
 /** French troops standing at a place, out of battle. */
