@@ -206,7 +206,7 @@ function slotsToCover(s: GameState, ctx: Context, f: Force, route: NodeId[], pac
 }
 
 function engagementReason(e: Engagement): string {
-  if (e === 'stand') return 'Stands: holds the place, and its marshal does not break off while it can still fight.';
+  if (e === 'stand') return 'Stand: marches as ordered. In battle, if most of the men there are under Stand orders, the marshal holds on after the position is lost, and breaks off only when the army is close to breaking.';
   return e === 'seek' ? 'Will seek battle.' : e === 'avoid' ? 'Avoids battle where it can withdraw.' : 'Accepts battle if attacked.';
 }
 

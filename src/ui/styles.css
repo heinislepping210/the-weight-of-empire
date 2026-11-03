@@ -437,6 +437,11 @@ label.choice {
   margin-bottom: 0.3rem;
 }
 
+/* Nine columns do not fit a phone: the table scrolls sideways inside the panel, not the page. */
+.table-scroll {
+  overflow-x: auto;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     scroll-behavior: auto !important;

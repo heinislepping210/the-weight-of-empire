@@ -200,7 +200,7 @@ export function App() {
                   ))}
                 </ul>
                 <p>
-                  Russian losses overall, now revealed: {(((total(start, 'ru', 'men') - total(s, 'ru', 'men')) / total(start, 'ru', 'men')) * 100).toFixed(1)}%.
+                  All Russian forces, now revealed: {thousands(total(start, 'ru', 'men'))} men at the start, {thousands(total(s, 'ru', 'men'))} at the end, reinforcements included. The verdict counts the main armies alone.
                 </p>
                 <p className="muted">A provisional verdict: the thresholds (§2.13, G-004) are still being tested. The full after-action report comes later. Save this run to compare it with another strategy on the same seed.</p>
               </section>

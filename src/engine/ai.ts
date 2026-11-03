@@ -91,13 +91,18 @@ export function decideNightfall(s: GameState, ctx: Context, b: BattleState, side
 /**
  * Whether the marshal holds on after losing the position, while cohesion lasts: when most of the side's men in
  * the battle are under stand orders, or for the Russian command under political pressure at a key place (§2.9).
- * Willingness only: it never closes a road (contract D).
+ * Willingness only: it never closes a road (contract D). The battle panel shows it (third review).
  */
-function mustStand(s: GameState, ctx: Context, b: BattleState, side: Side): boolean {
-  const forces = b.sides[side].map((id) => must(s.forces[id], id));
-  const standing = forces.filter((f) => f.engagement === 'stand').reduce((n, f) => n + f.men, 0);
-  if (standing * 2 > forces.reduce((n, f) => n + f.men, 0)) return true;
+export function mustStand(s: GameState, ctx: Context, b: BattleState, side: Side): boolean {
+  const { standing, men } = standingMen(s, b, side);
+  if (standing * 2 > men) return true;
   return side === 'ru' && (ctx.scenario.keyPlaces ?? []).includes(b.node) && s.russianCommand.pressure >= ctx.rules.russian.mustStandPressure;
+}
+
+/** The side's men in the battle under stand orders, and all its men there: a strict majority stands (D-045). */
+export function standingMen(s: GameState, b: BattleState, side: Side): { standing: number; men: number } {
+  const forces = b.sides[side].map((id) => must(s.forces[id], id));
+  return { standing: forces.filter((f) => f.engagement === 'stand').reduce((n, f) => n + f.men, 0), men: forces.reduce((n, f) => n + f.men, 0) };
 }
 
 /** Horsemen still in the side's reserve, deployed forces only. */

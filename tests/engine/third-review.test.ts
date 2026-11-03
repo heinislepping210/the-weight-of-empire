@@ -4,8 +4,9 @@
 import { describe, expect, it } from 'vitest';
 import { RULES, advance, createContext, evaluate, newGame, slotIndexOf, statusOf } from '../../src/engine';
 import type { BattleState, Context, GameState, KeyDecision, LogEntry, ScenarioDef, Side } from '../../src/engine';
-import { decideRound } from '../../src/engine/ai';
-import { allInReserve, exitStateFor, resolveRound, retreatOfSide } from '../../src/engine/battle';
+import { decideRound, mustStand } from '../../src/engine/ai';
+import { planDirective } from '../../src/engine/directive';
+import { allInReserve, exitStateFor, placedAllocation, resolveRound, retreatOfSide, sectorsLost } from '../../src/engine/battle';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
 import { play } from '../fixtures/driver';
 import { forceInit, holdStill, idleField, testGround } from '../fixtures/testGround';
@@ -256,5 +257,59 @@ describe('5. battle losses are counted when they happen, not on the day a battle
       for (const at of Object.values(b.lossesAt)) for (const [id, n] of Object.entries(at)) summed[id] = (summed[id] ?? 0) + n;
       expect(summed, b.id).toEqual(Object.fromEntries(Object.entries(b.losses).filter(([, n]) => n > 0)));
     }
+  });
+});
+
+describe('6. the interface says what the rules do', () => {
+  /** The main body and the flank corps in one battle at B, the main body under the given stance, with the given strengths. */
+  function standing(main: number, flank: number) {
+    const ctx = ground((d) => {
+      Object.assign(forceInit(d, 'fr-main'), { men: main, engagement: 'stand' });
+      Object.assign(forceInit(d, 'fr-flank'), { at: 'B', men: flank, engagement: 'accept' });
+    });
+    const s = first(ctx);
+    const b = battleOf(s);
+    expect(b.sides.fr).toEqual(expect.arrayContaining(['fr-main', 'fr-flank']));
+    return mustStand(s, ctx, b, 'fr');
+  }
+
+  it('Stand holds only when a strict majority of the men in the battle are under it: a minority, exactly half, a majority', () => {
+    expect(standing(15_000, 25_000)).toBe(false);
+    expect(standing(20_000, 20_000)).toBe(false);
+    expect(standing(25_000, 15_000)).toBe(true);
+  });
+
+  it('the staff explains Stand as a battle order: the group marches as ordered', () => {
+    const ctx = createContext(vitebskDecision());
+    const plan = planDirective(newGame(ctx, 1812), ctx, { objective: 'smolensk-north', axis: null, tempo: 'steady', posture: 'concentrated', engagement: 'stand', holdBack: [], logistics: 'hold' });
+    for (const p of plan) {
+      const why = p.reasons.find((r) => r.startsWith('Stand'));
+      expect(why, p.force).toContain('marches as ordered');
+      expect(why, p.force).toContain('most of the men there');
+    }
+  });
+
+  it('the deployment preview is the deployment: a corps placed whole shows where it will stand', () => {
+    const ctx = ground();
+    let r = advance(newGame(ctx, 1), { kind: 'orders', turn: 1, orders: [] }, ctx);
+    if (!r.ok) throw new Error(r.reason);
+    const st = r.status as { battleId: string; round: number };
+    const preview = placedAllocation(r.state.forces['fr-main']!, 2);
+    r = advance(r.state, { kind: 'battle', battleId: st.battleId, round: st.round, decision: { kind: 'deploy', placements: { 'fr-main': 2 } } }, ctx);
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.state.battles[st.battleId]!.field.alloc['fr-main']).toEqual(preview);
+  });
+
+  it('lost sectors are counted from the tracks, while the lost position stays recorded', () => {
+    const ctx = ground();
+    const s = first(ctx);
+    const b = battleOf(s);
+    b.field.positionLost = ['fr'];
+    b.field.control = [-2, -2, 0];
+    expect(sectorsLost(b, 'fr')).toBe(2);
+    b.field.control = [-2, 1, 0];
+    expect(sectorsLost(b, 'fr')).toBe(1);
+    expect(sectorsLost(b, 'ru')).toBe(0);
+    expect(b.field.positionLost).toEqual(['fr']);
   });
 });

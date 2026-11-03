@@ -112,17 +112,21 @@ export function newField(template: FieldTemplateId, plans: Record<Side, Deployme
   };
 }
 
+/** A force's whole strength in one sector or the reserve, as the player places it at deployment. */
+export function placedAllocation(f: Force, where: SectorIndex | 'reserve'): Allocation {
+  const whole = allInReserve(f);
+  if (where !== 'reserve') {
+    whole.sectors[where] = whole.reserve;
+    whole.reserve = noTroops();
+  }
+  return whole;
+}
+
 /** The player's own placements at deployment: a force's whole strength into a sector or the reserve. */
 export function applyPlacements(s: GameState, b: BattleState, placements: Record<ForceId, Placement>): void {
   for (const [id, where] of Object.entries(placements).sort(([a], [c]) => (a < c ? -1 : 1))) {
     if (where === 'staff') continue;
-    const f = must(s.forces[id], id);
-    const whole = allInReserve(f);
-    if (where !== 'reserve') {
-      whole.sectors[where] = whole.reserve;
-      whole.reserve = noTroops();
-    }
-    b.field.alloc[id] = whole;
+    b.field.alloc[id] = placedAllocation(must(s.forces[id], id), where);
   }
 }
 
@@ -475,6 +479,9 @@ function applyCasualties(s: GameState, ctx: Context, b: BattleState, sec: Sector
 /** The side whose end of the track a sector has reached: +2 the French have it, −2 the Russians (contract C). */
 const loserOf = (control: number): Side | null => (control >= 2 ? 'ru' : control <= -2 ? 'fr' : null);
 
+/** The sectors a side has lost now, from the tracks; losing two loses the position, a shock taken once (contract C). */
+export const sectorsLost = (b: BattleState, side: Side): number => b.field.control.filter((c) => loserOf(c) === side).length;
+
 /**
  * One 2-hour round (§3.4a step 5, contracts B–D). Both sides' decisions are given: the Russian one was fixed at
  * the pause, the French one is the player's or the marshal's (`marshal`), neither knowing the other.
@@ -536,7 +543,7 @@ export function resolveRound(s: GameState, ctx: Context, b: BattleState, decisio
   });
   note(s, log, 'sectors', { battle: b.id, round: b.roundsFought, control: b.field.control.join(','), frLost: (losses.fr as number[]).reduce((n, x) => n + x, 0), ruLost: (losses.ru as number[]).reduce((n, x) => n + x, 0) });
   for (const side of SIDES) {
-    if (b.field.positionLost.includes(side) || b.field.control.filter((c) => loserOf(c) === side).length < 2) continue;
+    if (b.field.positionLost.includes(side) || sectorsLost(b, side) < 2) continue;
     b.field.positionLost.push(side);
     for (const f of sideForces(s, b, side)) f.cohesion = Math.max(0, f.cohesion - r.positionLossShock);
     note(s, log, 'positionLost', { battle: b.id, side });

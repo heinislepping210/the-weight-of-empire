@@ -58,7 +58,7 @@ The first review's findings and their status are in [reviews/2026-10-31-independ
 | Sector battles | Three sectors and a reserve, cavalry and guns, four results kept apart, graded exits, pursuit once; contracts tested before the combat code (TECHNICAL_ARCHITECTURE §3.4b) | 0.17.0–0.17.1 | D-043 |
 | Prudichevo road | A track with a ford from the Old Town to the Moscow road (H-022), found missing by the pinning bot | 0.17.2 | D-044 |
 | Stand order | A battle stance whose marshal holds on after losing the position while cohesion lasts | 0.17.2 | D-045 |
-| Third review | A beaten side falls back together along its line (an attacker the way it came, a defender towards its base); both break-offs leave at once, never by one road; an empty line counter-attacks; only deployed cavalry pursues; losses by sub-step ([record](reviews/2026-11-02-third-review.md)) | 0.18.0 | D-046 |
+| Third review | A beaten side falls back together along its line (an attacker the way it came, a defender towards its base); both break-offs leave at once, never by one road; an empty line counter-attacks; only deployed cavalry pursues; losses by sub-step; in the interface, Stand explained, the verdict in Compare and a deployment preview ([record](reviews/2026-11-02-third-review.md)) | 0.18.0 | D-046 |
 
 Each change was written test-first: tests that failed on the previous rules.
 

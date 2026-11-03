@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { BattleDecision, Context, GameState, KeyDecision, Placement, SectorIndex, Status } from '../engine';
 import { when } from '../engine';
-import { FIELD_TEMPLATES, SECTORS, exitStateFor, reserveMen, retreatOfSide } from '../engine/battle';
+import { mustStand, standingMen } from '../engine/ai';
+import { FIELD_TEMPLATES, SECTORS, exitStateFor, placedAllocation, reserveMen, retreatOfSide, sectorsLost } from '../engine/battle';
 import { slotIndexOf } from '../engine';
 import { condition } from './OrdersPanel';
 import { thousands } from './names';
@@ -30,16 +31,34 @@ export function BattlePanel({ s, ctx, status, onDecide }: Props) {
   const road = retreatOfSide(s, ctx, b, 'fr')?.to ?? null;
   const roadName = road ? (ctx.graph.nodes.get(road)?.name ?? road) : null;
   const reserve = reserveMen(s, b, 'fr', now);
+  // Before the deployment is ordered, the field shows the staff's plan with your changes to it (third review).
+  const pending = status.step === 'deploy' ? placements : {};
+  const changed = Object.values(pending).some((p) => p !== 'staff');
+  const allocOf = (id: string) => {
+    const where = pending[id];
+    const f = s.forces[id];
+    return where !== undefined && where !== 'staff' && f ? placedAllocation(f, where) : b.field.alloc[id];
+  };
   const reserveCav = b.sides.fr.reduce((n, id) => n + ((b.fightsFrom[id] ?? 0) <= now ? (b.field.alloc[id]?.reserve.cav ?? 0) : 0), 0);
-  const guns = (i: SectorIndex) => b.sides.fr.reduce((n, id) => n + (b.field.alloc[id]?.sectors[i].guns ?? 0), 0);
+  const guns = (i: SectorIndex) => b.sides.fr.reduce((n, id) => n + (allocOf(id)?.sectors[i].guns ?? 0), 0);
+  // Stand holds only when most of the men here are under it (D-045), and only in the marshal's own decisions.
+  const stand = standingMen(s, b, 'fr');
+  const firm = mustStand(s, ctx, b, 'fr');
 
   /** Men of one side in a sector, ours exact, theirs as the scouts see them: to the nearest thousand. */
   const menIn = (side: 'fr' | 'ru', i: SectorIndex | 'reserve') =>
     b.sides[side].reduce((n, id) => {
-      const a = b.field.alloc[id];
+      const a = side === 'fr' ? allocOf(id) : b.field.alloc[id];
       const t = a ? (i === 'reserve' ? a.reserve : a.sectors[i]) : null;
       return n + (t ? t.inf + t.cav : 0);
     }, 0);
+  const COUNT = ['no sector is', 'one sector is', 'two sectors are', 'all three sectors are'];
+  const lostLine = (side: 'fr' | 'ru') => {
+    const n = COUNT[sectorsLost(b, side)] as string;
+    const whose = side === 'fr' ? 'their' : 'our';
+    if (sectorsLost(b, side) >= 2) return side === 'fr' ? `We have lost the position: ${n} in ${whose} hands.` : `They have lost the position: ${n} in ${whose} hands.`;
+    return side === 'fr' ? `We lost the position earlier; now ${n} in ${whose} hands.` : `They lost the position earlier; now ${n} in ${whose} hands.`;
+  };
   const seen = (n: number) => (n === 0 ? 'none seen' : `about ${thousands(Math.max(1000, Math.round(n / 1000) * 1000))}`);
   // The five-step track: the marker where the line stands, the ground taken from the middle towards it filled.
   const track = (control: number) => [-2, -1, 0, 1, 2].map((step) => (step === control ? '◆' : (step > 0 && step < control) || (step < 0 && step > control) ? '■' : '·')).join(' ');
@@ -86,7 +105,18 @@ export function BattlePanel({ s, ctx, status, onDecide }: Props) {
         {b.field.flank.fr !== null ? ` Coming along two roads, we strike ${sectors[b.field.flank.fr].name} in the flank.` : ''}
         {b.field.flank.ru !== null ? ` The enemy, coming along two roads, strikes ${sectors[b.field.flank.ru].name} in the flank.` : ''}
       </p>
-      {b.field.positionLost.length > 0 && <p className="warning">{b.field.positionLost.includes('fr') ? 'We have lost the position: two sectors are in their hands.' : 'They have lost the position: two sectors are in our hands.'}</p>}
+      {(['fr', 'ru'] as const).filter((side) => b.field.positionLost.includes(side)).map((side) => (
+        <p key={side} className="warning">
+          {lostLine(side)}
+        </p>
+      ))}
+      {stand.standing > 0 && (
+        <p className="muted">
+          {firm
+            ? `Most of our men here are under Stand orders (${thousands(stand.standing)} of ${thousands(stand.men)}): when the marshal decides, he holds on after the position is lost, and breaks off only when the army is close to breaking.`
+            : `${thousands(stand.standing)} of our ${thousands(stand.men)} men here are under Stand orders, not most of them: the marshal fights this battle as usual.`}
+        </p>
+      )}
 
       <h3>Our corps</h3>
       <ul>
@@ -101,7 +131,10 @@ export function BattlePanel({ s, ctx, status, onDecide }: Props) {
 
       {status.step === 'deploy' && (
         <>
-          <p>The fighting begins with the next light. The staff has deployed the troops as shown; you may send a corps whole into another sector or the reserve.</p>
+          <p>
+            The fighting begins with the next light. The staff has deployed the troops as shown; you may send a corps whole into another sector or the reserve.
+            {changed ? ' The field above shows your changes; they take effect when you deploy.' : ''}
+          </p>
           <div className="form-grid">
             {ours.map((f) => (
               <label key={f.id}>

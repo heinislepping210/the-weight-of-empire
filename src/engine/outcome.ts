@@ -35,6 +35,15 @@ export const ENDING_NAMES: Record<EndingId, string> = {
   collapse: 'Operational Collapse',
 };
 
+/** What became of the Russian main armies, in words (§2.13). */
+export const RUSSIAN_RESULT_NAMES: Record<RussianResult, string> = {
+  decisivelyDefeated: 'decisively defeated',
+  cutOff: 'cut off',
+  forcedOut: 'forced out',
+  damaged: 'damaged',
+  intact: 'intact',
+};
+
 /** Rank for statistics only (1 is best); the report itself presents trade-offs, not ranks. */
 export const ENDING_RANK: Record<EndingId, number> = {
   decisiveSuccess: 1,
@@ -70,6 +79,12 @@ export interface Outcome {
 }
 
 const men = (forces: Force[]) => forces.reduce((n, f) => n + f.men, 0);
+
+/** What was lost of a starting figure, in permille, truncated: the one rule for every loss the game reports (third review). */
+export const lossPermille = (start: number, end: number): number => (start <= 0 ? 0 : Math.floor(((start - end) * 1000) / start));
+
+/** A permille figure as the game writes it: one decimal of a percent, exact. */
+export const percent = (permille: number): string => `${(permille / 10).toFixed(1)}%`;
 const sideOf = (s: GameState, side: Side) => sortedValues(s.forces).filter((f) => f.side === side);
 
 /**
@@ -100,14 +115,14 @@ export function evaluate(start: GameState, end: GameState, ctx: Context): Outcom
   const mainIds = start.mainArmies;
   const mainStart = men(ruStart.filter((f) => mainIds.includes(f.id)));
   const mainEnd = men(sideOf(end, 'ru').filter((f) => mainIds.includes(f.id)));
-  const russianMainLostPermille = mainStart === 0 ? 0 : Math.floor(((mainStart - mainEnd) * 1000) / mainStart);
+  const russianMainLostPermille = lossPermille(mainStart, mainEnd);
 
   const frStart = sideOf(start, 'fr');
   const frEnd = sideOf(end, 'fr');
-  const frenchMenLostPermille = Math.floor(((men(frStart) - men(frEnd)) * 1000) / Math.max(1, men(frStart)));
+  const frenchMenLostPermille = lossPermille(men(frStart), men(frEnd));
   // All the army's horses: saddle, artillery and draught (G-019).
   const horses = (forces: Force[]) => forces.reduce((n, f) => n + f.horses + f.draught, 0);
-  const frenchHorsesLostPermille = Math.floor(((horses(frStart) - horses(frEnd)) * 1000) / Math.max(1, horses(frStart)));
+  const frenchHorsesLostPermille = lossPermille(horses(frStart), horses(frEnd));
 
   const holders = (side: Side, node: NodeId) => men(sideOf(end, side).filter((f) => f.transit === null && f.at === node));
 
@@ -217,7 +232,7 @@ export function evaluate(start: GameState, end: GameState, ctx: Context): Outcom
   else if (!capable || lostBattle) ending = 'repulse';
   else ending = 'inconclusive';
 
-  const pct = (p: number) => `${(p / 10).toFixed(1)}%`;
+  const pct = percent;
   const reasons = [
     russian === 'decisivelyDefeated'
       ? `In battles in which they broke, within ${r.decisiveWindowDays} days, the Russian main armies lost ${pct(battleLossPermille)} of their strength; over the whole campaign ${pct(russianMainLostPermille)}.`
