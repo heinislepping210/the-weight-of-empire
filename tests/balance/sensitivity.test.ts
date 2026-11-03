@@ -14,6 +14,8 @@ import { violations } from '../fixtures/invariants';
 import { BOTS } from './bots';
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
+/** What-if map: BALANCE_SCENARIO=candidate-roads adds the roads not yet adopted (MAP_AND_GEOGRAPHY.md). */
+const WITH_CANDIDATE_ROADS = env.BALANCE_SCENARIO === 'candidate-roads';
 const SEEDS = Number(env.BALANCE_SEEDS ?? 500);
 
 const VARIANTS: { name: string; over: Record<string, unknown> }[] = [
@@ -50,7 +52,7 @@ it.skipIf(env.BALANCE !== '1')('sector-battle sensitivity', () => {
   for (const bot of BOT_NAMES) {
     for (const i of picked) {
       const v = VARIANTS[i]!;
-      const ctx = createContext(vitebskDecision(), overridden(RULES, v.over, 'rules') as Rules);
+      const ctx = createContext(vitebskDecision({ candidateRoads: WITH_CANDIDATE_ROADS }), overridden(RULES, v.over, 'rules') as Rules);
       const endings: Record<string, number> = {};
       let rank = 0;
       let decisive = 0;

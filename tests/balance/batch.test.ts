@@ -21,6 +21,8 @@ import { violations } from '../fixtures/invariants';
 import { BOTS, FAMILIES } from './bots';
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
+/** What-if map: BALANCE_SCENARIO=candidate-roads adds the roads not yet adopted (MAP_AND_GEOGRAPHY.md). */
+const WITH_CANDIDATE_ROADS = env.BALANCE_SCENARIO === 'candidate-roads';
 const enabled = env.BALANCE === '1';
 
 /** Share of the French wagon trains' draught horses lost over the game, in permille (G-019). */
@@ -113,7 +115,7 @@ function battleFigures(end: GameState, log: LogEntry[], decisive: boolean): Pick
 
 it.skipIf(!enabled)('balance batch', () => {
   const rules = OVERRIDES ? (overridden(RULES, OVERRIDES, 'rules') as Rules) : RULES;
-  const ctx = createContext(vitebskDecision(), rules);
+  const ctx = createContext(vitebskDecision({ candidateRoads: WITH_CANDIDATE_ROADS }), rules);
   const names = Object.keys(BOTS);
   const results: Record<string, Result[]> = {};
   const problems: string[] = [];
@@ -166,6 +168,7 @@ it.skipIf(!enabled)('balance batch', () => {
   const lines: string[] = [];
   lines.push(`# Balance report: rules ${RULES_VERSION}${OVERRIDES ? ' (what-if)' : ''}, The Vitebsk Decision, seeds 1–${SEEDS}${DICE > 1 ? `, ${DICE} sets of dice each` : ''}`, '');
   if (OVERRIDES) lines.push(`**What-if run, not the adopted rules.** Overrides: \`${JSON.stringify(OVERRIDES)}\``, '');
+  if (WITH_CANDIDATE_ROADS) lines.push('**What-if map, not the adopted network:** with the candidate roads (MAP_AND_GEOGRAPHY.md, "Missing").', '');
   lines.push(`Bots: ${names.join(', ')}. Approach families: ${FAMILIES.join(', ')}. Battles are left to the marshal.`, '');
   lines.push(`**Invariant violations: ${problems.length}**${problems.length ? ` (first: ${problems.slice(0, 5).join('; ')})` : ''}`, '');
 

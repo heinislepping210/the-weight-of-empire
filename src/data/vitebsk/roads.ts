@@ -49,6 +49,17 @@ export const ROADS: readonly Road[] = [
   // Smolensk and the Moscow road
   { id: 'smolensk-bridges', a: 'smolensk', b: 'smolensk-north', metres: 1_398, road: 'post', crossing: 'bridge', status: 'provisional', basis: 'bridges between the Old Town and the north-bank suburb' },
   { id: 'smolensk-north-valutino', a: 'smolensk-north', b: 'valutino', metres: 12_755, road: 'post', crossing: null, status: 'provisional', basis: 'Moscow road' },
+  {
+    id: 'smolensk-prudichevo-valutino',
+    a: 'smolensk',
+    b: 'valutino',
+    metres: 12_598,
+    road: 'track',
+    crossing: 'ford',
+    status: 'provisional',
+    basis:
+      'Foord (1914), ch. V: from the south side of Smolensk a track crossed the Dnieper by a ford at Prudichevo, about 6 miles out, and joined the Moscow high road about 2 miles west of Lubino; on 19 August Eblé bridged it and Junot crossed there (H-022). Length by the network rule (G-007); the track itself was longer. Adopted on your decision (D-044)',
+  },
   { id: 'valutino-dorogobuzh', a: 'valutino', b: 'dorogobuzh', metres: 90_214, road: 'post', crossing: null, status: 'provisional', basis: 'Moscow road; whether it crosses the Dnieper on this stretch is still to be checked' },
 
   // Southern edge (Bagration's line of approach; crossings at Mogilev not yet modelled)
@@ -58,10 +69,17 @@ export const ROADS: readonly Road[] = [
   { id: 'mstislavl-smolensk', a: 'mstislavl', b: 'smolensk', metres: 109_205, road: 'secondary', crossing: null, status: 'provisional', basis: 'approach of the Russian 2nd Army to Smolensk' },
 ];
 
-/** Engine-ready network: nodes and edges without the research fields. */
-export function vitebskNetwork(): { nodes: NodeDef[]; edges: EdgeDef[] } {
+/**
+ * Roads found in the sources but not yet adopted (MAP_AND_GEOGRAPHY.md, "Missing"). They are left out of the game
+ * until you decide, and offered only for what-if runs (`vitebskNetwork({ candidates: true })`).
+ */
+export const CANDIDATE_ROADS: readonly Road[] = [];
+
+/** Engine-ready network: nodes and edges without the research fields; with `candidates`, the roads not yet adopted too. */
+export function vitebskNetwork(options: { candidates?: boolean } = {}): { nodes: NodeDef[]; edges: EdgeDef[] } {
+  const roads = options.candidates ? [...ROADS, ...CANDIDATE_ROADS] : ROADS;
   return {
     nodes: PLACES.map(({ id, name }) => ({ id, name })),
-    edges: ROADS.map(({ id, a, b, metres, road, crossing }) => ({ id, a, b, metres, road, crossing })),
+    edges: roads.map(({ id, a, b, metres, road, crossing }) => ({ id, a, b, metres, road, crossing })),
   };
 }

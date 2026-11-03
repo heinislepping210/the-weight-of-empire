@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { RULES, advance, createContext, newGame, stateHash, statusOf } from '../../src/engine';
 import type { BattleDecision, BattleState, Context, GameState, KeyDecision, LogEntry, Rules, ScenarioDef, Side } from '../../src/engine';
-import { decideRound } from '../../src/engine/ai';
+import { decideNightfall, decideRound } from '../../src/engine/ai';
 import { allocationTotals, effectiveCavalry, exitStateFor, keyLabel, resolveRound } from '../../src/engine/battle';
 import { loseMen } from '../../src/engine/util';
 import { play, randomPolicy } from '../fixtures/driver';
@@ -555,3 +555,50 @@ describe('extensions (step 5): Smolensk, the guns, the cavalry, flanks and press
     expect(decision(100).exit).toBe(decision(0).exit);
   });
 });
+
+describe('the stand order: a group holding a place tells its marshal to hold on', () => {
+  /** The French main body at B under the given stance, with its position lost and the given cohesion. */
+  const marshalFor = (stance: 'accept' | 'stand', cohesion: number, flankStands = false) => {
+    const ctx = ground((d) => {
+      forceInit(d, 'fr-main').engagement = stance;
+      if (flankStands) Object.assign(forceInit(d, 'fr-flank'), { at: 'B', engagement: 'stand' });
+    });
+    const { s, b } = firstRound(ctx);
+    b.field.positionLost = ['fr'];
+    for (const id of b.sides.fr) s.forces[id]!.cohesion = cohesion;
+    return { round: decideRound(s, ctx, b, 'fr'), night: decideNightfall(s, ctx, b, 'fr'), exit: exitStateFor(s, ctx, b, 'fr') };
+  };
+
+  it('a side under stand orders does not break off when its position is lost, while it can still fight', () => {
+    expect(marshalFor('accept', 600).exit).toBe('open');
+    expect(marshalFor('accept', 600).round).toEqual(breakOff);
+    expect(marshalFor('stand', 600).round).not.toEqual(breakOff);
+    expect(marshalFor('stand', 600).night).toBe('stay');
+  });
+
+  it('it breaks off once its cohesion is nearly gone, and withdraws at nightfall a little sooner', () => {
+    expect(marshalFor('stand', RULES.battle.mustStandCohesion - 10).round).toEqual(breakOff);
+    expect(marshalFor('stand', RULES.battle.mustStandNightCohesion - 10).night).toBe('withdraw');
+    expect(marshalFor('stand', RULES.battle.mustStandNightCohesion + 10).night).toBe('stay');
+  });
+
+  it('the side stands when most of its men are under stand orders, not when a small part is', () => {
+    expect(marshalFor('accept', 600, true).round).toEqual(breakOff);
+    expect(marshalFor('stand', 600, true).round).not.toEqual(breakOff);
+  });
+
+  it('stand is a valid order for a group, and random play with it keeps every contract', () => {
+    const ctx = createContext(testGround((d) => {
+      Object.assign(forceInit(d, 'fr-main'), { cavalry: 9_000, guns: 60 });
+      Object.assign(forceInit(d, 'ru-main'), { cavalry: 8_250, guns: 60 });
+    }));
+    const r = advance(newGame(ctx, 1), { kind: 'orders', turn: 1, orders: [{ force: 'fr-main', engagement: 'stand' }] }, ctx);
+    expect(r.ok).toBe(true);
+    for (let seed = 1; seed <= 15; seed++) {
+      const random = randomPolicy(ctx, seed, true);
+      const standing = { ...random, orders: (s: GameState, turn: number) => random.orders(s, turn).map((o) => ({ ...o, engagement: 'stand' as const })) };
+      expect(violations(play(ctx, seed, standing)), `seed ${seed}`).toEqual([]);
+    }
+  });
+});
+

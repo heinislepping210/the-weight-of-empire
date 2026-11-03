@@ -85,10 +85,14 @@ export function decideNightfall(s: GameState, ctx: Context, b: BattleState, side
 }
 
 /**
- * The Russian command under political pressure must stand at a key place (§2.9): the marshal holds on there
- * after losing the position, while cohesion lasts. Willingness only: it never closes a road (contract D).
+ * Whether the marshal holds on after losing the position, while cohesion lasts: when most of the side's men in
+ * the battle are under stand orders, or for the Russian command under political pressure at a key place (§2.9).
+ * Willingness only: it never closes a road (contract D).
  */
 function mustStand(s: GameState, ctx: Context, b: BattleState, side: Side): boolean {
+  const forces = b.sides[side].map((id) => must(s.forces[id], id));
+  const standing = forces.filter((f) => f.engagement === 'stand').reduce((n, f) => n + f.men, 0);
+  if (standing * 2 > forces.reduce((n, f) => n + f.men, 0)) return true;
   return side === 'ru' && (ctx.scenario.keyPlaces ?? []).includes(b.node) && s.russianCommand.pressure >= ctx.rules.russian.mustStandPressure;
 }
 

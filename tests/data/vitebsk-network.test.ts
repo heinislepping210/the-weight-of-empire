@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PLACES } from '../../src/data/vitebsk/places';
-import { ROADS, vitebskNetwork } from '../../src/data/vitebsk/roads';
+import { CANDIDATE_ROADS, ROADS, vitebskNetwork } from '../../src/data/vitebsk/roads';
 import { buildGraph, neighboursOf, type Graph } from '../../src/engine/graph';
 
 const graph = (() => {
@@ -43,7 +43,7 @@ describe('Vitebsk–Smolensk network (provisional)', () => {
   it('stored road lengths match the coordinates (great circle × 1.25, G-007)', () => {
     const at = new Map(PLACES.map((p) => [p.id, p]));
     const rad = Math.PI / 180;
-    for (const r of ROADS) {
+    for (const r of [...ROADS, ...CANDIDATE_ROADS]) {
       const a = at.get(r.a)!;
       const b = at.get(r.b)!;
       const h = Math.sin(((b.lat - a.lat) * rad) / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(((b.lon - a.lon) * rad) / 2) ** 2;
@@ -72,8 +72,19 @@ describe('Vitebsk–Smolensk network (provisional)', () => {
 
   it('makes the Dnieper and the Smolensk bridges real obstacles (G2)', () => {
     expect(ROADS.find((r) => r.id === 'rasasna-liady')?.crossing).toBe('pontoon');
-    // The Moscow road starts from the north bank: from the Old Town it is reached only over the bridges.
-    expect(neighboursOf(graph, 'valutino').map((n) => n.node).sort()).toEqual(['dorogobuzh', 'smolensk-north']);
-    expect(reachable(graph, 'smolensk', 'valutino', ['smolensk-north'])).toBe(false);
+    // The Moscow road starts from the north bank; from the Old Town it is reached over the bridges, or by the
+    // ford at Prudichevo that Junot took (H-022, D-044): a river crossing either way.
+    expect(neighboursOf(graph, 'valutino').map((n) => n.node).sort()).toEqual(['dorogobuzh', 'smolensk', 'smolensk-north']);
+    expect(ROADS.find((r) => r.id === 'smolensk-prudichevo-valutino')?.crossing).toBe('ford');
+    expect(reachable(graph, 'smolensk', 'valutino', ['smolensk-north'])).toBe(true);
+  });
+
+  it('candidate roads, if any, are not in the game: offered for what-if runs only', () => {
+    for (const r of CANDIDATE_ROADS) {
+      expect(ROADS.some((x) => x.id === r.id), r.id).toBe(false);
+      expect(r.basis.length, r.id).toBeGreaterThan(0);
+    }
+    const { edges } = vitebskNetwork({ candidates: true });
+    expect(edges.length).toBe(ROADS.length + CANDIDATE_ROADS.length);
   });
 });

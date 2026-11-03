@@ -25,7 +25,7 @@ export function condition(f: Force): string {
 }
 
 const PACES: Pace[] = ['rest', 'steady', 'forced'];
-const STANCES: Engagement[] = ['seek', 'accept', 'avoid'];
+const STANCES: Engagement[] = ['seek', 'accept', 'stand', 'avoid'];
 const POSTURES: Posture[] = ['dispersed', 'concentrated'];
 const SUPPLY: [LogisticsStance, string][] = [
   ['hold', 'Keep the depots'],

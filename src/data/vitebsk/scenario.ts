@@ -56,10 +56,11 @@ const CONVOYS: ConvoyInit[] = [
 /** What the countryside around each place can still yield (G-012): uniform placeholders. */
 const DISTRICTS: Record<string, District> = Object.fromEntries(PLACES.map((p) => [p.id, { food: 150_000, fodder: 150_000 }]));
 
-export function vitebskDecision(): ScenarioDef {
-  const { nodes, edges } = vitebskNetwork();
+/** The scenario; `candidateRoads` adds the roads not yet adopted, for what-if runs only (MAP_AND_GEOGRAPHY.md). */
+export function vitebskDecision(options: { candidateRoads?: boolean } = {}): ScenarioDef {
+  const { nodes, edges } = vitebskNetwork({ candidates: options.candidateRoads ?? false });
   return {
-    id: 'vitebsk-decision',
+    id: options.candidateRoads ? 'vitebsk-decision+candidate-roads' : 'vitebsk-decision',
     title: 'The Vitebsk Decision',
     startDate: '1812-08-05',
     turns: 10,

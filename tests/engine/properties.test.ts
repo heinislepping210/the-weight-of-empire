@@ -54,6 +54,8 @@ const GOLDEN: Record<string, string> = {
   '0.17.0': 'ab33d4c557f65a1f',
   // The Smolensk battlefield, massed guns, cavalry charges and tasks, flanks, the Russian marshal under pressure.
   '0.17.1': '322ab15672e0bec3',
+  // The road by the Prudichevo ford from Smolensk's Old Town to Valutino (H-022, D-044).
+  '0.17.2': 'e4f859a50da6e294',
 };
 
 /**
@@ -74,6 +76,7 @@ const GOLDEN_VITEBSK: Record<string, string> = {
   '0.16.0': '78b60ad66e0f73a5',
   '0.17.0': '4e36c8f97b470641',
   '0.17.1': '85c3bf612566b3ff',
+  '0.17.2': '6b6b838b705d899c',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */

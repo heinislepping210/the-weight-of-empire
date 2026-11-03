@@ -172,3 +172,16 @@ Researched for the sector battles (§2.10; TECHNICAL_ARCHITECTURE §3.4b). Regis
 **Not obtained.** Nafziger's dated unit returns for 1 and 15 August 1812 (812HAB, 812HDA) refused automated access. They are the next step for the composition, unit by unit.
 
 Sources consulted: Wikipedia, "First Battle of Krasnoi", "Battle of Smolensk (1812)", "Battle of Valutino", "Battle of Borodino", "Second Western Army", "Order of battle of the French invasion of Russia", "Russian Army order of battle (1812)", "Horses in the Napoleonic Wars", and the works they cite (Bodart 1908; Riehn 1990; Chandler 1996; Smith 1998; Palmer 2003; Zamoyski 2004; Mikaberidze 2007; Clodfelter 2017). Secondary throughout; the counts are disputed, so the game uses ranges.
+
+## Roads east of Smolensk (2 November 2026)
+
+Researched after the pinning bot showed that no Russian army at Smolensk's north bank can be shut in on the present network (GAMEPLAY_BALANCING, "Pinning"). Register entry H-022.
+
+Edward Foord's *Napoleon's Russian Campaign of 1812* (1914), chapter V, describes the roads round the city. Three roads left the north gate, the Moscow road running some 5 miles along the Dnieper before crossing the chord of a great bend to Solovievo. "A cross-road passed by the village of Gorbunovo in a shallow curve to the high-road at Lubino, 14 miles distant", and Barclay's main columns took that track on the night of 18–19 August. "From the south side of Smolensk another track crossed the Dnieper by a ford at Prudichevo, about 6 miles out", and joined the high road about 2 miles west of Lubino; on the 19th Napoleon sent Eblé to bridge it and Junot's corps to cross there. The Wikipedia summary of Valutino agrees on Junot and Prudichevo.
+
+**What the game takes from it:** the Prudichevo track as a candidate road, not yet adopted (MAP_AND_GEOGRAPHY.md). The Gorbunovo cross-road leaves from beside the north-bank suburb and adds no new way out on this network.
+
+**Still to do:** check both against Clausewitz's account of Barclay's flank march (the PDF is too large to fetch here) and a period map; neither Prudichevo nor this Gorbunovo has a Wikidata location.
+
+Sources consulted: Foord (1914), [Project Gutenberg #57185](https://www.gutenberg.org/ebooks/57185), public domain; Wikipedia, "Battle of Valutino".
+

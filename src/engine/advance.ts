@@ -44,7 +44,7 @@ export type AdvanceResult =
 type RunStage = Exclude<Stage, 'orders'>;
 
 const PACES = ['rest', 'steady', 'forced'];
-const ENGAGEMENTS = ['seek', 'accept', 'avoid'];
+const ENGAGEMENTS = ['seek', 'accept', 'avoid', 'stand'];
 const POSTURES = ['dispersed', 'concentrated'];
 const ROUND_ACTIONS = ['press', 'hold', 'withdraw'];
 const NIGHT_CHOICES = ['stay', 'withdraw'];

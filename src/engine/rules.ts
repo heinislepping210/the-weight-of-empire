@@ -7,7 +7,7 @@
 export type CutOffCredit = 'stands' | 'atEnd' | 'graded';
 
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.17.1';
+export const RULES_VERSION = '0.17.2';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -198,7 +198,10 @@ export const RULES = {
     /** Cavalry set to screen pursues at this share, and covers its own side's withdrawal this much better. */
     screeningPursuitPermille: 500,
     screeningCoverPermille: 1500,
-    /** Under political pressure at a key place, the Russian marshal breaks off only below these cohesions (§2.9). */
+    /**
+     * A side under stand orders, or the Russian command under political pressure at a key place (§2.9), has its
+     * marshal break off only below the first cohesion, and withdraw at nightfall only below the second.
+     */
     mustStandCohesion: 300,
     mustStandNightCohesion: 400,
     /** The staff's reserve, as a share of each force's infantry and cavalry. */

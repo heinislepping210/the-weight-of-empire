@@ -1,6 +1,6 @@
 # Review Brief
 
-For an outside reviewer, human or AI, asked to give feedback on the project as it stands (2 November 2026, rules 0.17.1, milestone M1). It says what exists, what changed since the first independent review, where to look, and what is already known, so a review can go beyond it. The detailed instructions for a second review are in [reviews/SECOND_REVIEW_PROMPT.md](reviews/SECOND_REVIEW_PROMPT.md).
+For an outside reviewer, human or AI, asked to give feedback on the project as it stands (2 November 2026, rules 0.17.2, milestone M1). It says what exists, what changed since the first independent review, where to look, and what is already known, so a review can go beyond it. The detailed instructions for a second review are in [reviews/SECOND_REVIEW_PROMPT.md](reviews/SECOND_REVIEW_PROMPT.md).
 
 ## What the project is
 
@@ -56,6 +56,8 @@ The first review's findings and their status are in [reviews/2026-10-31-independ
 | Second review, reporting | Dice labelled as resolution randomness; noise-adjusted variance split; regret; scenario-clustered intervals; a cross-fitted oracle | — | D-041 |
 | Competent bots | A southern envelopment that holds Valutino, a concentrated strike; a beaten attacker falls back the way it came | 0.16.0 | D-042 |
 | Sector battles | Three sectors and a reserve, cavalry and guns, four results kept apart, graded exits, pursuit once; contracts tested before the combat code (TECHNICAL_ARCHITECTURE §3.4b) | 0.17.0–0.17.1 | D-043 |
+| Prudichevo road | A track with a ford from the Old Town to the Moscow road (H-022), found missing by the pinning bot | 0.17.2 | D-044 |
+| Stand order | A battle stance whose marshal holds on after losing the position while cohesion lasts | 0.17.2 | D-045 |
 
 Each change was written test-first: tests that failed on the previous rules.
 
@@ -64,7 +66,7 @@ Each change was written test-first: tests that failed on the previous rules.
 1. This brief, then [PROJECT_VISION](PROJECT_VISION.md) for the goals and the scope limits.
 2. [GAME_DESIGN_DOCUMENT](GAME_DESIGN_DOCUMENT.md) §2: §2.4b directives, §2.6 logistics, §2.12 variation, §2.13 outcomes.
 3. [TECHNICAL_ARCHITECTURE](TECHNICAL_ARCHITECTURE.md) §3.4a: the turn timeline and the contact rule.
-4. [GAMEPLAY_BALANCING](GAMEPLAY_BALANCING.md), from "Contacts corrected" to the end, with the reports in [balance/](balance/). The latest are [rules 0.17.1 with the sector battles](balance/2026-11-02-rules-0.17.1.md), [the sensitivity of four battle values](balance/2026-11-02-sensitivity-0.17.1.md), [rules 0.16.0 with the bots that feed the trap](balance/2026-11-02-rules-0.16.0-feeding-the-trap.md), [the adaptive policy](balance/2026-11-02-adaptive-0.17.1.md), and the what-ifs on [the cut road](balance/2026-11-01-whatif-cutoff.md), [the foraging reach](balance/2026-11-01-whatif-reach.md) and [the line-haul limit](balance/2026-11-02-whatif-haul.md).
+4. [GAMEPLAY_BALANCING](GAMEPLAY_BALANCING.md), from "Contacts corrected" to the end, with the reports in [balance/](balance/). The latest are [rules 0.17.2 with the stand order](balance/2026-11-02-rules-0.17.2-stand.md), [rules 0.17.2 with the Prudichevo road](balance/2026-11-02-rules-0.17.2.md), [rules 0.17.1 with the sector battles](balance/2026-11-02-rules-0.17.1.md), [the sensitivity of four battle values](balance/2026-11-02-sensitivity-0.17.1.md), [rules 0.16.0 with the bots that feed the trap](balance/2026-11-02-rules-0.16.0-feeding-the-trap.md), [the adaptive policy](balance/2026-11-02-adaptive-0.17.1.md), and the what-ifs on [the cut road](balance/2026-11-01-whatif-cutoff.md), [the foraging reach](balance/2026-11-01-whatif-reach.md) and [the line-haul limit](balance/2026-11-02-whatif-haul.md).
 5. [HISTORICAL_RESEARCH](HISTORICAL_RESEARCH.md) and [HISTORICAL_ASSUMPTIONS](HISTORICAL_ASSUMPTIONS.md): sources, and the status of every claim (H-, L- and G- entries).
 6. [DECISIONS](DECISIONS.md) D-029 to D-042.
 7. Code:

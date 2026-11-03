@@ -64,7 +64,7 @@ Plus independent assets: **wagon parks**, a **pontoon train**, and **garrison de
 2. **Orders.** In Challenge mode a single army directive sets these for you (§2.4b). In detail, each force group has:
    - **destination** (click the map);
    - **pace**: Rest / Steady / Forced;
-   - **engagement**: Seek / Accept if favourable / Avoid;
+   - **engagement**: Seek / Accept if favourable / Stand (hold the place: the marshal does not break off while the group can still fight; from rules 0.17.2, D-045) / Avoid;
    - **rations**: Full / Reduced;
    - **foraging**: Regulated / Free.
 

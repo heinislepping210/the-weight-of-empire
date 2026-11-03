@@ -180,6 +180,7 @@ Borodino (H-018) is the negative control. A cohesive army that has lost two sect
 
 - Several approach roads block nothing by themselves. A side whose forces came along two or more roads strikes the enemy's thinnest sector in the flank (`field.flank`, recomputed each round, so a reinforcement arriving by another road creates it).
 - Political pressure changes only the Russian marshal's willingness to withdraw. It never closes a road.
+- **Stand** (D-045): a group under stand orders tells its marshal to hold on. When most of a side's men in a battle stand, its marshal breaks off only below `mustStandCohesion` and withdraws at nightfall only below `mustStandNightCohesion`, the same willingness as the Russian command under political pressure at a key place. It closes no road and opens none: a standing side with no road out is still trapped if it breaks.
 
 **Decisions.**
 - The marshal (`decideRound`, `decideNightfall`, `src/engine/ai.ts`) answers for the Russians and for any French decision left to it. It reads only the state, never `b.hidden`.

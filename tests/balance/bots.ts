@@ -160,7 +160,8 @@ const BASE_BOTS: Record<string, (ctx: Context) => Policy> = {
 
 /**
  * The southern envelopment that holds Valutino, with the groups `heldBack` names staying where they are: the
- * corridor via Rasasna to the Old Town, then, once Smolensk is taken or Valutino reached, Valutino to the end.
+ * corridor via Rasasna to the Old Town, then, once Smolensk is taken or Valutino reached, Valutino to the end,
+ * standing there.
  */
 function holdingEnvelopment(ctx: Context, heldBack: (s: GameState) => ForceId[]): Policy {
   let corridor: Axis | null = null;
@@ -169,7 +170,8 @@ function holdingEnvelopment(ctx: Context, heldBack: (s: GameState) => ForceId[])
     orders: (s) => {
       if (frenchHold(s, 'smolensk') || frenchHold(s, 'smolensk-north') || frenchAt(s, 'valutino')) committed = true;
       const holdBack = heldBack(s);
-      if (committed) return orders(s, ctx, { objective: 'valutino', engagement: 'accept', holdBack });
+      // The block stands: its marshal does not give up the road while it can still fight (rules 0.17.2).
+      if (committed) return orders(s, ctx, { objective: 'valutino', engagement: 'stand', holdBack });
       corridor ??= axisVia(s, ctx, 'smolensk', 'Rasasna');
       return orders(s, ctx, { objective: 'smolensk', axis: corridor, holdBack });
     },
@@ -219,6 +221,8 @@ function pinningOrders(s: GameState, ctx: Context): GroupOrder[] {
       return { force: f.id, route: head(path), pace: 'steady', engagement: 'seek' };
     }
     const path = routeAround(ctx, from(f), station as NodeId, target) ?? [];
+    // Holding a road out, a corps accepts battle but does not stand: alone against an army it would be destroyed
+    // (standing was tried and did worse, Repulse 64% against 25% on 200 seeds).
     return { force: f.id, route: head(path), pace: 'steady', posture: 'concentrated', engagement: 'accept' };
   });
 }

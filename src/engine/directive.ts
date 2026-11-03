@@ -206,6 +206,7 @@ function slotsToCover(s: GameState, ctx: Context, f: Force, route: NodeId[], pac
 }
 
 function engagementReason(e: Engagement): string {
+  if (e === 'stand') return 'Stands: holds the place, and its marshal does not break off while it can still fight.';
   return e === 'seek' ? 'Will seek battle.' : e === 'avoid' ? 'Avoids battle where it can withdraw.' : 'Accepts battle if attacked.';
 }
 
@@ -229,7 +230,7 @@ function knownThreats(s: GameState, ctx: Context, route: NodeId[], start: NodeId
 function overrideReason(ov: GroupOverride): string {
   const parts = [
     ov.pace === 'rest' ? 'rest here' : ov.pace === 'forced' ? 'forced march' : ov.pace === 'steady' ? 'steady pace' : '',
-    ov.engagement === 'seek' ? 'seek battle' : ov.engagement === 'avoid' ? 'avoid battle' : ov.engagement === 'accept' ? 'accept battle' : '',
+    ov.engagement === 'seek' ? 'seek battle' : ov.engagement === 'avoid' ? 'avoid battle' : ov.engagement === 'accept' ? 'accept battle' : ov.engagement === 'stand' ? 'stand' : '',
     ov.road === 'route' ? 'follow the route' : ov.road === 'own' ? 'own road' : '',
   ].filter(Boolean);
   return `Your order: ${parts.join(', ')}.`;

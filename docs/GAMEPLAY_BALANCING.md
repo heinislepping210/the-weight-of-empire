@@ -580,3 +580,59 @@ Can a Russian army be trapped? A **pinning attack** (`pinning-attack`): a corps 
 
 **For your decision:** trace and add a way east of Smolensk that does not pass through the north bank (the Prudichevo crossing to Lubino, the side road from the Porechye road), then test the trap and the pinning again. Without one, a decisive defeat in battle is out of reach on this map, and the fed trap at Valutino is the only road to Decisive Success.
 
+## Roads east of Smolensk (what-if, 2 November 2026)
+
+Following the pinning finding, the sources show a way east that avoids the north-bank suburb: a track from the south side of Smolensk by the ford at Prudichevo to the high road near Lubino, which Junot took on 19 August (H-022). It is a **candidate road**, not adopted; this is a first look, 200 seeds with one set of dice (`BALANCE_SCENARIO=candidate-roads`, the sensitivity tool and a one-off probe of the holding envelopment).
+
+| Holding envelopment, 200 games | Costly Victory | Repulse | Decisive defeats |
+|---|---|---|---|
+| Today's map, battles left to the marshal | 24.5% | 48% | 0 |
+| Today's map, the block at Valutino stands (holds, stays at nightfall) | 36% | 20% | 0 |
+| With the road, battles left to the marshal | 5% | 77% | 0 |
+| With the road, the block stands | 30.5% | 18% | 0 |
+
+**Reading:**
+- **On today's map the trap holds partly because the French block is itself shut in.** At Valutino the French have no way out, so their marshal never breaks off, and the Russians attacking it give up first. With the road, the block has a way back to the Old Town over the ford; when shaken, the marshal takes it, and the trap fails.
+- **A block that stands holds nearly as well with the road as without it** (Costly Victory 30.5% against 36%). The road changes what leaving the block to the marshal costs, not what a firm block can do.
+- **Still no decisive defeat in battle, and no army trapped.** The pinning attack does better with the road (Repulse 24% against 41%), but traps no one either.
+
+**For your decision:** whether to adopt the Prudichevo road (it is documented, and its absence is what makes the north bank impossible to close); and, separately, whether a group ordered to hold should be able to tell its marshal to stand, so that leaving a block's battle to him does not give it up. The full batch with the road follows your decision.
+
+## The road by the Prudichevo ford (rules 0.17.2, 2 November 2026)
+
+Adopted on your decision (D-044): a track with a ford from Smolensk's Old Town to Valutino, the way east Junot took on 19 August (H-022). Reports: [the batch, 1,000 scenarios × 3 sets of dice](balance/2026-11-02-rules-0.17.2.md), [the adaptive policy](balance/2026-11-02-adaptive-0.17.2.md), [the supply-stance probe](balance/2026-11-02-supply-stance-0.17.2.md). Zero invariant violations in 42,000 games.
+
+| Strategy, every game (0.17.1 → 0.17.2) | Decisive Success | Costly Victory | Operational Success | Limited Success | Inconclusive | Repulse |
+|---|---|---|---|---|---|---|
+| southern-envelopment-hold | 0.1% → 0.0% | 29.4% → 6.7% | 0.0% → 0.0% | 3.7% → 0.8% | 23.6% → 18.4% | 42.5% → 73.5% |
+| southern-envelopment-guard-at-base | 4.8% → 0.5% | 21.1% → 6.2% | 7.4% → 15.1% | 2.1% → 1.1% | 25.8% → 17.7% | 38.7% → 59.4% |
+| southern-envelopment | 0.0% → 0.0% | 9.6% → 5.9% | 0.0% → 2.2% | 48.6% → 45.4% | 13.2% → 23.3% | 27.1% → 22.2% |
+| bait-and-converge | 0.0% → 0.0% | 0.0% → 0.0% | 0.0% → 0.0% | 91.8% → 98.3% | 2.5% → 0.3% | 5.7% → 1.4% |
+| concentrated-strike | 0.0% → 0.0% | 0.0% → 0.0% | 0.0% → 0.0% | 71.7% → 54.6% | 11.2% → 12.4% | 17.1% → 32.9% |
+| pinning-attack | 0.0% → 0.0% | 0.0% → 0.0% | 0.1% → 0.0% | 58.6% → 74.9% | 0.0% → 0.0% | 41.3% → 25.1% |
+
+**Reading:**
+- **The road gives both sides a way east from the Old Town.** The Russians use it to leave Smolensk: in a traced game of bait and converge, Bagration left the Old Town over the ford after the French attacked the north bank and both armies withdrew towards Dorogobuzh, where before he had joined Barclay on the north bank and they fought back twice. Bait and converge now fights a third as many battles (64 against 194 per 100 games) and forces the Russians out of Smolensk far more often (77% against 30%).
+- **French blocks left to the marshal give the trap up.** The holding envelopment still cuts the road in 86% of its games, but the Russians are still cut off at the end in only 6.7% (29.5% before): its block at Valutino now has a way back over the ford, and a shaken marshal takes it. The what-if showed that a block that stands holds nearly as well as before (Costly Victory 30.5% against 36%, 200 seeds).
+- **Still no decisive defeat in battle, and no army trapped.** Russian main armies break far less often (4 or 5 battles per 100 games for the trap, against 32): they attack the block less and withdraw more.
+- **The families stay balanced** (F3: push 38%, bait and converge 38%, southern envelopment 24%). Reading the scenario is worth less now: the scenario oracle gains 0.13 ranks (0.08 to 0.18), against 0.36.
+- **Open:** the pinning attack does much better keeping its depots than bringing them forward (Limited Success 98% against 75%, better in 22.5% of seeds, in the paired probe), alone among the bots; not yet explained.
+
+**For your decision:** whether a group ordered to hold a place can tell its marshal to stand, so that leaving a blocking battle to him does not give the block up.
+
+## The stand order (rules 0.17.2, 2 November 2026)
+
+Added on your decision (D-045): a fourth battle stance. When most of a side's men in a battle stand, its marshal breaks off only below cohesion 300 and withdraws at nightfall only below 400. It changes nothing for orders without it. The three trap bots now stand at their block; the pinning attack does not (standing, a lone corps on a road out was destroyed more often: Repulse 64% against 25% on 200 seeds). Reports: [the batch, 1,000 scenarios × 3 sets of dice](balance/2026-11-02-rules-0.17.2-stand.md), [the adaptive policy](balance/2026-11-02-adaptive-0.17.2-stand.md), [the supply-stance probe](balance/2026-11-02-supply-stance-0.17.2-stand.md). Zero invariant violations.
+
+| Strategy, every game (accept → stand at the block) | Decisive Success | Costly Victory | Operational Success | Inconclusive | Repulse | Still cut off at the end |
+|---|---|---|---|---|---|---|
+| southern-envelopment-hold | 0.0% → 0.0% | 6.7% → 20.6% | 0.0% → 0.0% | 18.4% → 26.6% | 73.5% → 50.8% | 6.7% → 20.6% |
+| southern-envelopment-guard-at-base | 0.5% → 4.8% | 6.2% → 15.6% | 15.1% → 9.5% | 17.7% → 24.6% | 59.4% → 44.0% | 6.7% → 20.4% |
+| southern-envelopment-wait-for-trains | 0.0% → 0.2% | 17.6% → 20.4% | 0.0% → 0.0% | 29.7% → 34.0% | 28.1% → 30.8% | 17.6% → 20.6% |
+
+**Reading:**
+- **Standing brings back much of the trap.** With the block standing, the Russians are still cut off at the end three times as often (20.6% against 6.7%), and the Guard-at-base plan wins decisively as often as before the road (4.8%).
+- **It costs what holding costs.** The holding envelopment's battles last longer (5.3 rounds on average against 3.4), Russian main armies break in 20 battles per 100 games of the holding envelopment (4 before), and the French rout in 39 (31 before).
+- **Against the map before the road** (0.17.1), the trap wins somewhat less (Costly Victory 20.6% against 29.4% for the holding envelopment) but decisively as often with the Guard at the base (4.8%). The road gives the Russians a way to leave Smolensk, so fewer of them end up shut in.
+- **Still no decisive defeat in battle, and no army trapped.** The families are unchanged (they do not stand); the scenario oracle gains 0.16 ranks (0.11 to 0.21).
+

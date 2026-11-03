@@ -15,7 +15,8 @@ export interface Supplies {
 }
 
 export type Pace = 'rest' | 'steady' | 'forced';
-export type Engagement = 'seek' | 'accept' | 'avoid';
+/** A group's battle stance. `stand` holds the place: it accepts battle, and its marshal does not break off while it can still fight (§3.4b). */
+export type Engagement = 'seek' | 'accept' | 'avoid' | 'stand';
 export type Activity = 'march' | 'halt' | 'gather' | 'cross' | 'withdraw' | 'fight';
 /** Dispersed forces forage widely but must gather before they can march or fight at full strength (§2.4b). */
 export type Posture = 'dispersed' | 'concentrated';
