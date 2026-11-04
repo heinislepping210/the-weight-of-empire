@@ -7,7 +7,7 @@ import { capacityGrams, weightGrams, withinCapacity } from './carriage';
 import { edgeBetween, pathMetres, roadDistance, shortestPath } from './graph';
 import type { Context } from './scenario';
 import { calendar, slotIndex, SLOTS_PER_TURN } from './time';
-import type { ConvoyOrder, Engagement, Force, ForceId, GameState, GroupOrder, LogisticsOrders, NodeId, Pace, Posture, Slot, SlotRef } from './types';
+import type { ConvoyOrder, Crossing, Engagement, Force, ForceId, GameState, GroupOrder, LogisticsOrders, NodeId, Pace, Posture, Slot, SlotRef } from './types';
 import { enemyPresent, sortedValues } from './util';
 
 export interface Axis {
@@ -66,11 +66,15 @@ export interface PlannedOrder {
   order: GroupOrder;
   arrival: { dry: SlotRef; mud: SlotRef } | null;
   foodDaysOnArrival: number | null;
+  /** Fatigue (permille) on arrival by dry roads, for a group on the march; null for one that holds or cannot arrive. */
+  fatigueOnArrival: number | null;
   reasons: string[];
   /** The player's own pace, battle stance or road replaced the staff's for this group. */
   own: boolean;
   /** With a chosen route: whether the staff would have this group follow it or take its own road. */
   staffRoad: RoadChoice | null;
+  /** The group marches for the objective: neither holding nor in battle. */
+  marching: boolean;
 }
 
 const placeName = (ctx: Context, id: NodeId) => ctx.graph.nodes.get(id)?.name ?? id;
@@ -167,14 +171,15 @@ export function when(ctx: Context, ref: SlotRef): string {
 }
 
 /**
- * Daylight sub-steps a force needs to reach the end of `route` from now, marching alone at `pace` (D-040). It
- * is projected through the engine's own hourly movement, with the same fatigue, rest at night and gathering,
- * so the forecast is what the force will do if nothing intervenes: today's roads as they are, then dry roads
- * (or, `wet`, mud on every road from tomorrow). Enemy columns, battles and the weather itself are not foreseen.
+ * Daylight sub-steps a force needs to reach the end of `route` from now, marching alone at `pace` (D-040), and its
+ * fatigue when it arrives. It is projected through the engine's own hourly movement, with the same fatigue, rest at
+ * night and gathering, so the forecast is what the force will do if nothing intervenes: today's roads as they are,
+ * then dry roads (or, `wet`, mud on every road from tomorrow). Enemy columns, battles and the weather itself are not
+ * foreseen. Infinity when it cannot get there.
  */
-function slotsToCover(s: GameState, ctx: Context, f: Force, route: NodeId[], pace: Pace, wet: boolean): number {
+function marchForecast(s: GameState, ctx: Context, f: Force, route: NodeId[], pace: Pace, wet: boolean): { slots: number; fatigue: number } {
   const goal = route[route.length - 1];
-  if (goal === undefined) return 0;
+  if (goal === undefined) return { slots: 0, fatigue: f.fatigue };
   const { fatigue, posture } = ctx.rules;
   const g: Force = { ...structuredClone(f), route: [...route], pace, battle: null };
   const alone = { ...s, forces: { [g.id]: g }, roads: { ...s.roads } } as GameState;
@@ -192,9 +197,9 @@ function slotsToCover(s: GameState, ctx: Context, f: Force, route: NodeId[], pac
       const moved = JSON.stringify([g.at, g.transit]) !== before;
       g.fatigue = Math.max(0, Math.min(1000, g.fatigue + (moved ? (pace === 'forced' ? fatigue.marchForced : fatigue.marchSteady) : fatigue.halt)));
       marchedToday = marchedToday || moved;
-      if (!moved && total <= 0) return Infinity;
+      if (!moved && total <= 0) return { slots: Infinity, fatigue: g.fatigue };
     }
-    if (g.transit === null && g.at === goal) return n;
+    if (g.transit === null && g.at === goal) return { slots: n, fatigue: g.fatigue };
     if (slot === 1 || slot === 3) {
       g.fatigue = Math.max(0, g.fatigue - (marchedToday ? fatigue.nightAfterMarch : fatigue.nightAfterRest));
       marchedToday = false;
@@ -202,7 +207,7 @@ function slotsToCover(s: GameState, ctx: Context, f: Force, route: NodeId[], pac
     }
     slot = ((slot + 1) % SLOTS_PER_TURN) as Slot;
   }
-  return Infinity;
+  return { slots: Infinity, fatigue: g.fatigue };
 }
 
 function engagementReason(e: Engagement): string {
@@ -247,7 +252,7 @@ export function planDirective(s: GameState, ctx: Context, d: Directive): Planned
     if (f.side !== 'fr' || f.men <= 0) continue;
     const here = placeName(ctx, f.at);
     if (f.battle !== null) {
-      plans.push({ force: f.id, name: f.name, order: { force: f.id }, arrival: null, foodDaysOnArrival: null, reasons: [`Engaged in battle at ${here}: no new movement until it ends.`], own: false, staffRoad: null });
+      plans.push({ force: f.id, name: f.name, order: { force: f.id }, arrival: null, foodDaysOnArrival: null, fatigueOnArrival: null, reasons: [`Engaged in battle at ${here}: no new movement until it ends.`], own: false, staffRoad: null, marching: false });
       continue;
     }
     // The player's own pace or battle stance replaces the staff's, and is forecast like it.
@@ -272,9 +277,11 @@ export function planDirective(s: GameState, ctx: Context, d: Directive): Planned
         order: { force: f.id, route: f.transit ? [f.transit.to] : [], pace: tempo === 'rest' ? 'rest' : 'steady', posture: d.posture, engagement },
         arrival: null,
         foodDaysOnArrival: Math.floor(f.stock.food / Math.max(1, f.men)),
+        fatigueOnArrival: null,
         reasons: [...reasons, ...knownThreats(s, ctx, [], start)],
         own,
         staffRoad: null,
+        marching: false,
       });
       continue;
     }
@@ -290,8 +297,9 @@ export function planDirective(s: GameState, ctx: Context, d: Directive): Planned
     const path = ownRoad ? direct : along;
     const route = f.transit ? [f.transit.to, ...path] : path;
     const metres = pathMetres(ctx.graph, start, path) + (f.transit ? (ctx.graph.edges.get(f.transit.edge)?.metres ?? 0) - f.transit.metres : 0);
-    const dry = slotsToCover(s, ctx, f, route, tempo, false);
-    const mud = slotsToCover(s, ctx, f, route, tempo, true);
+    const dryForecast = marchForecast(s, ctx, f, route, tempo, false);
+    const dry = dryForecast.slots;
+    const mud = marchForecast(s, ctx, f, route, tempo, true).slots;
     const days = Math.ceil(dry / 2);
     // Foraging on the march, but never more than the districts on the way still hold.
     const onTheWay = [...new Set([f.at, ...route])].reduce((n, p) => n + (s.districts[p]?.food ?? 0), 0);
@@ -344,12 +352,90 @@ export function planDirective(s: GameState, ctx: Context, d: Directive): Planned
       order: { force: f.id, route, pace: tempo, posture: 'concentrated', engagement },
       arrival: Number.isFinite(dry) ? { dry: slotAfter(now, dry), mud: slotAfter(now, Number.isFinite(mud) ? mud : dry) } : null,
       foodDaysOnArrival: foodDays,
+      fatigueOnArrival: Number.isFinite(dry) ? dryForecast.fatigue : null,
       reasons,
       own,
       staffRoad,
+      marching: true,
     });
   }
   return plans;
+}
+
+/** What a route would do for the whole army, read before it is chosen (M2, G1 and G3). French knowledge only. */
+export interface RoutePreview {
+  /** The route, or null for each group's shortest roads. */
+  axis: Axis | null;
+  /** Each marching group's way from where it stands: what the map draws for this route. */
+  paths: NodeId[][];
+  /** The first arrival by dry roads, and the last in wet weather. */
+  arrival: { first: SlotRef; last: SlotRef } | null;
+  /** Marching groups that would not arrive before the campaign ends, or at all without rest. */
+  late: string[];
+  /** The marching group most tired on arrival (fatigue, permille), and the one with least food (days). */
+  tiredest: { force: ForceId; name: string; fatigue: number } | null;
+  hungriest: { force: ForceId; name: string; days: number } | null;
+  /** River crossings on the way, each once: between which places, and how. */
+  crossings: { between: string; by: Crossing }[];
+  /** Known enemies near the way, in the plan's words. */
+  threats: string[];
+  /**
+   * An earlier route in the list that comes to the very same orders, if any: its label, or null for the shortest
+   * roads. Groups join a route where their total road is shortest, so a route can come to another's orders.
+   */
+  sameAs: string | null | undefined;
+}
+
+/**
+ * Previews each route the staff could take to the objective: the army planned once for each, as it would be
+ * committed, and summed up. It changes nothing; choosing a route still goes through `planDirective`.
+ */
+export function previewRoutes(s: GameState, ctx: Context, d: Directive, axes: readonly (Axis | null)[]): RoutePreview[] {
+  const lastSlot = slotIndex({ turn: ctx.scenario.turns, slot: 3 });
+  const seen = new Map<string, string | null>();
+  return axes.map((axis) => {
+    const marching = planDirective(s, ctx, { ...d, axis }).filter((p) => p.marching);
+    const paths = marching.map((p) => [(s.forces[p.force] as Force).at, ...(p.order.route ?? [])]);
+    const arrived = marching.filter((p) => p.arrival !== null);
+    const crossings = new Map<string, { between: string; by: Crossing }>();
+    for (const path of paths) {
+      path.slice(1).forEach((n, i) => {
+        const from = path[i] as NodeId;
+        const e = edgeBetween(ctx.graph, from, n);
+        if (e?.crossing) crossings.set(e.id, { between: `${placeName(ctx, from)} and ${placeName(ctx, n)}`, by: e.crossing });
+      });
+    }
+    const places = [...new Set(paths.flat())];
+    const worst = <T>(xs: T[], key: (x: T) => number) => xs.reduce<T | null>((w, x) => (w === null || key(x) > key(w) ? x : w), null);
+    const tired = worst(
+      marching.filter((p) => p.fatigueOnArrival !== null),
+      (p) => p.fatigueOnArrival as number,
+    );
+    const hungry = worst(
+      marching.filter((p) => p.foodDaysOnArrival !== null),
+      (p) => -(p.foodDaysOnArrival as number),
+    );
+    const orders = JSON.stringify(marching.map((p) => p.order));
+    const sameAs = seen.has(orders) ? seen.get(orders) : undefined;
+    if (!seen.has(orders)) seen.set(orders, axis?.label ?? null);
+    return {
+      sameAs,
+      axis,
+      paths,
+      arrival:
+        arrived.length === 0
+          ? null
+          : {
+              first: arrived.map((p) => p.arrival!.dry).reduce((a, b) => (slotIndex(b) < slotIndex(a) ? b : a)),
+              last: arrived.map((p) => p.arrival!.mud).reduce((a, b) => (slotIndex(b) > slotIndex(a) ? b : a)),
+            },
+      late: marching.filter((p) => p.arrival === null || slotIndex(p.arrival.dry) > lastSlot).map((p) => p.name),
+      tiredest: tired ? { force: tired.force, name: tired.name, fatigue: tired.fatigueOnArrival as number } : null,
+      hungriest: hungry ? { force: hungry.force, name: hungry.name, days: hungry.foodDaysOnArrival as number } : null,
+      crossings: [...crossings.values()],
+      threats: places.length > 0 ? knownThreats(s, ctx, places.slice(1), places[0] as NodeId) : [],
+    };
+  });
 }
 
 export interface PlanSummary {

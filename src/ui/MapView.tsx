@@ -11,6 +11,8 @@ interface Props {
   s: GameState;
   ctx: Context;
   plan: readonly PlannedOrder[];
+  /** The ways the route pointed at in the orders panel would send the groups (M2, G3); null when none is. */
+  preview?: readonly (readonly string[])[] | null;
   objective: string | null;
   onPick: (place: string) => void;
 }
@@ -72,7 +74,7 @@ function Glyph({ activity, men }: { activity: Activity; men: number }) {
  * The campaign map (M2, first slice): the camera pans and zooms, labels and markers keep their size on screen, and
  * markers show what each group is doing. It shows only what the French know of the enemy.
  */
-export function MapView({ s, ctx, plan, objective, onPick }: Props) {
+export function MapView({ s, ctx, plan, preview = null, objective, onPick }: Props) {
   const [cam, setCam] = useState<Camera>(() => fit(WORLD));
   const svg = useRef<SVGSVGElement>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -216,6 +218,10 @@ export function MapView({ s, ctx, plan, objective, onPick }: Props) {
             </g>
           );
         })}
+
+        {preview?.map((path, i) => (
+          <polyline key={`preview-${i}`} className="route-preview" points={path.map((n) => `${(POSITION[n] as Point).x},${(POSITION[n] as Point).y}`).join(' ')} />
+        ))}
 
         {plan.map((p) => {
           const f = s.forces[p.force];

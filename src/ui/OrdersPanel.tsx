@@ -1,6 +1,7 @@
-import { axesTo, leadGroup } from '../engine';
-import type { Axis, Context, Directive, Engagement, Force, GameState, GroupOverride, LogisticsPlan, LogisticsStance, Pace, PlannedOrder, PlanSummary, Posture } from '../engine';
-import { thousands } from './names';
+import { useMemo } from 'react';
+import { axesTo, leadGroup, previewRoutes, when } from '../engine';
+import type { Axis, Context, Directive, Engagement, Force, GameState, GroupOverride, LogisticsPlan, LogisticsStance, NodeId, Pace, PlannedOrder, PlanSummary, Posture, RoutePreview } from '../engine';
+import { shortName, thousands } from './names';
 
 interface Props {
   s: GameState;
@@ -16,6 +17,25 @@ interface Props {
   halt: boolean;
   onHalt: (halt: boolean) => void;
   onCommit: () => void;
+  /** The ways a route would send the groups, while it is pointed at or focused; null when none is. */
+  onPreview: (paths: NodeId[][] | null) => void;
+}
+
+/** A forecast fatigue in words: the preview speaks of the march, not of cohesion. */
+const tiredness = (fatigue: number) => (fatigue < 250 ? 'rested' : fatigue < 500 ? 'tired' : fatigue < 750 ? 'weary' : 'exhausted');
+
+/** A route's preview in a few lines (M2, G1 and G3): arrivals, the most tired and hungriest group, crossings, threats. */
+function previewLines(ctx: Context, p: RoutePreview): string[] {
+  if (p.paths.length === 0) return ['No group marches.'];
+  const lines: string[] = [];
+  if (p.sameAs !== undefined) lines.push(`Same orders as ${p.sameAs ?? 'the shortest roads'}.`);
+  if (p.arrival) lines.push(`Arrivals ${when(ctx, p.arrival.first)} (dry roads) to ${when(ctx, p.arrival.last)} (wet weather).`);
+  if (p.late.length > 0) lines.push(`${p.late.length === 1 ? '1 group arrives' : `${p.late.length} groups arrive`} only after the campaign ends, or not without rest.`);
+  if (p.tiredest) lines.push(`Most tired on arrival: ${shortName(p.tiredest.force, p.tiredest.name)}, ${tiredness(p.tiredest.fatigue)}.`);
+  if (p.hungriest) lines.push(`Least food on arrival: ${shortName(p.hungriest.force, p.hungriest.name)}, about ${p.hungriest.days} day${p.hungriest.days === 1 ? '' : 's'}.`);
+  lines.push(p.crossings.length === 0 ? 'No river to cross.' : `Crosses: ${p.crossings.map((c) => `${c.between} (${c.by})`).join('; ')}.`);
+  lines.push(p.threats.length === 0 ? 'No known enemy near the way.' : `${p.threats.length === 1 ? 'A known enemy' : `${p.threats.length} known enemies`} near the way: ${p.threats.map((t) => t.replace(/^Known enemy: /, '').replace(/\.$/, '')).join('; ')}.`);
+  return lines;
 }
 
 /** One word for fatigue and cohesion together (§2.5); the numbers stay one hover away. */
@@ -40,7 +60,7 @@ function changed(own: GroupOverride | undefined, field: keyof GroupOverride, val
   return Object.keys(next).length > 0 ? (next as GroupOverride) : null;
 }
 
-export function OrdersPanel({ s, ctx, directive, onDirective, plan, summary, supply, overrides, onOverride, halt, onHalt, onCommit }: Props) {
+export function OrdersPanel({ s, ctx, directive, onDirective, plan, summary, supply, overrides, onOverride, halt, onHalt, onCommit, onPreview }: Props) {
   const places = [...ctx.graph.nodes.values()].sort((a, b) => a.name.localeCompare(b.name));
   const lead = directive.objective ? leadGroup(s, ctx, directive.objective) : null;
   // The routes traced from the current lead group, and the chosen one even when it was traced from another.
@@ -48,6 +68,12 @@ export function OrdersPanel({ s, ctx, directive, onDirective, plan, summary, sup
   const kept = directive.axis && !traced.some((a) => a.id === directive.axis?.id) ? directive.axis : null;
   const routes: Axis[] = kept ? [kept, ...traced] : traced;
   const set = (change: Partial<Directive>) => onDirective({ ...directive, ...change });
+  // Every route planned at once when the objective or the orders change, so that pointing at one shows it at once.
+  const options = useMemo<(Axis | null)[]>(() => (directive.objective ? [null, ...routes] : []), [directive.objective, routes.map((a) => a.id).join()]);
+  const previews = useMemo(
+    () => (options.length > 0 ? previewRoutes(s, ctx, { ...directive, overrides, axis: null }, options) : []),
+    [s, ctx, options, directive.objective, directive.tempo, directive.posture, directive.engagement, directive.holdBack, overrides],
+  );
   const ownCount = plan.filter((p) => p.own).length;
 
   return (
@@ -72,18 +98,40 @@ export function OrdersPanel({ s, ctx, directive, onDirective, plan, summary, sup
             ))}
           </select>
         </label>
-        {directive.objective && (
-          <label>
-            Route
-            <select value={directive.axis?.id ?? ''} onChange={(e) => set({ axis: routes.find((a) => a.id === e.target.value) ?? null })}>
-              <option value="">Shortest roads for each group</option>
-              {routes.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.label} ({Math.round(a.metres / 1000)} km from {ctx.graph.nodes.get(a.places[0] ?? '')?.name}){a === kept ? ', as chosen earlier' : ''}
-                </option>
-              ))}
-            </select>
-          </label>
+        {directive.objective && previews.length > 0 && (
+          <fieldset className="routes">
+            <legend>Route (point at one to see it on the map)</legend>
+            {previews.map((p) => {
+              const a = p.axis;
+              const chosen = (directive.axis?.id ?? null) === (a?.id ?? null);
+              return (
+                <label
+                  key={a?.id ?? 'shortest'}
+                  className={`route-card${chosen ? ' route-chosen' : ''}`}
+                  onMouseEnter={() => onPreview(p.paths)}
+                  onMouseLeave={() => onPreview(null)}
+                  onFocus={() => onPreview(p.paths)}
+                  onBlur={() => onPreview(null)}
+                >
+                  <span className="route-title">
+                    <input type="radio" name="route" aria-label={a ? a.label : 'Shortest roads for each group'} checked={chosen} onChange={() => set({ axis: a })} /> {a ? a.label : 'Shortest roads for each group'}
+                    {a && (
+                      <span className="figures">
+                        {' '}
+                        {Math.round(a.metres / 1000)} km from {ctx.graph.nodes.get(a.places[0] ?? '')?.name}
+                        {a === kept ? ', as chosen earlier' : ''}
+                      </span>
+                    )}
+                  </span>
+                  <ul className="reasons">
+                    {previewLines(ctx, p).map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </label>
+              );
+            })}
+          </fieldset>
         )}
         <fieldset>
           <legend>Pace</legend>

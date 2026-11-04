@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ENDING_NAMES, advance, createContext, evaluate, newGame, ordersFrom, planDirective, planLogistics, statusOf, summarizePlan, when } from '../engine';
-import type { BattleDecision, Directive, GameState, GroupOverride, Input, LogEntry, Side } from '../engine';
+import type { BattleDecision, Directive, GameState, GroupOverride, Input, LogEntry, NodeId, Side } from '../engine';
 import { vitebskDecision } from '../data/vitebsk/scenario';
 import { BattlePanel } from './BattlePanel';
 import { Compare } from './Compare';
@@ -41,6 +41,8 @@ export function App() {
   const [view, setView] = useState<'play' | 'compare'>('play');
   const [halt, setHalt] = useState(false);
   const [asList, setAsList] = useState(false);
+  /** The ways the route pointed at in the orders panel would send the groups, drawn on the map (M2, G3). */
+  const [preview, setPreview] = useState<NodeId[][] | null>(null);
 
   const s = run.states[run.states.length - 1] as GameState;
   const status = statusOf(s);
@@ -70,6 +72,7 @@ export function App() {
     submit({ kind: 'orders', turn: status.turn, orders: ordersFrom(plan), ...(halt ? { halt: true } : {}), ...(logistics ? { logistics } : {}) });
     setOverrides({});
     setHalt(false);
+    setPreview(null);
   }
 
   /** A place picked on the map or in the list becomes the objective, while orders are being given. */
@@ -168,7 +171,7 @@ export function App() {
       ) : (
         <main className="layout">
           <div className="map-wrap">
-            {asList ? <MapList s={s} ctx={ctx} objective={directive.objective} onPick={pick} /> : <MapView s={s} ctx={ctx} plan={plan} objective={directive.objective} onPick={pick} />}
+            {asList ? <MapList s={s} ctx={ctx} objective={directive.objective} onPick={pick} /> : <MapView s={s} ctx={ctx} plan={plan} preview={status.kind === 'awaitingOrders' ? preview : null} objective={directive.objective} onPick={pick} />}
             <p className="legend">
               Blue: our groups; the sign shows whether a group is marching, in battle, dispersed to feed or concentrated, and a dashed one is worn. Green: enemy reports, fading with age; after two turns a pale "last seen" marker. Dashed lines: the staff's planned routes. Squares: depots. Circles on roads: river crossings. Click a place to make it the objective. Drag to pan; pinch, Ctrl + scroll or the buttons to zoom.{' '}
               <button type="button" className="link" onClick={() => setAsList(!asList)}>
@@ -198,6 +201,7 @@ export function App() {
                 halt={halt}
                 onHalt={setHalt}
                 onCommit={commit}
+                onPreview={setPreview}
               />
             )}
             {status.kind === 'awaitingBattleInput' && <BattlePanel s={s} ctx={ctx} status={status} onDecide={decide} />}

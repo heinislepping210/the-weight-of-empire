@@ -165,8 +165,49 @@ button:disabled {
 /* Lines keep their width on screen at any zoom; labels and markers are scaled in the drawing. */
 .road,
 .planned,
-.crossing {
+.crossing,
+.route-preview {
   vector-effect: non-scaling-stroke;
+}
+
+/* The route pointed at in the orders panel (G3): broad and warm under the roads' own lines. */
+.route-preview {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.45;
+}
+
+/* The routes to choose from, each with its preview (G1, G3). */
+.routes {
+  display: grid !important;
+  gap: 0.4rem !important;
+}
+
+.route-card {
+  display: grid;
+  gap: 0.15rem;
+  border: 1px solid #d8ccb2;
+  border-radius: 3px;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+}
+
+.route-card:hover,
+.route-card:focus-within {
+  border-color: var(--gold);
+}
+
+.route-chosen {
+  border-color: var(--navy);
+  background: #efe3c5;
+}
+
+.route-card .reasons {
+  margin: 0.1rem 0 0;
+  font-size: 0.82rem;
 }
 
 .map-paper {

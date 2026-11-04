@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { advance, createContext, newGame, slotIndexOf, statusOf } from '../../src/engine';
 import type { Axis, Directive, GameState } from '../../src/engine';
-import { axesTo, leadGroup, ordersFrom, planDirective, summarizePlan } from '../../src/engine/directive';
+import { axesTo, leadGroup, ordersFrom, planDirective, previewRoutes, summarizePlan } from '../../src/engine/directive';
 import { shortestPath } from '../../src/engine/graph';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
 import { inputFor } from '../fixtures/driver';
@@ -155,5 +155,57 @@ describe('the army-level summary comes first', () => {
     for (const id of Object.keys(bare.districts)) bare.districts[id] = { food: 0, fodder: 0 };
     const stripped = planDirective(bare, ctx, d).find((p) => p.force === 'fr-vanguard')!;
     expect(stripped.foodDaysOnArrival!).toBeLessThan(full.foodDaysOnArrival!);
+  });
+});
+
+describe('route previews (M2, G1 and G3): each route read before it is chosen', () => {
+  const d = directive({ objective: 'smolensk' });
+  const routes = () => [null, ...axesTo(ctx, 'liozno', 'smolensk')];
+
+  it('gives one preview for each route, planned as it would be committed', () => {
+    const s = start();
+    const previews = previewRoutes(s, ctx, d, routes());
+    expect(previews).toHaveLength(4);
+    for (const p of previews) {
+      const plan = planDirective(s, ctx, { ...d, axis: p.axis });
+      const summary = summarizePlan(s, ctx, plan);
+      expect(p.paths).toHaveLength(plan.filter((x) => x.marching).length);
+      expect(p.arrival?.first).toEqual(summary.arrival?.first);
+      expect(slotIndexOf(p.arrival!.last)).toBeGreaterThanOrEqual(slotIndexOf(p.arrival!.first));
+    }
+  });
+
+  it('tells the routes apart, and says when one comes to the same orders as another', () => {
+    const previews = previewRoutes(start(), ctx, d, routes().slice(1));
+    for (const p of previews.filter((x) => x.sameAs === undefined)) {
+      const twins = previews.filter((x) => JSON.stringify(x.paths) === JSON.stringify(p.paths));
+      expect(twins.every((x) => x === p || x.sameAs === p.axis?.label)).toBe(true);
+    }
+    // On the opening turn the route by Orsha and Dubrovna comes to the orders of the one by Rasasna: every group
+    // joins it at Liady, after the places that name it (a finding for the planner, not yet changed).
+    const orsha = previews.find((p) => p.axis?.label.includes('Orsha'))!;
+    expect(orsha.sameAs).toBe(previews.find((p) => p.axis?.label.includes('Rasasna'))!.axis!.label);
+    // The southern swing crosses the Dnieper on the pontoons between Rasasna and Liady.
+    const south = previews.find((p) => p.axis?.label.includes('Rasasna'))!;
+    expect(south.crossings).toContainEqual({ between: 'Rasasna and Liady', by: 'pontoon' });
+  });
+
+  it('forecasts fatigue on arrival, higher on a forced march', () => {
+    const s = start();
+    const steady = previewRoutes(s, ctx, d, [null])[0]!;
+    const forced = previewRoutes(s, ctx, { ...d, tempo: 'forced' }, [null])[0]!;
+    expect(steady.tiredest).not.toBeNull();
+    expect(forced.tiredest!.fatigue).toBeGreaterThan(steady.tiredest!.fatigue);
+    expect(steady.hungriest!.days).toBeGreaterThanOrEqual(0);
+  });
+
+  it('holding the line previews no march, and nothing in the game changes', () => {
+    const s = start();
+    const before = JSON.stringify(s);
+    const [hold] = previewRoutes(s, ctx, directive({}), [null]);
+    expect(hold!.paths).toEqual([]);
+    expect(hold!.arrival).toBeNull();
+    previewRoutes(s, ctx, d, routes());
+    expect(JSON.stringify(s)).toBe(before);
   });
 });
