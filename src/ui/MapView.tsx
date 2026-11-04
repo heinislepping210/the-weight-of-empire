@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { when } from '../engine';
-import type { Context, Force, GameState, PlannedOrder } from '../engine';
+import type { Context, Force, Frame, GameState, PlannedOrder, SupplyLine } from '../engine';
 import { bandOf, fit, onKey, panBy, viewBoxOf, zoomAbout, zoomOf, type Camera } from '../map/camera';
 import { shortName, thousands } from './names';
 import { condition } from './OrdersPanel';
+import { PlaybackLayer, type PlaybackBar } from './Playback';
+import { isShort, supplyText, trailsOf } from './playbackModel';
 import { MAP_HEIGHT, MAP_WIDTH, POSITION, along, type Point } from './projection';
 
 interface Props {
@@ -15,6 +17,13 @@ interface Props {
   preview?: readonly (readonly string[])[] | null;
   objective: string | null;
   onPick: (place: string) => void;
+  /** The turn just resolved, played back on the map while set (M2, G4); `key` starts it again. */
+  playback?: { frames: readonly Frame[]; key: number } | null;
+  onPlaybackEnd?: () => void;
+  /** The turn just resolved, once played: where each group went is drawn beside the plan for the next. */
+  trails?: readonly Frame[] | null;
+  /** The French wagon trains at work and what each can bring a day (G5). */
+  supply?: readonly SupplyLine[];
 }
 
 const WORLD = { width: MAP_WIDTH, height: MAP_HEIGHT };
@@ -71,10 +80,11 @@ function Glyph({ activity, men }: { activity: Activity; men: number }) {
 }
 
 /**
- * The campaign map (M2, first slice): the camera pans and zooms, labels and markers keep their size on screen, and
- * markers show what each group is doing. It shows only what the French know of the enemy.
+ * The campaign map (M2): the camera pans and zooms, labels and markers keep their size on screen, and markers show
+ * what each group is doing. Each turn plays back on it, then leaves a trail of where each group went, and the supply
+ * lines show what each wagon train can bring a day. It shows only what the French know of the enemy.
  */
-export function MapView({ s, ctx, plan, preview = null, objective, onPick }: Props) {
+export function MapView({ s, ctx, plan, preview = null, objective, onPick, playback = null, onPlaybackEnd = () => {}, trails = null, supply = [] }: Props) {
   const [cam, setCam] = useState<Camera>(() => fit(WORLD));
   const svg = useRef<SVGSVGElement>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -98,6 +108,11 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick }: Pro
   const u = 0.85 / pixels;
   /** Where the map is drawn small (a phone, the whole theatre), markers are compact and only the main places named. */
   const compact = pixels < 0.6;
+  // The playback's loop reads the markers' scale and writes the clock without a render (Playback.tsx).
+  const scale = useRef(u);
+  scale.current = u;
+  const bar = useRef<PlaybackBar>({ clock: null, news: null });
+  const trailLines = useMemo(() => (trails ? trailsOf(ctx, trails) : []), [ctx, trails]);
   const major = new Set([...ctx.graph.nodes.keys()].filter((id) => s.depots[id] || (ctx.scenario.keyPlaces ?? []).includes(id) || (ctx.scenario.cutOffPlaces ?? []).includes(id)));
 
   // The wheel zooms when asked to (Ctrl or a trackpad pinch), or once the map has focus; otherwise the page scrolls.
@@ -219,16 +234,41 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick }: Pro
           );
         })}
 
+        {supply.map((l) => {
+          const points = l.path.map((n) => POSITION[n] as Point);
+          const short = isShort(l);
+          const mid = points[Math.floor((points.length - 1) / 2)] as Point;
+          const next = points[Math.floor((points.length - 1) / 2) + 1] ?? mid;
+          return (
+            <g key={`supply-${l.convoy}`} className={`supply${short ? ' supply-short' : ''}`}>
+              <title>{supplyText(l, s, ctx)}</title>
+              <polyline points={points.map((q) => `${q.x},${q.y}`).join(' ')} style={{ strokeWidth: Math.min(7, 1.5 + l.perDay / 20_000) }} />
+              {short && points.length > 1 && (
+                <g transform={`translate(${(mid.x + next.x) / 2} ${(mid.y + next.y) / 2}) scale(${u})`} className="supply-badge">
+                  <circle r={6.5} />
+                  <text y={3.5} textAnchor="middle">
+                    !
+                  </text>
+                </g>
+              )}
+            </g>
+          );
+        })}
+
+        {!playback &&
+          trailLines.map((line, i) => <polyline key={`trail-${i}`} className="trail" points={line.map((q) => `${q.x},${q.y}`).join(' ')} />)}
+
         {preview?.map((path, i) => (
           <polyline key={`preview-${i}`} className="route-preview" points={path.map((n) => `${(POSITION[n] as Point).x},${(POSITION[n] as Point).y}`).join(' ')} />
         ))}
 
-        {plan.map((p) => {
-          const f = s.forces[p.force];
-          if (!f || !p.order.route || p.order.route.length === 0) return null;
-          const points = [positionOf(ctx, f), ...p.order.route.map((n) => POSITION[n] as Point)];
-          return <polyline key={`plan-${p.force}`} className="planned" points={points.map((q) => `${q.x},${q.y}`).join(' ')} />;
-        })}
+        {!playback &&
+          plan.map((p) => {
+            const f = s.forces[p.force];
+            if (!f || !p.order.route || p.order.route.length === 0) return null;
+            const points = [positionOf(ctx, f), ...p.order.route.map((n) => POSITION[n] as Point)];
+            return <polyline key={`plan-${p.force}`} className="planned" points={points.map((q) => `${q.x},${q.y}`).join(' ')} />;
+          })}
 
         {[...ctx.graph.nodes.values()].map((n) => {
           const q = POSITION[n.id] as Point;
@@ -266,58 +306,71 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick }: Pro
           );
         })}
 
-        {Object.keys(s.intel.fr)
-          .sort()
-          .map((id) => {
-            const x = s.intel.fr[id];
-            const f = s.forces[id];
-            if (!x || !f) return null;
-            const age = turn - x.turn;
-            const { at, up } = anchorOf(x.at);
-            const q = POSITION[at] as Point;
-            const k = slotFor(at);
+        {playback && <PlaybackLayer key={playback.key} s={s} ctx={ctx} frames={playback.frames} scale={scale} bar={bar} compact={compact} onEnd={onPlaybackEnd} />}
+
+        {!playback &&
+          Object.keys(s.intel.fr)
+            .sort()
+            .map((id) => {
+              const x = s.intel.fr[id];
+              const f = s.forces[id];
+              if (!x || !f) return null;
+              const age = turn - x.turn;
+              const { at, up } = anchorOf(x.at);
+              const q = POSITION[at] as Point;
+              const k = slotFor(at);
+              const y = rowY(k, up);
+              // Reports fade with age; after two turns they are a "last seen" ghost with its date (§2.9).
+              const ghost = age >= 2;
+              const text = compact ? `~${thousands(x.men)}` : `${shortName(id, f.name)} ~${thousands(x.men)}${ghost ? ` · seen ${day(x.turn)}` : age === 1 ? ' (1t)' : ''}`;
+              const w = textWidth(text) + 12;
+              return (
+                <g key={`ru-${id}`} className={`enemy${ghost ? ' enemy-ghost' : ''}`} opacity={age <= 0 ? 1 : age === 1 ? 0.75 : 0.55} transform={`translate(${q.x} ${q.y}) scale(${u})`}>
+                  <rect x={-w / 2} y={y} width={w} height={14} rx={2} />
+                  <text x={0} y={y + 10.5} textAnchor="middle">
+                    {text}
+                  </text>
+                </g>
+              );
+            })}
+
+        {!playback &&
+          french.map((f) => {
+            // On the road a group stands where it is, its marker above the road, clear of the stacks below the places;
+            // at a place it joins that place's stack.
+            const { at, up } = f.transit ? { at: f.at, up: true } : anchorOf(f.at);
+            const q = f.transit ? positionOf(ctx, f) : (POSITION[at] as Point);
+            const k = slotFor(f.transit ? `${f.id}-road` : at);
             const y = rowY(k, up);
-            // Reports fade with age; after two turns they are a "last seen" ghost with its date (§2.9).
-            const ghost = age >= 2;
-            const text = compact ? `~${thousands(x.men)}` : `${shortName(id, f.name)} ~${thousands(x.men)}${ghost ? ` · seen ${day(x.turn)}` : age === 1 ? ' (1t)' : ''}`;
-            const w = textWidth(text) + 12;
+            const activity = activityOf(f);
+            const state = condition(f);
+            const worn = state === 'Worn' || state === 'Exhausted' || state === 'Breaking';
+            const text = compact ? thousands(f.men) : `${shortName(f.id, f.name)} ${thousands(f.men)}${worn ? ' · worn' : ''}`;
+            // The glyph's room on the left, then the text, centred on the place as a whole.
+            const w = 24 + textWidth(text);
             return (
-              <g key={`ru-${id}`} className={`enemy${ghost ? ' enemy-ghost' : ''}`} opacity={age <= 0 ? 1 : age === 1 ? 0.75 : 0.55} transform={`translate(${q.x} ${q.y}) scale(${u})`}>
+              <g key={f.id} className={`friend friend-${activity}${worn ? ' friend-worn' : ''}`} transform={`translate(${q.x} ${q.y}) scale(${u})`}>
+                <title>{`${f.name}: ${thousands(f.men)} men, ${ACTIVITY_WORDS[activity]}, ${state.toLowerCase()}`}</title>
                 <rect x={-w / 2} y={y} width={w} height={14} rx={2} />
-                <text x={0} y={y + 10.5} textAnchor="middle">
+                <g transform={`translate(${-w / 2 + 10} ${y + 7})`}>
+                  <Glyph activity={activity} men={f.men} />
+                </g>
+                <text x={-w / 2 + 20} y={y + 10.5}>
                   {text}
                 </text>
               </g>
             );
           })}
-
-        {french.map((f) => {
-          // On the road a group stands where it is, its marker above the road, clear of the stacks below the places;
-          // at a place it joins that place's stack.
-          const { at, up } = f.transit ? { at: f.at, up: true } : anchorOf(f.at);
-          const q = f.transit ? positionOf(ctx, f) : (POSITION[at] as Point);
-          const k = slotFor(f.transit ? `${f.id}-road` : at);
-          const y = rowY(k, up);
-          const activity = activityOf(f);
-          const state = condition(f);
-          const worn = state === 'Worn' || state === 'Exhausted' || state === 'Breaking';
-          const text = compact ? thousands(f.men) : `${shortName(f.id, f.name)} ${thousands(f.men)}${worn ? ' · worn' : ''}`;
-          // The glyph's room on the left, then the text, centred on the place as a whole.
-          const w = 24 + textWidth(text);
-          return (
-            <g key={f.id} className={`friend friend-${activity}${worn ? ' friend-worn' : ''}`} transform={`translate(${q.x} ${q.y}) scale(${u})`}>
-              <title>{`${f.name}: ${thousands(f.men)} men, ${ACTIVITY_WORDS[activity]}, ${state.toLowerCase()}`}</title>
-              <rect x={-w / 2} y={y} width={w} height={14} rx={2} />
-              <g transform={`translate(${-w / 2 + 10} ${y + 7})`}>
-                <Glyph activity={activity} men={f.men} />
-              </g>
-              <text x={-w / 2 + 20} y={y + 10.5}>
-                {text}
-              </text>
-            </g>
-          );
-        })}
       </svg>
+      {playback && (
+        <div className="playback-bar" role="group" aria-label="Playback of the turn">
+          <span className="playback-clock" ref={(el) => void (bar.current.clock = el)} />
+          <span className="playback-news" aria-live="polite" ref={(el) => void (bar.current.news = el)} />
+          <button type="button" onClick={onPlaybackEnd}>
+            Skip
+          </button>
+        </div>
+      )}
       <div className="map-controls" role="group" aria-label="Map zoom">
         <button type="button" aria-label="Zoom in" onClick={() => setCam((c) => zoomAbout(WORLD, c, 1.5))}>
           +

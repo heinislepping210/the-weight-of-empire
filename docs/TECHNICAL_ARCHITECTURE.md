@@ -11,7 +11,7 @@ How the game is built: stack, modules, simulation integrity, turn resolution, pe
   3. **Canvas 2D effects layer.** Convoys in motion, smoke, rain and dust particles.
 
   A small custom camera built on Pointer Events handles pan, zoom, pinch and focus animations. *Built (M2, first slice): `src/map/camera.ts` holds the camera as pure functions (pan, zoom about a point, clamping, the three zoom bands, keys), and `MapView` drives the SVG view box with it; labels and markers are drawn at a scale that keeps their size on screen. Focus animations are still to come.*
-- **Animation:** one `requestAnimationFrame` loop interpolates between simulation snapshots and updates elements via refs, with no React re-render per frame. In reduced-motion mode, the map snaps instead of animating.
+- **Animation:** one `requestAnimationFrame` loop interpolates between simulation snapshots and updates elements via refs, with no React re-render per frame. In reduced-motion mode, the map snaps instead of animating. *Built (M2, third slice): `advanceWithPlayback` (`src/engine/playback.ts`) records the turn as frames through a read-only watch on `advance`, one at the end of each hour of movement, holding only what the French know; `src/ui/Playback.tsx` runs the loop over them (`src/ui/playbackModel.ts` holds the timing and paths). Recording adds about 1.5 ms to a turn's 2 ms. The effects canvas is not built: wagon trains are SVG for now.*
 
 ## 3.2 Modules
 ```

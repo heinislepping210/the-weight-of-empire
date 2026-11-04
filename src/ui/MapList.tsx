@@ -1,20 +1,23 @@
 import { when } from '../engine';
-import type { Context, GameState } from '../engine';
+import type { Context, GameState, SupplyLine } from '../engine';
 import { shortName, thousands } from './names';
 import { condition } from './OrdersPanel';
+import { isShort, supplyText } from './playbackModel';
 
 interface Props {
   s: GameState;
   ctx: Context;
   objective: string | null;
   onPick: (place: string) => void;
+  supply?: readonly SupplyLine[];
 }
 
 /**
  * The map as a list (M2, G7): every place with what stands there, what marches to it and what the scouts last
- * reported of the enemy, for keyboard and screen-reader play. It shows only what the French know.
+ * reported of the enemy, then the supply lines (G5), for keyboard and screen-reader play. It shows only what the
+ * French know.
  */
-export function MapList({ s, ctx, objective, onPick }: Props) {
+export function MapList({ s, ctx, objective, onPick, supply = [] }: Props) {
   const turn = s.resolution.turn;
   const day = (t: number) => when(ctx, { turn: t, slot: 0 }).split(' ').slice(0, 2).join(' ');
   const french = Object.values(s.forces).filter((f) => f.side === 'fr' && f.men > 0);
@@ -61,6 +64,18 @@ export function MapList({ s, ctx, objective, onPick }: Props) {
           );
         })}
       </ul>
+      {supply.length > 0 && (
+        <>
+          <h3>Supply lines</h3>
+          <ul className="reasons">
+            {supply.map((l) => (
+              <li key={l.convoy} className={isShort(l) ? 'supply-short-text' : ''}>
+                {supplyText(l, s, ctx)}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </section>
   );
 }

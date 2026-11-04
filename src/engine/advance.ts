@@ -43,6 +43,13 @@ export type AdvanceResult =
 
 type RunStage = Exclude<Stage, 'orders'>;
 
+/**
+ * Watches a turn resolve, for playback (M2): called with the live state after each hour of movement (`hour` 0–5)
+ * and after each stage (`hour` null), with the log so far. It only reads: a game advanced with a watch is the same
+ * game as one advanced without (tests/engine/playback.test.ts).
+ */
+export type Watch = (s: GameState, at: { stage: RunStage; hour: number | null }, log: readonly LogEntry[]) => void;
+
 const PACES = ['rest', 'steady', 'forced'];
 const ENGAGEMENTS = ['seek', 'accept', 'avoid', 'stand'];
 const POSTURES = ['dispersed', 'concentrated'];
@@ -64,10 +71,10 @@ export function statusOf(s: GameState): Status {
 }
 
 /** The only way the game moves forward. Pure: the input state is never modified. */
-export function advance(state: GameState, input: Input, ctx: Context): AdvanceResult {
+export function advance(state: GameState, input: Input, ctx: Context, watch?: Watch): AdvanceResult {
   const submitted = submit(state, input, ctx);
   if (!submitted.ok) return submitted;
-  runUntilPause(submitted.state, ctx, submitted.log);
+  runUntilPause(submitted.state, ctx, submitted.log, watch);
   return { ok: true, state: submitted.state, status: statusOf(submitted.state), log: submitted.log };
 }
 
@@ -99,10 +106,12 @@ function isPaused(s: GameState): boolean {
   return s.ended !== null || s.resolution.stage === 'orders' || waitingBattle(s) !== undefined;
 }
 
-function runUntilPause(s: GameState, ctx: Context, log: LogEntry[]): void {
+function runUntilPause(s: GameState, ctx: Context, log: LogEntry[], watch?: Watch): void {
   for (let guard = 0; !isPaused(s); guard++) {
     if (guard > 100_000) throw new Error('turn resolution made no progress');
-    STAGES[s.resolution.stage as RunStage](s, ctx, log);
+    const stage = s.resolution.stage as RunStage;
+    STAGES[stage](s, ctx, log, watch);
+    watch?.(s, { stage, hour: null }, log);
   }
 }
 
@@ -322,11 +331,14 @@ export function marchBudget(f: Force, rules: Context['rules']): number {
   return Math.floor((rules.march.metresPerSlot[f.pace] * fatiguePermille(f.fatigue, rules)) / 1000);
 }
 
-function stageMovement(s: GameState, ctx: Context, log: LogEntry[]): void {
+function stageMovement(s: GameState, ctx: Context, log: LogEntry[], watch?: Watch): void {
   const movers = sortedValues(s.forces).filter((f) => f.activity === 'march' || f.activity === 'cross');
   // The march budget is set by each force's condition at the start of the sub-step.
   const budgets = movers.map((f) => marchBudget(f, ctx.rules));
-  for (let hour = 0; hour < HOURS_PER_SLOT; hour++) marchHour(s, ctx, movers, budgets.map((total) => hourlyShare(total, hour)), hour, log);
+  for (let hour = 0; hour < HOURS_PER_SLOT; hour++) {
+    marchHour(s, ctx, movers, budgets.map((total) => hourlyShare(total, hour)), hour, log);
+    watch?.(s, { stage: 'movement', hour }, log);
+  }
   // A column that could not move at all (held up on the road, or too exhausted) rests instead.
   for (const f of movers) if (!f.movedThisSlot) f.activity = 'halt';
   for (const c of sortedValues(s.convoys)) moveConvoy(s, ctx, c, log);
@@ -450,7 +462,7 @@ function stageEndOfTurn(s: GameState, ctx: Context, log: LogEntry[]): void {
   s.resolution = { turn: next, slot: 0, stage: 'orders', encounterQueue: null, battleSeq: 0 };
 }
 
-const STAGES: Record<RunStage, (s: GameState, ctx: Context, log: LogEntry[]) => void> = {
+const STAGES: Record<RunStage, (s: GameState, ctx: Context, log: LogEntry[], watch?: Watch) => void> = {
   activity: stageActivity,
   movement: stageMovement,
   contacts: stageContacts,
@@ -546,7 +558,8 @@ interface Mover {
 }
 
 /** What else on the road limits a mover: whether it may set out along a road, and how far along it it may go. */
-function roadFactor(s: GameState, ctx: Context, edge: EdgeDef): number {
+/** Permille of a march's or a wagon train's ideal distance a road gives today: its class, mud and any crossing. */
+export function roadFactor(s: GameState, ctx: Context, edge: EdgeDef): number {
   const r = ctx.rules.march;
   let factor: number = r.roadPermille[edge.road];
   if (s.roads[edge.id] === 'mud') factor = Math.floor((factor * r.mudPermille) / 1000);

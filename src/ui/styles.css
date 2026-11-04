@@ -170,6 +170,94 @@ button:disabled {
   vector-effect: non-scaling-stroke;
 }
 
+/* Supply lines (G5): from a depot to the group or depot its wagons serve, wider for more a day; a bottleneck,
+   where a train brings less than its group eats, is red and dashed, with a mark midway. */
+.supply polyline,
+.trail {
+  vector-effect: non-scaling-stroke;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.supply polyline {
+  stroke: #8a6a3a;
+  opacity: 0.55;
+}
+
+.supply-short polyline {
+  stroke: var(--crimson);
+  stroke-dasharray: 6 5;
+  opacity: 0.8;
+}
+
+.supply-badge circle {
+  fill: var(--crimson);
+  stroke: var(--paper);
+  stroke-width: 1.5;
+}
+
+.supply-badge text {
+  fill: #fff;
+  font: 700 10px system-ui, sans-serif;
+}
+
+.supply-short-text {
+  color: var(--crimson);
+}
+
+/* Where each group went in the turn just played, beside the dashed plan for the next. */
+.trail {
+  stroke: var(--french);
+  stroke-width: 2;
+  opacity: 0.45;
+}
+
+/* Turn playback (G4, V4): wagon trains as rows of carts, a spreading ring where something happens. */
+.train rect {
+  fill: #8a6a3a;
+  stroke: var(--paper);
+  stroke-width: 0.8;
+}
+
+.pulse {
+  fill: none;
+  stroke: var(--crimson);
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.playback-bar {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  font-family: system-ui, sans-serif;
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+
+.playback-clock,
+.playback-news:not(:empty) {
+  background: var(--paper);
+  border: 1px solid var(--stone);
+  border-radius: 3px;
+  padding: 0.1rem 0.45rem;
+}
+
+.playback-clock {
+  font-variant-numeric: tabular-nums;
+}
+
+.playback-bar button {
+  margin-left: auto;
+  pointer-events: auto;
+}
+
 /* The route pointed at in the orders panel (G3): broad and warm under the roads' own lines. */
 .route-preview {
   fill: none;

@@ -79,6 +79,8 @@ Plus independent assets: **wagon parks**, a **pontoon train**, and **garrison de
    A major battle or an event choice pauses resolution, which then resumes exactly where it stopped (§3.4).
 4. **Playback.** An animated replay of the turn on the map (2–6 s, skippable), followed by a short dispatch summary. A battle pauses playback, opens the battle screen, then resumes.
 
+   *Built (M2, third slice):* each turn plays back hour by hour, about four seconds for a whole turn, with a clock: groups and wagon trains move along the roads at their simulated speed, enemy forces appear only while a French force has them within detection range, and contacts, battles, skirmishes, captured depots and deliveries show where they happen. Skip or Escape ends it, it can be played again, and with reduced motion it is not animated. Afterwards a thin line shows where each group went, beside the dashed plan for the next turn. A turn stopped by a battle plays up to the contact, and the battle panel is already open beside it; playback does not yet stop and resume around the battle screen.
+
 Orders persist until you change them.
 
 ## 2.4b Challenge mode: directives, standing orders, decision points
