@@ -733,3 +733,28 @@ The history audit confirmed the crossing from a second account but left open whe
 - **The holding plans win more often without the road.** It is mostly the French who use it, not the Russians: the corps of the envelopment, and late in the game the Guard, reach Valutino by the ford. Without it the Guard can only go by the north bank, so it attacks the Russians there from the west while the block holds Valutino, and the trap closes from both sides (traced on seeds 2, 3 and 4). The Russian armies took the road in about 11 of the 90 games it changed.
 - **So the effect runs through the bots' routes,** not through a Russian escape: a player can choose either way to Valutino while the road exists.
 - **For your decision, later:** keep the road (recommended: two accounts support it); or make it usable only after bridging, which needs an engineering rule we do not have. Nothing changes until then.
+
+## The French at their 5 August strength (what-if, rules 0.18.0, 3 November 2026)
+
+The history audit found that the game starts the French at about their mid-August strength on 5 August, three quarters of what Nafziger's returns give for that day, while the Russians start at their early-August strength (HISTORICAL_RESEARCH, "The third review's history audit"). This what-if starts each French group at its 5 August strength by the returns: 11% to 42% larger, its horses, wagons, carried food and wagon train grown with it (the same days of food per man), its guns, the depots and the Russians as adopted. A second variant also takes the cavalry from the returns (the vanguard's nearly doubles). Not adopted. Reports: [5 August strength](balance/2026-11-03-whatif-french-5-august.md), [and the cavalry](balance/2026-11-03-whatif-french-5-august-cavalry.md), 1,000 scenarios × 3 sets of dice each, against [the adopted scenario](balance/2026-11-03-rules-0.18.0-reporting.md). Zero invariant violations.
+
+| Strategy, every game (adopted → 5 August → with the cavalry) | Won (Decisive Success, Costly Victory, Operational Success) | Decisive Success | Repulse | Food days at the end | Russian road cut |
+|---|---|---|---|---|---|
+| southern-envelopment-guard-at-base | 31.7% → 17.4% → 17.5% | 5.2% → 0% → 0% | 43.3% → 46.7% → 45.9% | 3.8 → 2.1 → 2.1 | 86.0% → 67.5% → 67.5% |
+| southern-envelopment-hold | 20.3% → 17.6% → 17.7% | 0% | 51.5% → 46.8% → 46.2% | 1.5 → 1.3 → 1.3 | 86.0% → 67.4% → 67.4% |
+| southern-envelopment-wait-for-trains | 19.5% → 14.2% → 14.4% | 0.2% → 0% → 0% | 25.2% → 46.1% → 46.2% | 0.6 → 0.3 → 0.3 | 47.8% → 55.3% → 55.4% |
+| southern-envelopment | 8.0% → 1.3% → 1.3% | 0% | 21.9% → 22.2% → 22.3% | 0.6 → 0.3 → 0.3 | 67.0% → 55.1% → 55.1% |
+| pinning-fix-first | 0.1% → 0.3% → 0.3% | 0% | 26.5% → 6.5% → 13.2% | 1.7 → 1.0 → 1.0 | 5.3% → 20.8% → 23.4% |
+| concentrated-push, bait-and-converge | 0% | 0% | 2.5% → 0% → 0.1%; 0.9% → 0.1% → 0.3% | 1.1 → 0.7; 1.1 → 1.0 | 0% |
+
+**Reading:**
+- **A larger French army wins less, not more.** The plans that win lose from an eighth of their wins (holding Valutino, 20.3% to 17.6%) to five sixths (the plain envelopment, 8.0% to 1.3%); the Guard at the base loses nearly half, and Decisive Success disappears. It fails at the end, on the army's state: traced on four games where the Guard at the base wins in the adopted scenario and is repulsed at 5 August strength, each ended with Poniatowski and Junot's group (once Davout's too) holding "food for less than 2 days", its supply "not sustainable".
+- **Not the depots alone.** With every French depot grown with the army as well (a 300-seed probe, first roll), the Guard at the base wins 17.7% instead of 16.0%, against 27.3% in the adopted scenario on the same seeds; the plan waiting for its trains 14.3% instead of 14.0%, against 23.7%. More men also share the same countryside, which feeds each of them less.
+- **The Russians' road is cut less often** by the holding plans (86% to 67%), and in the plain envelopment and the rush the Russian main armies lose less. That fits a Russian command that reads the French as stronger and leaves sooner; it was not traced game by game.
+- **Repulses become rarer where the army stays close to its depots:** the pinning attack that strikes first is repulsed in 6.5% of games instead of 26.5%, and the push and bait and converge almost never (0–0.3%). F4 rises (strategy 29.0% of the raw variance, against 19.4%), because the approaches spread further apart.
+- **The cavalry from the returns changes almost nothing** at this level: the two variants end within a point of each other, except the pinning attack's repulses.
+
+**Your decision (4 November): keep the mid-August strengths** (D-048). The options were:
+1. **Keep the mid-August strengths** (recommended for this release, and chosen). Every measurement so far rests on them; the asymmetry is then a stated design choice: the army is taken after the straggling of early August, which the game does not model, and its own hunger and sickness run from there. Record it in the register and the briefing.
+2. **Adopt the 5 August strengths.** Truer to the returns, but the winning plans lose up to half their wins, and the balance would have to be found again: above all the depot stocks and the countryside, both placeholders still awaiting the research on the 1812 magazines (G-012).
+3. **Return to it after the magazine research,** with depots and countryside from sources, and measure both together then.

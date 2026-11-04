@@ -2,13 +2,14 @@
 //
 // Status of the numbers (HISTORICAL_ASSUMPTIONS.md):
 // - Totals sit inside the researched ranges (H-009): French central group ≈180,000,
-//   Russian 1st and 2nd Armies ≈120,000–130,000 plus Cossacks.
+//   Russian 1st and 2nd Armies ≈120,000–130,000 plus Cossacks. The French are taken at their mid-August
+//   strength, after the straggling of early August, though the game starts on 5 August (D-048).
 // - The split of those totals across force groups is a game assumption (G-010), pending orders of battle.
 // - Start positions are working assumptions from the chronology (G-011, H-001 to H-003).
 // - Carried supplies, depot stocks and countryside yields are placeholders (G-012).
 // - Cavalry, guns and the Guard's quality are game assumptions guided by the sources in H-021 (G-021).
 
-import type { DepotInit, ConvoyInit, ForceInit, ScenarioDef } from '../../engine/scenario';
+import type { DepotInit, ConvoyInit, ForceInit, ScenarioDef, Strength } from '../../engine/scenario';
 import type { District } from '../../engine/types';
 import { PLACES } from './places';
 import { vitebskNetwork } from './roads';
@@ -53,22 +54,70 @@ const CONVOYS: ConvoyInit[] = [
   { id: 'cv-smolensk-neverovsky', side: 'ru', home: 'smolensk', serves: 'ru-neverovsky', wagons: 40 },
 ];
 
+/**
+ * The French strength the scenario starts with. `mid-august` is the adopted one (H-009). The others are what-ifs,
+ * not adopted: the groups at their strength on 5 August, the game's start, by Nafziger's returns of 1 and 15 August
+ * (HISTORICAL_RESEARCH, "The third review's history audit"); with `-cavalry`, their cavalry from the returns too.
+ */
+export type FrenchStrength = 'mid-august' | 'returns-5-august' | 'returns-5-august-cavalry';
+
+/** Each group on 5 August by the returns, with the scenario's spread of ±12.5% around the estimate. */
+const RETURNS_5_AUGUST: Record<string, { men: readonly [number, number]; cavalry: readonly [number, number] }> = {
+  'fr-guard': { men: [31_100, 40_000], cavalry: [5_100, 6_600] },
+  'fr-vanguard': { men: [50_800, 65_300], cavalry: [24_500, 31_500] },
+  'fr-left': { men: [36_800, 47_300], cavalry: [3_700, 4_800] },
+  'fr-right': { men: [57_800, 74_400], cavalry: [2_800, 3_600] },
+  'fr-south': { men: [38_500, 49_500], cavalry: [4_300, 5_600] },
+};
+
+/** How much larger a group is on 5 August than in the adopted scenario; 1 for the adopted strength and the Russians. */
+function growth(f: ForceInit, strength: FrenchStrength): number {
+  const target = RETURNS_5_AUGUST[f.id];
+  if (strength === 'mid-august' || !target || typeof f.men === 'number') return 1;
+  return (target.men[0] + target.men[1]) / (f.men[0] + f.men[1]);
+}
+
+/**
+ * A French group at the chosen strength: its men from the returns, and its horses, wagons and carried stocks grown
+ * by the same factor, so that it has as many days of food per man; its guns as they are. Its cavalry grows with it,
+ * or comes from the returns with a mount for each extra horseman.
+ */
+function atStrength(f: ForceInit, strength: FrenchStrength): ForceInit {
+  const factor = growth(f, strength);
+  const target = RETURNS_5_AUGUST[f.id];
+  if (factor === 1 || !target) return { ...f, stock: { ...f.stock } };
+  const scale = (x: number) => Math.round(x * factor);
+  const range = (s: Strength): readonly [number, number] => (typeof s === 'number' ? [scale(s), scale(s)] : [scale(s[0]), scale(s[1])]);
+  let horses = range(f.horses);
+  let cavalry = f.cavalry === undefined || f.cavalry === 'all' ? f.cavalry : range(f.cavalry);
+  if (strength === 'returns-5-august-cavalry' && Array.isArray(cavalry)) {
+    horses = [horses[0] + target.cavalry[0] - cavalry[0], horses[1] + target.cavalry[1] - cavalry[1]];
+    cavalry = target.cavalry;
+  }
+  return { ...f, men: target.men, cavalry, horses, wagons: scale(f.wagons), stock: { food: scale(f.stock.food), fodder: scale(f.stock.fodder), ammo: scale(f.stock.ammo) } };
+}
+
 /** What the countryside around each place can still yield (G-012): uniform placeholders. */
 const DISTRICTS: Record<string, District> = Object.fromEntries(PLACES.map((p) => [p.id, { food: 150_000, fodder: 150_000 }]));
 
-/** The scenario; `candidateRoads` adds the roads not yet adopted, for what-if runs only (MAP_AND_GEOGRAPHY.md). */
-export function vitebskDecision(options: { candidateRoads?: boolean } = {}): ScenarioDef {
+/**
+ * The scenario. For what-if runs only: `candidateRoads` adds the roads not yet adopted (MAP_AND_GEOGRAPHY.md), and
+ * `frenchStrength` starts the French at another strength, their wagon trains grown with them.
+ */
+export function vitebskDecision(options: { candidateRoads?: boolean; frenchStrength?: FrenchStrength } = {}): ScenarioDef {
   const { nodes, edges } = vitebskNetwork({ candidates: options.candidateRoads ?? false });
+  const strength = options.frenchStrength ?? 'mid-august';
+  const served = new Map(FORCES.map((f) => [f.id, growth(f, strength)]));
   return {
-    id: options.candidateRoads ? 'vitebsk-decision+candidate-roads' : 'vitebsk-decision',
+    id: ['vitebsk-decision', ...(options.candidateRoads ? ['candidate-roads'] : []), ...(strength !== 'mid-august' ? [strength] : [])].join('+'),
     title: 'The Vitebsk Decision',
     startDate: '1812-08-05',
     turns: 10,
     nodes,
     edges,
-    forces: FORCES.map((f) => ({ ...f, stock: { ...f.stock } })),
+    forces: FORCES.map((f) => atStrength(f, strength)),
     depots: DEPOTS.map((d) => ({ ...d, stock: { ...d.stock } })),
-    convoys: CONVOYS.map((c) => ({ ...c })),
+    convoys: CONVOYS.map((c) => ({ ...c, wagons: Math.round(c.wagons * (c.serves ? (served.get(c.serves) ?? 1) : 1)) })),
     districts: Object.fromEntries(Object.entries(DISTRICTS).map(([k, v]) => [k, { ...v }])),
     // Places of Smolensk province, the "old Russian" soil whose loss raised pressure on Barclay (G-014).
     pressurePlaces: ['rudnia', 'porechye', 'krasnyi', 'smolensk', 'smolensk-north', 'valutino', 'dorogobuzh'],

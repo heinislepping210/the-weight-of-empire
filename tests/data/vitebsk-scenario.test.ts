@@ -62,3 +62,54 @@ describe('The Vitebsk Decision: starting situation', () => {
     }
   });
 });
+
+describe('What-if: the French at their 5 August strength (third review, history audit; not adopted)', () => {
+  const plain = vitebskDecision();
+  const grown = vitebskDecision({ frenchStrength: 'returns-5-august' });
+  const mounted = vitebskDecision({ frenchStrength: 'returns-5-august-cavalry' });
+  const force = (sc: typeof plain, id: string) => sc.forces.find((f) => f.id === id)!;
+  const mid = (s: unknown) => (Array.isArray(s) ? (s[0] + s[1]) / 2 : Number(s));
+
+  it('is a separate scenario, and leaves the Russians, the depots and the line trains as they are', () => {
+    expect(plain.id).toBe('vitebsk-decision');
+    expect(grown.id).toBe('vitebsk-decision+returns-5-august');
+    for (const f of plain.forces.filter((x) => x.side === 'ru')) expect(force(grown, f.id)).toEqual(f);
+    expect(grown.depots).toEqual(plain.depots);
+    for (const c of plain.convoys.filter((x) => !x.serves || x.side === 'ru')) expect(grown.convoys.find((x) => x.id === c.id)).toEqual(c);
+  });
+
+  it('grows each French group with the same days of food and horses per man, its guns unchanged', () => {
+    for (const f of plain.forces.filter((x) => x.side === 'fr')) {
+      const g = force(grown, f.id);
+      const factor = mid(g.men) / mid(f.men);
+      expect(factor, f.id).toBeGreaterThan(1.1);
+      expect(g.stock.food / mid(g.men)).toBeCloseTo(f.stock.food / mid(f.men), 2);
+      expect(mid(g.horses) / mid(g.men)).toBeCloseTo(mid(f.horses) / mid(f.men), 2);
+      expect(mid(g.cavalry) / mid(g.men)).toBeCloseTo(mid(f.cavalry) / mid(f.men), 2);
+      expect(g.guns).toEqual(f.guns);
+      const train = (sc: typeof plain) => sc.convoys.find((c) => c.serves === f.id)!.wagons;
+      expect(train(grown) / train(plain)).toBeCloseTo(factor, 1);
+    }
+  });
+
+  it('with the cavalry from the returns, every extra horseman has a mount', () => {
+    for (const f of grown.forces.filter((x) => x.side === 'fr')) {
+      const m = force(mounted, f.id);
+      expect(m.men).toEqual(f.men);
+      expect(mid(m.horses) - mid(f.horses)).toBeCloseTo(mid(m.cavalry) - mid(f.cavalry), 6);
+    }
+    // The vanguard's cavalry nearly doubles from the adopted scenario's.
+    expect(mid(force(mounted, 'fr-vanguard').cavalry) / mid(force(plain, 'fr-vanguard').cavalry)).toBeGreaterThan(1.8);
+  });
+
+  it('every group still starts within what it can carry, and the game plays to the end', () => {
+    for (const sc of [grown, mounted]) {
+      const c = createContext(sc);
+      for (let seed = 0; seed < 50; seed++) {
+        const s = newGame(c, seed * 2654435761 >>> 0);
+        for (const f of Object.values(s.forces)) expect(weightGrams(f.stock, c.rules), `${sc.id} ${f.id}, seed ${seed}`).toBeLessThanOrEqual(capacityGrams(f, c.rules));
+      }
+      expect(play(c, 7, randomPolicy(c, 7)).final.ended).toBe('scenarioEnd');
+    }
+  });
+});

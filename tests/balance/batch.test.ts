@@ -14,7 +14,7 @@
 import { expect, it } from 'vitest';
 import { ENDING_NAMES, ENDING_RANK, RULES, RULES_VERSION, createContext, evaluate } from '../../src/engine';
 import type { EndingId, GameState, LogEntry, Rules, RussianResult } from '../../src/engine';
-import { vitebskDecision } from '../../src/data/vitebsk/scenario';
+import { vitebskDecision, type FrenchStrength } from '../../src/data/vitebsk/scenario';
 import { lineOfRetreat } from '../../src/engine/battle';
 import { keyHash } from '../../src/engine/rng';
 import { play, type Run } from '../fixtures/driver';
@@ -25,6 +25,11 @@ import { BOTS, FAMILIES, PIN_STAGES, pinStages, pinTraceOf } from './bots';
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 /** What-if map: BALANCE_SCENARIO=candidate-roads adds the roads not yet adopted (MAP_AND_GEOGRAPHY.md). */
 const WITH_CANDIDATE_ROADS = env.BALANCE_SCENARIO === 'candidate-roads';
+/**
+ * What-if strength: BALANCE_SCENARIO=french-5-august starts the French at their 5 August strength by the returns,
+ * and french-5-august-cavalry with their cavalry from the returns too (HISTORICAL_RESEARCH, the history audit).
+ */
+const FRENCH: FrenchStrength = env.BALANCE_SCENARIO === 'french-5-august' ? 'returns-5-august' : env.BALANCE_SCENARIO === 'french-5-august-cavalry' ? 'returns-5-august-cavalry' : 'mid-august';
 const enabled = env.BALANCE === '1';
 
 /** Share of the French wagon trains' draught horses lost over the game, in permille (G-019). */
@@ -138,7 +143,7 @@ function battleFigures(end: GameState, log: LogEntry[], decisive: boolean): Pick
 
 it.skipIf(!enabled)('balance batch', () => {
   const rules = OVERRIDES ? (overridden(RULES, OVERRIDES, 'rules') as Rules) : RULES;
-  const ctx = createContext(vitebskDecision({ candidateRoads: WITH_CANDIDATE_ROADS }), rules);
+  const ctx = createContext(vitebskDecision({ candidateRoads: WITH_CANDIDATE_ROADS, frenchStrength: FRENCH }), rules);
   const names = Object.keys(BOTS);
   const results: Record<string, Result[]> = {};
   const problems: string[] = [];
@@ -193,9 +198,10 @@ it.skipIf(!enabled)('balance batch', () => {
   const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
   const endings = Object.keys(ENDING_NAMES) as EndingId[];
   const lines: string[] = [];
-  lines.push(`# Balance report: rules ${RULES_VERSION}${OVERRIDES ? ' (what-if)' : ''}, The Vitebsk Decision, seeds 1–${SEEDS}${DICE > 1 ? `, ${DICE} sets of dice each` : ''}`, '');
+  lines.push(`# Balance report: rules ${RULES_VERSION}${OVERRIDES || WITH_CANDIDATE_ROADS || FRENCH !== 'mid-august' ? ' (what-if)' : ''}, The Vitebsk Decision, seeds 1–${SEEDS}${DICE > 1 ? `, ${DICE} sets of dice each` : ''}`, '');
   if (OVERRIDES) lines.push(`**What-if run, not the adopted rules.** Overrides: \`${JSON.stringify(OVERRIDES)}\``, '');
   if (WITH_CANDIDATE_ROADS) lines.push('**What-if map, not the adopted network:** with the candidate roads (MAP_AND_GEOGRAPHY.md, "Missing").', '');
+  if (FRENCH !== 'mid-august') lines.push(`**What-if strength, not the adopted scenario:** the French start at their 5 August strength by Nafziger's returns of 1 and 15 August, each group's horses, wagons and carried stocks grown with it${FRENCH === 'returns-5-august-cavalry' ? ', and its cavalry from the returns' : ', its cavalry in the same proportion'}; guns, depots and the Russians as adopted (HISTORICAL_RESEARCH, the history audit).`, '');
   lines.push(`Bots: ${names.join(', ')}. Approach families: ${FAMILIES.join(', ')}. Battles are left to the marshal.`, '');
   lines.push(`**Invariant violations: ${problems.length}**${problems.length ? ` (first: ${problems.slice(0, 5).join('; ')})` : ''}`, '');
 
