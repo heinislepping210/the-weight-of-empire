@@ -758,3 +758,25 @@ The history audit found that the game starts the French at about their mid-Augus
 1. **Keep the mid-August strengths** (recommended for this release, and chosen). Every measurement so far rests on them; the asymmetry is then a stated design choice: the army is taken after the straggling of early August, which the game does not model, and its own hunger and sickness run from there. Record it in the register and the briefing.
 2. **Adopt the 5 August strengths.** Truer to the returns, but the winning plans lose up to half their wins, and the balance would have to be found again: above all the depot stocks and the countryside, both placeholders still awaiting the research on the 1812 magazines (G-012).
 3. **Return to it after the magazine research,** with depots and countryside from sources, and measure both together then.
+
+## Following a chosen route (what-if, 4 November 2026)
+
+The route previews (M2) showed that two of the three routes can come to the same orders: on the opening turn the route by Orsha and Dubrovna gives exactly the orders of the route by Rasasna. Groups join a chosen route where their total road is shortest (D-034), and for the Orsha route that is at Liady, after the places that name it; even the Vanguard, standing where the route begins, cuts across. Two other ways of following a route were measured as a rule switch (`rules.staff.joinRoute`; with the batch, `BALANCE_OVERRIDES='{"staff":{"joinRoute":"on-route"}}'`), the adopted one unchanged:
+- **on-route:** a group already on the route follows it from where it stands; any other joins where its total road is shortest, as now.
+- **by-first-landmark:** as on-route, but any other group joins no later than the route's first named place, so every group passes the places that name it.
+
+Only the four southern-envelopment bots choose a route (always the one by Rasasna), so only they can change. 1,000 seeds, first roll, the same seeds under each setting; the concentrated push as a control (200 seeds, unchanged under both):
+
+| Bot (adopted → on-route → by-first-landmark) | Won | Decisive Success | Repulse | Orders the same as adopted |
+|---|---|---|---|---|
+| southern-envelopment-guard-at-base | 31.4% → 31.4% → 8.7% | 4.6% → 4.6% → 0% | 44.5% → 44.5% → 67.6% | 100% / 0% of games |
+| southern-envelopment-hold | 19.8% → 19.8% → 9.0% | 0% | 52.7% → 52.7% → 67.1% | 100% / 0% |
+| southern-envelopment-wait-for-trains | 19.2% → 19.2% → 17.7% | 0.2% → 0.2% → 0% | 24.9% → 24.9% → 29.6% | 100% / 0% |
+| southern-envelopment | 7.4% → 7.4% → 5.2% | 0% | 21.7% → 21.7% → 24.3% | 100% / 0% |
+
+**Reading:**
+- **On-route changes nothing the bots do, and makes the routes distinct.** On the Rasasna route every group already behaves this way, so the bots' orders are the same on every seed and every turn. Yet the three routes to Smolensk's Old Town, to its north bank and to Valutino now each give their own orders: on the Orsha route the Vanguard marches by Babinovichi, Orsha and Dubrovna. To the north bank the three are by Rudnia, by Rasasna and Liady, and by Surazh and Porechye, the three approaches of G1.
+- **By-first-landmark costs the winning plans dearly.** Every group, even Poniatowski's from Mogilev, swings through Liubavichi, and the army reaches Valutino later: the Guard-at-the-base plan wins 8.7% instead of 31.4%, and no Decisive Success remains. A player could keep groups off the long swing with "Own road", but the bots do not.
+- Zero invariant violations in every run.
+
+**Your decision (4 November 2026): adopt on-route** (rules 0.18.1, D-050). In the table above, "adopted" is the rule before 0.18.1, now the what-if `shortest`. Both golden games are unchanged apart from the rules version they record, and the route cards on the opening turn no longer say "Same orders as …".

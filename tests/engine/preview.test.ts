@@ -2,7 +2,7 @@
 // committed, the chosen route keeps its identity, and the army-level summary comes first.
 
 import { describe, expect, it } from 'vitest';
-import { advance, createContext, newGame, slotIndexOf, statusOf } from '../../src/engine';
+import { RULES, advance, createContext, newGame, slotIndexOf, statusOf } from '../../src/engine';
 import type { Axis, Directive, GameState } from '../../src/engine';
 import { axesTo, leadGroup, ordersFrom, planDirective, previewRoutes, summarizePlan } from '../../src/engine/directive';
 import { shortestPath } from '../../src/engine/graph';
@@ -176,15 +176,22 @@ describe('route previews (M2, G1 and G3): each route read before it is chosen', 
   });
 
   it('tells the routes apart, and says when one comes to the same orders as another', () => {
+    const twinsAgree = (previews: ReturnType<typeof previewRoutes>) => {
+      for (const p of previews.filter((x) => x.sameAs === undefined)) {
+        const twins = previews.filter((x) => JSON.stringify(x.paths) === JSON.stringify(p.paths));
+        expect(twins.every((x) => x === p || x.sameAs === p.axis?.label)).toBe(true);
+      }
+    };
     const previews = previewRoutes(start(), ctx, d, routes().slice(1));
-    for (const p of previews.filter((x) => x.sameAs === undefined)) {
-      const twins = previews.filter((x) => JSON.stringify(x.paths) === JSON.stringify(p.paths));
-      expect(twins.every((x) => x === p || x.sameAs === p.axis?.label)).toBe(true);
-    }
-    // On the opening turn the route by Orsha and Dubrovna comes to the orders of the one by Rasasna: every group
-    // joins it at Liady, after the places that name it (a finding for the planner, not yet changed).
-    const orsha = previews.find((p) => p.axis?.label.includes('Orsha'))!;
-    expect(orsha.sameAs).toBe(previews.find((p) => p.axis?.label.includes('Rasasna'))!.axis!.label);
+    twinsAgree(previews);
+    expect(previews.map((p) => p.sameAs)).toEqual([undefined, undefined, undefined]);
+    // Before 0.18.1 (D-050) the route by Orsha and Dubrovna came to the orders of the one by Rasasna on the opening
+    // turn: every group joined it at Liady, after the places that name it. The preview says so when it happens.
+    const shortest = createContext(vitebskDecision(), { ...RULES, staff: { joinRoute: 'shortest' } });
+    const old = previewRoutes(newGame(shortest, 1812), shortest, d, axesTo(shortest, 'liozno', 'smolensk'));
+    twinsAgree(old);
+    const orsha = old.find((p) => p.axis?.label.includes('Orsha'))!;
+    expect(orsha.sameAs).toBe(old.find((p) => p.axis?.label.includes('Rasasna'))!.axis!.label);
     // The southern swing crosses the Dnieper on the pontoons between Rasasna and Liady.
     const south = previews.find((p) => p.axis?.label.includes('Rasasna'))!;
     expect(south.crossings).toContainEqual({ between: 'Rasasna and Liady', by: 'pontoon' });
@@ -207,5 +214,60 @@ describe('route previews (M2, G1 and G3): each route read before it is chosen', 
     expect(hold!.arrival).toBeNull();
     previewRoutes(s, ctx, d, routes());
     expect(JSON.stringify(s)).toBe(before);
+  });
+});
+
+describe('joining a route by its first named place (a what-if, rules.staff.joinRoute; not adopted)', () => {
+  const byLandmark = createContext(vitebskDecision(), { ...RULES, staff: { joinRoute: 'by-first-landmark' } });
+  const d = directive({ objective: 'smolensk' });
+  const axes = () => axesTo(byLandmark, 'liozno', 'smolensk');
+
+  it('makes the three routes to Smolensk three different sets of orders on the opening turn', () => {
+    const previews = previewRoutes(newGame(byLandmark, 1812), byLandmark, d, axes());
+    expect(previews.map((p) => p.sameAs)).toEqual([undefined, undefined, undefined]);
+  });
+
+  it('a group standing on the route follows it from where it stands', () => {
+    const orsha = axes().find((a) => a.label.includes('Orsha'))!;
+    const vanguard = planDirective(newGame(byLandmark, 1812), byLandmark, { ...d, axis: orsha }).find((p) => p.force === 'fr-vanguard')!;
+    expect(vanguard.order.route).toEqual(orsha.places.slice(1));
+  });
+
+  it('a group following the route passes its first named place, unless it already stands on the route beyond it', () => {
+    const s = newGame(byLandmark, 1812);
+    for (const axis of axes()) {
+      const first = axis.landmarks[0]!;
+      const beyond = (id: string) => axis.places.indexOf(s.forces[id]!.at) >= axis.places.indexOf(first);
+      for (const p of planDirective(s, byLandmark, { ...d, axis }).filter((x) => x.marching && x.staffRoad === 'route' && !beyond(x.force))) {
+        expect(p.order.route, `${p.force} on ${axis.label}`).toContain(first);
+      }
+    }
+  });
+});
+
+describe('a group already on a chosen route follows it (on-route, adopted in 0.18.1, D-050)', () => {
+  const onRoute = ctx;
+  const shortest = createContext(vitebskDecision(), { ...RULES, staff: { joinRoute: 'shortest' } });
+  const d = directive({ objective: 'smolensk' });
+
+  it('is the rule the game plays by', () => {
+    expect(RULES.staff.joinRoute).toBe('on-route');
+  });
+
+  it('gives three different sets of orders for the three routes, to Smolensk, its north bank and Valutino', () => {
+    const s = newGame(onRoute, 1812);
+    for (const objective of ['smolensk', 'smolensk-north', 'valutino']) {
+      const previews = previewRoutes(s, onRoute, { ...d, objective }, axesTo(onRoute, 'liozno', objective));
+      expect(previews.map((p) => p.sameAs), objective).toEqual([undefined, undefined, undefined]);
+    }
+  });
+
+  it('sends the Vanguard, standing where the Orsha route begins, along it; groups off the route join as before', () => {
+    const s = newGame(onRoute, 1812);
+    const orsha = axesTo(onRoute, 'liozno', 'smolensk').find((a) => a.label.includes('Orsha'))!;
+    const plan = planDirective(s, onRoute, { ...d, axis: orsha });
+    expect(plan.find((p) => p.force === 'fr-vanguard')!.order.route).toEqual(orsha.places.slice(1));
+    const before = planDirective(newGame(shortest, 1812), shortest, { ...d, axis: orsha });
+    for (const id of ['fr-guard', 'fr-left', 'fr-south']) expect(plan.find((p) => p.force === id)!.order).toEqual(before.find((p) => p.force === id)!.order);
   });
 });

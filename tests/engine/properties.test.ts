@@ -60,6 +60,9 @@ const GOLDEN: Record<string, string> = {
   // towards its base), both sides breaking off leave at once and never by one road, a stand with an empty line
   // counter-attacks, only deployed cavalry pursues or screens, no column led past a slower enemy (D-046).
   '0.18.0': 'ace0bdbfd267a81a',
+  // A group already on a chosen route follows it (D-050). The same game as 0.18.0, which no route enters: with the
+  // version label set back to 0.18.0 it reproduces ace0bdbfd267a81a; the state records the rules version.
+  '0.18.1': 'ae00ce353d5b3ca1',
 };
 
 /**
@@ -82,6 +85,8 @@ const GOLDEN_VITEBSK: Record<string, string> = {
   '0.17.1': '85c3bf612566b3ff',
   '0.17.2': '6b6b838b705d899c',
   '0.18.0': '78bd0b273d8bc56e',
+  // The same game as 0.18.0 (it reproduces 78bd0b273d8bc56e with the version label set back): D-050.
+  '0.18.1': 'b8fd258c60f4a523',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */

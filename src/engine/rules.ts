@@ -7,7 +7,7 @@
 export type CutOffCredit = 'stands' | 'atEnd' | 'graded';
 
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.18.0';
+export const RULES_VERSION = '0.18.1';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -72,6 +72,14 @@ export const RULES = {
    * line trains sent no farther than a few days' haul (80 km is about 4½ days at 18 km/day).
    */
   logistics: { minDepotSpacingMetres: 40_000, maxLineHaulMetres: 80_000 },
+  /**
+   * How the staff sends a group along a route you chose (§2.4b, D-034, D-050). `on-route`, adopted in 0.18.1: a
+   * group already on the route follows it from where it stands, and any other joins where its total road is
+   * shortest. What-ifs: `shortest`, before 0.18.1, every group joins where its total road is shortest, which can be
+   * after the places that name the route; `by-first-landmark`, as on-route, but any other group joins no later than
+   * the route's first named place.
+   */
+  staff: { joinRoute: 'on-route' as 'shortest' | 'on-route' | 'by-first-landmark' },
   /**
    * What a group is issued at its own side's depot, or from its wagon train: as much food as it can carry
    * (D-040), and fodder and ammunition up to this much (G-020, placeholders).

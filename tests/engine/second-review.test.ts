@@ -84,7 +84,7 @@ describe('3. a group finishing its last stretch into the objective stops there',
     const ctx = passiveContext(testGround());
     const s = newGame(ctx, 1);
     Object.assign(s.forces['fr-flank']!, { at: 'B', transit: { edge: 'B-C', to: 'C', metres: 5_000, seq: 0 } });
-    const axis: Axis = { id: 'via:b', label: 'Via Node B', places: ['A', 'B', 'C'], metres: 28_000 };
+    const axis: Axis = { id: 'via:b', label: 'Via Node B', places: ['A', 'B', 'C'], landmarks: ['B'], metres: 28_000 };
     const plan = planDirective(s, ctx, { objective: 'C', axis, tempo: 'steady', posture: 'concentrated', engagement: 'accept', holdBack: [], logistics: 'hold' });
     expect(plan.find((p) => p.force === 'fr-flank')!.order.route).toEqual(['C']);
   });

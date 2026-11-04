@@ -15,6 +15,8 @@ export interface Axis {
   label: string;
   /** Starting place, then the places along the axis, ending at the objective. */
   places: NodeId[];
+  /** The places that name it, in the order it passes them ("Via Orsha and Dubrovna"); none for a direct road. */
+  landmarks: NodeId[];
   metres: number;
 }
 
@@ -129,7 +131,7 @@ export function axesTo(ctx: Context, from: NodeId, objective: NodeId, max = 3): 
     const mid = Math.max(0, Math.floor((unique.length - 1) / 2));
     const landmarks = unique.length === 0 ? [] : unique.slice(mid, mid + 2);
     const label = landmarks.length === 0 ? 'Direct road' : `Via ${landmarks.map((n) => placeName(ctx, n)).join(' and ')}`;
-    return { id: `via:${landmarks.join('+') || 'direct'}`, label, places: [from, ...path], metres: pathMetres(ctx.graph, from, path) };
+    return { id: `via:${landmarks.join('+') || 'direct'}`, label, places: [from, ...path], landmarks, metres: pathMetres(ctx.graph, from, path) };
   });
 }
 
@@ -141,9 +143,18 @@ function routeAlong(ctx: Context, start: NodeId, axis: Axis | null, objective: N
   const direct = shortestPath(ctx.graph, start, objective) ?? [];
   // Already bound for the objective: it finishes the stretch it is on (D-037).
   if (!axis || start === objective) return direct;
+  // The what-ifs (rules.staff.joinRoute): a group on the route follows it from here; with `by-first-landmark` another
+  // joins it no later than its first named place, so that every group passes the places that name the route.
+  const join = ctx.rules.staff.joinRoute;
+  const byLandmark = join === 'by-first-landmark';
+  const on = axis.places.indexOf(start);
+  if (join !== 'shortest' && on >= 0 && on < axis.places.length - 1) return axis.places.slice(on + 1);
+  const firstNamed = (axis.landmarks ?? []).length > 0 ? axis.places.indexOf(axis.landmarks[0] as NodeId) : -1;
+  const lastJoin = byLandmark && firstNamed >= 0 ? firstNamed : axis.places.length - 2;
   let best: NodeId[] | null = null;
   let bestMetres = Infinity;
   axis.places.slice(0, -1).forEach((join, i) => {
+    if (i > lastJoin) return;
     const toJoin = shortestPath(ctx.graph, start, join);
     if (toJoin === null || toJoin.includes(objective)) return;
     const route = [...toJoin, ...axis.places.slice(i + 1)];
