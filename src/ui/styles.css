@@ -170,6 +170,96 @@ button:disabled {
   vector-effect: non-scaling-stroke;
 }
 
+/* What the campaign leaves on the map (V5). A district foragers have taken from is hatched around its place,
+   darker as less is left; burned stores and battlefields are marked beside the place; columns on dry roads raise
+   dust; mud is a brown wash along the road. */
+.district {
+  fill: url(#stripped);
+  stroke: #9b7a45;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.stripped-hatch {
+  stroke: #9b7a45;
+  stroke-width: 2;
+}
+
+.district-foraged {
+  opacity: 0.35;
+}
+
+.district-stripped {
+  opacity: 0.6;
+}
+
+.district-bare {
+  opacity: 0.9;
+}
+
+.dust,
+.mud-wash {
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+}
+
+.dust {
+  stroke: #d9c08a;
+  stroke-width: 10;
+  opacity: 0.55;
+}
+
+.mud-wash {
+  stroke: #8a6a3a;
+  stroke-width: 8;
+  opacity: 0.35;
+}
+
+.scar-burned path {
+  fill: var(--crimson);
+  stroke: var(--charcoal);
+  stroke-width: 0.8;
+}
+
+.scar-battle path {
+  fill: none;
+  stroke: var(--charcoal);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+/* Rain over the map (V6): falling while it rains, a still hatch with reduced motion. */
+.rain-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s;
+  background-image: repeating-linear-gradient(105deg, transparent 0 9px, rgba(40, 60, 90, 0.18) 9px 10px);
+  background-size: 40px 40px;
+}
+
+.rain-overlay.raining {
+  opacity: 1;
+  animation: rain-fall 0.5s linear infinite;
+}
+
+@keyframes rain-fall {
+  to {
+    background-position: -10px 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rain-overlay {
+    transition: none;
+  }
+
+  .rain-overlay.raining {
+    animation: none;
+  }
+}
+
 /* Supply lines (G5): from a depot to the group or depot its wagons serve, wider for more a day; a bottleneck,
    where a train brings less than its group eats, is red and dashed, with a mark midway. */
 .supply polyline,

@@ -1,13 +1,28 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { Context, Frame, GameState } from '../engine';
+import { blend, viewBoxOf, zoomOf, zoomTo, type Camera, type World } from '../map/camera';
 import { shortName, thousands } from './names';
-import { TAIL_MS, clockOf, eventText, newsworthy, sample, timesOf, tracksOf } from './playbackModel';
+import { TAIL_MS, clockOf, eventText, focusWeight, focusesOf, newsworthy, sample, timesOf, tracksOf } from './playbackModel';
 import { POSITION, type Point } from './projection';
 
-/** What the loop writes to outside the map's drawing: the clock and the latest event, in the playback bar. */
+/** What the loop writes to outside the map's drawing: the clock and the latest event, and the rain over the map. */
 export interface PlaybackBar {
   clock: HTMLElement | null;
   news: HTMLElement | null;
+  rain: HTMLElement | null;
+}
+
+/**
+ * The map's view, for the camera's focus moments (V7): the loop moves the view box itself and gives it back as you
+ * left it; once you move the map yourself, it stops focusing.
+ */
+export interface PlaybackView {
+  svg: { current: SVGSVGElement | null };
+  world: World;
+  camera: { current: Camera };
+  /** When you last moved the map, by `performance.now()`. */
+  touched: { current: number };
+  following: { current: boolean };
 }
 
 interface Props {
@@ -19,6 +34,7 @@ interface Props {
   bar: { current: PlaybackBar };
   /** A map drawn small: markers show only their strength, as on the map. */
   compact: boolean;
+  view: PlaybackView;
   onEnd: () => void;
 }
 
@@ -28,12 +44,14 @@ const PULSE_MS = 900;
 /**
  * The turn played back on the map (M2, G4, V4): one animation loop moves every marker along its road, hour by
  * hour, through the elements themselves, with no React render per frame (§3.1). Groups and enemies are drawn as
- * on the map; a wagon train is a short row of carts, one for every 60 wagons, up to five.
+ * on the map; a wagon train is a short row of carts, one for every 60 wagons, up to five. Rain and mud follow the
+ * day's weather (V6), and the camera can move in on the moments that matter and back (V7).
  */
-export function PlaybackLayer({ s, ctx, frames, scale, bar, compact, onEnd }: Props) {
+export function PlaybackLayer({ s, ctx, frames, scale, bar, compact, view, onEnd }: Props) {
   const tracks = useMemo(() => tracksOf(ctx, frames), [ctx, frames]);
   const times = useMemo(() => timesOf(frames), [frames]);
   const pulses = useMemo(() => frames.flatMap((f, i) => f.events.filter(newsworthy).map((e) => ({ at: POSITION[e.node] as Point, from: times[i] as number }))), [frames, times]);
+  const focuses = useMemo(() => focusesOf(frames, times), [frames, times]);
   const marks = useRef(new Map<string, SVGGElement>());
   const rings = useRef<(SVGCircleElement | null)[]>([]);
   const end = useRef(onEnd);
@@ -42,9 +60,16 @@ export function PlaybackLayer({ s, ctx, frames, scale, bar, compact, onEnd }: Pr
   useEffect(() => {
     let raf = 0;
     let shown = -1;
+    let focused = false;
     const start = performance.now();
     const last = times.length - 1;
-    const stop = (times[last] as number) + TAIL_MS;
+    const stop = Math.max((times[last] as number) + TAIL_MS, focuses[focuses.length - 1]?.end ?? 0);
+    // The roads' mud during playback, drawn by MapView and shown here day by day.
+    const mud = [...(view.svg.current?.querySelectorAll<SVGLineElement>('[data-mud]') ?? [])];
+    const restore = () => {
+      if (focused) view.svg.current?.setAttribute('viewBox', viewBoxOf(view.world, view.camera.current));
+      focused = false;
+    };
     const tick = (now: number) => {
       const t = now - start;
       let i = 0;
@@ -79,14 +104,27 @@ export function PlaybackLayer({ s, ctx, frames, scale, bar, compact, onEnd }: Pr
         ring.style.opacity = on ? String(1 - age) : '0';
         if (on) ring.setAttribute('r', String((6 + 22 * age) * u));
       });
+      // Moving in on a moment that matters, unless you turned it off or moved the map yourself.
+      const focus = view.following.current && view.touched.current < start ? focuses.find((x) => t >= x.start && t < x.end) : undefined;
+      if (focus && view.svg.current) {
+        const user = view.camera.current;
+        const target = zoomTo(view.world, user, Math.max(2.5, zoomOf(view.world, user) * 1.5), focus.at.x, focus.at.y);
+        view.svg.current.setAttribute('viewBox', viewBoxOf(view.world, blend(user, target, focusWeight(t, focus))));
+        focused = true;
+      } else restore();
       if (i !== shown) {
         shown = i;
         const frame = frames[i] as Frame;
-        if (bar.current.clock) bar.current.clock.textContent = clockOf(ctx, frame);
+        if (bar.current.clock) bar.current.clock.textContent = `${clockOf(ctx, frame)}${frame.rain ? ' · rain' : ''}`;
+        bar.current.rain?.classList.toggle('raining', frame.rain);
+        const wet = new Set(frame.mud);
+        // Shown at the stylesheet's own wash; hidden while the road is dry.
+        for (const line of mud) line.style.opacity = wet.has(line.dataset.mud ?? '') ? '' : '0';
         const news = frame.events.filter(newsworthy).pop();
         if (news && bar.current.news) bar.current.news.textContent = eventText(news, s, ctx);
       }
       if (t >= stop) {
+        restore();
         end.current();
         return;
       }
@@ -98,8 +136,9 @@ export function PlaybackLayer({ s, ctx, frames, scale, bar, compact, onEnd }: Pr
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('keydown', onKey);
+      restore();
     };
-  }, [tracks, times, pulses, frames, s, ctx, scale, bar]);
+  }, [tracks, times, pulses, focuses, frames, s, ctx, scale, bar, view]);
 
   return (
     <g className="playback" aria-hidden="true">

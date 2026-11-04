@@ -2,7 +2,7 @@
 // show only what the French would know.
 
 import { describe, expect, it } from 'vitest';
-import { RULES, advance, advanceWithPlayback, createContext, newGame, stateHash, statusOf } from '../../src/engine';
+import { RULES, advance, advanceWithPlayback, createContext, newGame, observedPlaces, stateHash, statusOf } from '../../src/engine';
 import type { Context, Frame, GameState, GroupOrder, Input, Mark } from '../../src/engine';
 import { edgeBetween } from '../../src/engine/graph';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
@@ -115,6 +115,27 @@ describe('the frames', () => {
   });
 });
 
+describe('the weather in the frames', () => {
+  it('is the day\'s rain and the roads as they stand at each hour: mud comes overnight after rain', () => {
+    const run = play(vitebsk, 1812, BOTS.methodical!(vitebsk));
+    let rained = false;
+    let muddy = false;
+    run.inputs.forEach((input, k) => {
+      const s = run.states[k]!;
+      // What the state held at each hour, watched directly.
+      const hours: { rain: boolean; mud: string[] }[] = [{ rain: s.rainToday, mud: Object.keys(s.roads).filter((id) => s.roads[id] === 'mud').sort() }];
+      advance(s, input, vitebsk, (live, at) => {
+        if (at.stage === 'movement' && at.hour !== null) hours.push({ rain: live.rainToday, mud: Object.keys(live.roads).filter((id) => live.roads[id] === 'mud').sort() });
+      });
+      const { frames } = advanceWithPlayback(s, input, vitebsk);
+      expect(frames.map((f) => ({ rain: f.rain, mud: f.mud }))).toEqual(hours);
+      rained ||= frames.some((f) => f.rain);
+      muddy ||= frames.some((f) => f.mud.length > 0);
+    });
+    expect([rained, muddy]).toEqual([true, true]);
+  });
+});
+
 describe('what the French see (§2.8)', () => {
   // No horses to scout with: each group sees 15 km by road. The Cossack post at E is 15 km from B; the Russian
   // main army at D is 37 km away.
@@ -136,6 +157,11 @@ describe('what the French see (§2.8)', () => {
     const seen = result.state.intel.fr['ru-post']!;
     for (const m of enemies) expect(m.strength).toBe(seen.men);
     expect(enemies[0]!.strength % 100).toBe(0);
+  });
+
+  it('the places they can see are those within the same range: A, B and E from the Main body at B, G from the Flank corps at A; not C or D', () => {
+    const s = newGame(blind, 7);
+    expect(observedPlaces(s, blind, 'fr')).toEqual(['A', 'B', 'E', 'G']);
   });
 });
 

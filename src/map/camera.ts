@@ -63,6 +63,17 @@ export function centreOn(world: World, c: Camera, x: number, y: number): Camera 
   return clamp(world, { ...c, x: x - c.width / 2, y: y - heightOf(world, c) / 2 });
 }
 
+/** The view at a given zoom, centred where this one is centred (or on a given point). */
+export function zoomTo(world: World, c: Camera, zoom: number, x = c.x + c.width / 2, y = c.y + heightOf(world, c) / 2): Camera {
+  const width = Math.min(world.width, Math.max(world.width / MAX_ZOOM, world.width / zoom));
+  return clamp(world, { width, x: x - width / 2, y: y - heightOf(world, { ...c, width }) / 2 });
+}
+
+/** A camera part of the way from one to another: `t` 0 is the first, 1 the second. */
+export function blend(a: Camera, b: Camera, t: number): Camera {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, width: a.width + (b.width - a.width) * t };
+}
+
 /** The camera's keys: arrows pan a tenth of the view, + and − zoom about the centre, 0 shows the whole theatre. */
 export function onKey(world: World, c: Camera, key: string): Camera | null {
   switch (key) {

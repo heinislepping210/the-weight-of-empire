@@ -4,7 +4,7 @@
 import { roadDistance } from './graph';
 import { drawBetween } from './rng';
 import type { Context } from './scenario';
-import type { Force, GameState, Side } from './types';
+import type { Force, GameState, NodeId, Side } from './types';
 import { sortedValues } from './util';
 
 export function detectionRange(f: Force, ctx: Context): number {
@@ -23,6 +23,12 @@ export function estimateOf(s: GameState, ctx: Context, side: Side, target: Force
   const err = ctx.rules.intel.estimateErrorPermille;
   const factor = drawBetween(s.seed, ['intel', side, target.id, turn], 1000 - err, 1000 + err);
   return Math.round((target.men * factor) / 100_000) * 100;
+}
+
+/** The places a side can see now: those within its forces' detection range by road, as for enemy forces. */
+export function observedPlaces(s: GameState, ctx: Context, side: Side): NodeId[] {
+  const observers = sortedValues(s.forces).filter((o) => o.side === side && o.men > 0);
+  return [...ctx.graph.nodes.keys()].filter((node) => observers.some((o) => roadDistance(ctx.graph, o.at, node) <= detectionRange(o, ctx))).sort();
 }
 
 export function updateIntel(s: GameState, ctx: Context): void {

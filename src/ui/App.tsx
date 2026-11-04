@@ -9,6 +9,7 @@ import { MapView } from './MapView';
 import { OrdersPanel } from './OrdersPanel';
 import { dispatches } from './dispatches';
 import { shortName, thousands } from './names';
+import { lastSeenDistricts, scarsOf } from './consequences';
 import { eventful } from './playbackModel';
 import { loadRuns, storeRuns, summarize, type SavedRun } from './runs';
 
@@ -62,6 +63,8 @@ export function App() {
   const outcome = useMemo(() => (status.kind === 'ended' ? evaluate(run.states[0] as GameState, s, ctx) : null), [status.kind, run.states, s]);
   const news = useMemo(() => dispatches(run.logs.flat(), s, ctx, ctx.scenario.startDate).reverse(), [run.logs, s]);
   const supply = useMemo(() => supplyLines(s, ctx), [s]);
+  // What the campaign has left on the map, as the French know it (V5).
+  const consequences = useMemo(() => ({ districts: lastSeenDistricts(run.states, ctx), ...scarsOf(run.logs.flat(), s) }), [run.states, run.logs, s]);
 
   function submit(input: Input) {
     const { result, frames } = advanceWithPlayback(s, input, ctx);
@@ -193,7 +196,7 @@ export function App() {
         <main className="layout">
           <div className="map-wrap">
             {asList ? (
-              <MapList s={s} ctx={ctx} objective={directive.objective} onPick={pick} supply={supply} />
+              <MapList s={s} ctx={ctx} objective={directive.objective} onPick={pick} supply={supply} consequences={consequences} />
             ) : (
               <MapView
                 s={s}
@@ -206,10 +209,11 @@ export function App() {
                 onPlaybackEnd={() => setPlaying(false)}
                 trails={played?.frames ?? null}
                 supply={supply}
+                consequences={consequences}
               />
             )}
             <p className="legend">
-              Blue: our groups; the sign shows whether a group is marching, in battle, dispersed to feed or concentrated, and a dashed one is worn. Green: enemy reports, fading with age; after two turns a pale "last seen" marker. Dashed lines: the staff's planned routes; thin solid lines: where each group went last. Brown lines: supply lines from a depot to the group or depot its wagons serve, wider for more a day; red and dashed with "!" where a train brings less than its group eats. Squares: depots. Circles on roads: river crossings. Click a place to make it the objective. Drag to pan; pinch, Ctrl + scroll or the buttons to zoom. Each turn is played back on the map (Skip or Escape to end it).{' '}
+              Blue: our groups; the sign shows whether a group is marching, in battle, dispersed to feed or concentrated, and a dashed one is worn. Green: enemy reports, fading with age; after two turns a pale "last seen" marker. Dashed lines: the staff's planned routes; thin solid lines: where each group went last. Brown lines: supply lines from a depot to the group or depot its wagons serve, wider for more a day; red and dashed with "!" where a train brings less than its group eats. Hatched rings: districts foragers have taken from, darker as less is left, as last seen. A flame: stores burned when a depot changed hands; crossed sabres: a battlefield. A pale wash: dust where columns marched on dry roads; a brown wash: mud. Blue hatching over the map: rain. Squares: depots. Circles on roads: river crossings. Click a place to make it the objective. Drag to pan; pinch, Ctrl + scroll or the buttons to zoom. Each turn is played back on the map, the camera moving in on contacts and battles unless you turn off "Follow events" (Skip or Escape to end it).{' '}
               {played && !playing && !asList && (
                 <>
                   <button type="button" className="link" onClick={replay}>

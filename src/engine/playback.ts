@@ -9,7 +9,7 @@ import { HOURS_PER_SLOT, advance, roadFactor, type AdvanceResult } from './advan
 import { edgeBetween, shortestPath } from './graph';
 import { estimateOf, seenBy } from './intel';
 import type { Context } from './scenario';
-import type { Activity, ConvoyId, ConvoyLeg, GameState, Input, LogEntry, NodeId, Slot } from './types';
+import type { Activity, ConvoyId, ConvoyLeg, EdgeId, GameState, Input, LogEntry, NodeId, Slot } from './types';
 import { must, sortedValues } from './util';
 
 /** A French group, an enemy force the French can see, or a French wagon train on the road, at one moment. */
@@ -45,7 +45,12 @@ export interface Frame {
   marks: Mark[];
   /** What happened since the frame before. */
   events: PlaybackEvent[];
+  /** Whether it rains that day, and the roads turned to mud, which change only overnight (§3.4a). */
+  rain: boolean;
+  mud: EdgeId[];
 }
+
+const weatherOf = (s: GameState) => ({ rain: s.rainToday, mud: Object.keys(s.roads).filter((id) => s.roads[id] === 'mud').sort() });
 
 interface Position {
   at: NodeId;
@@ -159,7 +164,7 @@ function trainHours(s: GameState, ctx: Context, from: Position, end: Position): 
  * movement, each with the events since the frame before. The result is exactly `advance`'s.
  */
 export function advanceWithPlayback(state: GameState, input: Input, ctx: Context): { result: AdvanceResult; frames: Frame[] } {
-  const frames: Frame[] = [{ turn: state.resolution.turn, slot: state.resolution.slot, hour: 0, marks: marksOf(state, ctx, new Map()), events: [] }];
+  const frames: Frame[] = [{ turn: state.resolution.turn, slot: state.resolution.slot, hour: 0, marks: marksOf(state, ctx, new Map()), events: [], ...weatherOf(state) }];
   let seen = 0;
   /** Places each force reached since the last frame. */
   let arrivals = new Map<string, NodeId[]>();
@@ -183,7 +188,7 @@ export function advanceWithPlayback(state: GameState, input: Input, ctx: Context
         trainsFrom = new Map(sortedValues(s.convoys).filter((c) => c.side === 'fr').map((c) => [c.id, { at: c.at, to: c.transit?.to ?? null, metres: c.transit?.metres ?? 0, leg: c.leg }]));
         hourFrames = [];
       }
-      const frame: Frame = { turn: s.resolution.turn, slot: s.resolution.slot, hour: at.hour + 1, marks: marksOf(s, ctx, arrivals), events: eventsOf(s, entries) };
+      const frame: Frame = { turn: s.resolution.turn, slot: s.resolution.slot, hour: at.hour + 1, marks: marksOf(s, ctx, arrivals), events: eventsOf(s, entries), ...weatherOf(s) };
       arrivals = new Map();
       frames.push(frame);
       hourFrames.push(frame);

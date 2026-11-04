@@ -5,7 +5,8 @@ import type { Context, Force, Frame, GameState, PlannedOrder, SupplyLine } from 
 import { bandOf, fit, onKey, panBy, viewBoxOf, zoomAbout, zoomOf, type Camera } from '../map/camera';
 import { shortName, thousands } from './names';
 import { condition } from './OrdersPanel';
-import { PlaybackLayer, type PlaybackBar } from './Playback';
+import { battleText, burnedText, districtText, dustOf, strippingOf, type Consequences } from './consequences';
+import { PlaybackLayer, type PlaybackBar, type PlaybackView } from './Playback';
 import { isShort, supplyText, trailsOf } from './playbackModel';
 import { MAP_HEIGHT, MAP_WIDTH, POSITION, along, type Point } from './projection';
 
@@ -24,9 +25,25 @@ interface Props {
   trails?: readonly Frame[] | null;
   /** The French wagon trains at work and what each can bring a day (G5). */
   supply?: readonly SupplyLine[];
+  /** What the campaign has left on the map, as the French know it (V5). */
+  consequences?: Consequences | null;
 }
 
 const WORLD = { width: MAP_WIDTH, height: MAP_HEIGHT };
+/** Whether the camera follows the moments that matter during playback (V7): a choice kept on this device. */
+const FOLLOW_KEY = 'woe.camera.follow';
+function loadFollow(): boolean {
+  if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+  try {
+    return localStorage.getItem(FOLLOW_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+}
+
+/** A district's mark: a hatched ring around its place, darker as foragers take more of it. */
+const DISTRICT_RADIUS = 17;
+
 /** A press that moves less than this, in screen pixels, is a click, not a drag. */
 const DRAG_PIXELS = 4;
 
@@ -84,7 +101,7 @@ function Glyph({ activity, men }: { activity: Activity; men: number }) {
  * what each group is doing. Each turn plays back on it, then leaves a trail of where each group went, and the supply
  * lines show what each wagon train can bring a day. It shows only what the French know of the enemy.
  */
-export function MapView({ s, ctx, plan, preview = null, objective, onPick, playback = null, onPlaybackEnd = () => {}, trails = null, supply = [] }: Props) {
+export function MapView({ s, ctx, plan, preview = null, objective, onPick, playback = null, onPlaybackEnd = () => {}, trails = null, supply = [], consequences = null }: Props) {
   const [cam, setCam] = useState<Camera>(() => fit(WORLD));
   const svg = useRef<SVGSVGElement>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -111,8 +128,17 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick, playb
   // The playback's loop reads the markers' scale and writes the clock without a render (Playback.tsx).
   const scale = useRef(u);
   scale.current = u;
-  const bar = useRef<PlaybackBar>({ clock: null, news: null });
+  const bar = useRef<PlaybackBar>({ clock: null, news: null, rain: null });
+  // The camera as you left it, and when you last moved it: playback's focus moments return to it, and stop if you move.
+  const camera = useRef(cam);
+  camera.current = cam;
+  const touched = useRef(0);
+  const [follow, setFollow] = useState(loadFollow);
+  const following = useRef(follow);
+  following.current = follow;
+  const view = useMemo<PlaybackView>(() => ({ svg, world: WORLD, camera, touched, following }), []);
   const trailLines = useMemo(() => (trails ? trailsOf(ctx, trails) : []), [ctx, trails]);
+  const dust = useMemo(() => new Set(trails ? dustOf(ctx, trails) : []), [ctx, trails]);
   const major = new Set([...ctx.graph.nodes.keys()].filter((id) => s.depots[id] || (ctx.scenario.keyPlaces ?? []).includes(id) || (ctx.scenario.cutOffPlaces ?? []).includes(id)));
 
   // The wheel zooms when asked to (Ctrl or a trackpad pinch), or once the map has focus; otherwise the page scrolls.
@@ -122,6 +148,7 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick, playb
     const onWheel = (ev: WheelEvent) => {
       if (!ev.ctrlKey && !el.contains(document.activeElement)) return;
       ev.preventDefault();
+      touched.current = performance.now();
       const r = el.getBoundingClientRect();
       setCam((c) => zoomAbout(WORLD, c, Math.exp(-ev.deltaY * 0.0015), (ev.clientX - r.left) / r.width, (ev.clientY - r.top) / r.height));
     };
@@ -136,6 +163,7 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick, playb
 
   function onPointerDown(ev: ReactPointerEvent<SVGSVGElement>) {
     pointers.current.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    touched.current = performance.now();
     if (pointers.current.size === 1) gesture.current = { dragged: false, start: { x: ev.clientX, y: ev.clientY }, pinch: null };
   }
 
@@ -216,18 +244,40 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick, playb
           const next = onKey(WORLD, cam, ev.key);
           if (next) {
             ev.preventDefault();
+            touched.current = performance.now();
             setCam(next);
           }
         }}
       >
+        <defs>
+          <pattern id="stripped" width={6} height={6} patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+            <line x1={0} y1={0} x2={0} y2={6} className="stripped-hatch" />
+          </pattern>
+        </defs>
         <rect width={MAP_WIDTH} height={MAP_HEIGHT} className="map-paper" />
+
+        {consequences &&
+          [...consequences.districts].map(([node, d]) => {
+            const { stripping } = strippingOf(ctx, node, d);
+            if (stripping === 'untouched') return null;
+            const q = POSITION[node] as Point;
+            return (
+              <circle key={`district-${node}`} className={`district district-${stripping}`} cx={q.x} cy={q.y} r={DISTRICT_RADIUS}>
+                <title>{districtText(ctx, node, d, s.resolution.turn)}</title>
+              </circle>
+            );
+          })}
 
         {[...ctx.graph.edges.values()].map((e) => {
           const a = POSITION[e.a] as Point;
           const b = POSITION[e.b] as Point;
-          const wet = s.roads[e.id] === 'mud';
+          // During playback the mud is drawn hour by hour by the playback itself.
+          const wet = !playback && s.roads[e.id] === 'mud';
           return (
             <g key={e.id}>
+              {!playback && dust.has(e.id) && <line className="dust" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />}
+              {wet && <line className="mud-wash" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />}
+              {playback && <line className="mud-wash" data-mud={e.id} style={{ opacity: 0 }} x1={a.x} y1={a.y} x2={b.x} y2={b.y} />}
               <line className={`road road-${e.road}${wet ? ' road-mud' : ''}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
               {(e.crossing === 'pontoon' || e.crossing === 'ford') && <circle className="crossing" cx={(a.x + b.x) / 2} cy={(a.y + b.y) / 2} r={6 * u} />}
             </g>
@@ -306,7 +356,33 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick, playb
           );
         })}
 
-        {playback && <PlaybackLayer key={playback.key} s={s} ctx={ctx} frames={playback.frames} scale={scale} bar={bar} compact={compact} onEnd={onPlaybackEnd} />}
+        {consequences &&
+          [...consequences.burned.map((b) => ({ node: b.node, kind: 'burned' as const, text: burnedText(ctx, b) })), ...consequences.battles.map((b) => ({ node: b.node, kind: 'battle' as const, text: battleText(ctx, b) }))].map((scar, i, all) => {
+            const q = POSITION[scar.node] as Point;
+            // Beside the place, away from its label; a second mark at one place sits further out.
+            const k = all.slice(0, i).filter((x) => x.node === scar.node).length;
+            const dx = (LABEL_LEFT.has(scar.node) ? 1 : -1) * (13 + k * 13);
+            return (
+              <g key={`scar-${i}`} className={`scar scar-${scar.kind}`} transform={`translate(${q.x} ${q.y}) scale(${u}) translate(${dx} -13)`}>
+                <title>{scar.text}</title>
+                {scar.kind === 'burned' ? <path d="M 0 5 C -5 5 -6 0 -3 -3 C -3 0 -1 0 -1 -2 C -1 -5 1 -6 2 -7 C 2 -4 6 -2 5 2 C 4.5 4.5 2.5 5 0 5 Z" /> : <path d="M -5 -5 L 5 5 M 5 -5 L -5 5 M -6 -3 L -3 -6 M 6 -3 L 3 -6" />}
+              </g>
+            );
+          })}
+
+        {playback && (
+          <PlaybackLayer
+            key={playback.key}
+            s={s}
+            ctx={ctx}
+            frames={playback.frames}
+            scale={scale}
+            bar={bar}
+            compact={compact}
+            view={view}
+            onEnd={onPlaybackEnd}
+          />
+        )}
 
         {!playback &&
           Object.keys(s.intel.fr)
@@ -362,10 +438,26 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick, playb
             );
           })}
       </svg>
+      {/* Rain over the map (V6): it falls while it rains; with reduced motion it is a still hatch. */}
+      {playback ? <div key="rain-playback" className="rain-overlay" aria-hidden="true" ref={(el) => void (bar.current.rain = el)} /> : <div key="rain" className={`rain-overlay${s.rainToday ? ' raining' : ''}`} aria-hidden="true" />}
       {playback && (
         <div className="playback-bar" role="group" aria-label="Playback of the turn">
           <span className="playback-clock" ref={(el) => void (bar.current.clock = el)} />
           <span className="playback-news" aria-live="polite" ref={(el) => void (bar.current.news = el)} />
+          <button
+            type="button"
+            aria-pressed={follow}
+            onClick={() => {
+              setFollow(!follow);
+              try {
+                localStorage.setItem(FOLLOW_KEY, follow ? 'off' : 'on');
+              } catch {
+                // Kept for this visit only.
+              }
+            }}
+          >
+            Follow events
+          </button>
           <button type="button" onClick={onPlaybackEnd}>
             Skip
           </button>
@@ -382,6 +474,7 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick, playb
           Whole theatre
         </button>
         <span className="map-band">{band === 'theatre' ? 'Theatre' : band === 'operations' ? 'Operations' : 'Local'}</span>
+        {!playback && s.rainToday && <span className="map-band">Rain</span>}
       </div>
     </div>
   );

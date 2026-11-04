@@ -1,5 +1,6 @@
 export { advance, statusOf, stepOnce, submit, type AdvanceResult, type Watch } from './advance';
 export { stableStringify, stateHash } from './hash';
+export { observedPlaces } from './intel';
 export { advanceWithPlayback, type Frame, type Mark, type PlaybackEvent, type PlaybackEventKind } from './playback';
 export { replay } from './replay';
 export { RULES, RULES_VERSION, type Rules } from './rules';

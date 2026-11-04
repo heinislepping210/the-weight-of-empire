@@ -170,6 +170,8 @@ The simulation underneath is identical; only the way you give orders changes.
 
 **Civilian consequences don't disappear.** Districts show their state (Intact / Requisitioned / Stripped / Hostile). The after-action report records the human cost of foraging choices. It reports this soberly, without lecturing.
 
+*Built (M2, fourth slice):* the map hatches each district by how much foragers have taken from it, by the scarcer of food and fodder (foraged below 85% left, stripped below 50%, bare below 20%), as the French last saw it: a district is drawn only once a French force has come within detection range of it, and keeps what was seen there after they leave. *Requisitioned* and *Hostile* wait for the requisition policy and local resistance, which are not built.
+
 All quantities (wagon capacity, march rates, consumption) come from Phase 2 research as ranges. Where no source exists, the value is a labelled game assumption in the register.
 
 ## 2.7 Movement and geography

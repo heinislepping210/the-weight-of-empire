@@ -1,7 +1,7 @@
 // The map camera (M2, V2): pan, zoom about the pointer, the three zoom bands, and the keys.
 
 import { describe, expect, it } from 'vitest';
-import { MAX_ZOOM, bandOf, centreOn, clamp, fit, heightOf, onKey, panBy, zoomAbout, zoomOf } from '../../src/map/camera';
+import { MAX_ZOOM, bandOf, blend, centreOn, clamp, fit, heightOf, onKey, panBy, zoomAbout, zoomOf, zoomTo } from '../../src/map/camera';
 
 const world = { width: 1000, height: 700 };
 
@@ -55,5 +55,20 @@ describe('the map camera', () => {
     expect(onKey(world, c, 'ArrowRight')!.x).toBeGreaterThan(c.x);
     expect(onKey(world, c, '0')).toEqual(fit(world));
     expect(onKey(world, c, 'a')).toBeNull();
+  });
+
+  it('focuses on a moment: a set zoom about a point, kept on the map, and back by blending', () => {
+    const c = fit(world);
+    const near = zoomTo(world, c, 2.5, 400, 300);
+    expect(zoomOf(world, near)).toBeCloseTo(2.5);
+    expect(near.x + near.width / 2).toBeCloseTo(400);
+    expect(near.y + heightOf(world, near) / 2).toBeCloseTo(300);
+    // A point at the map's edge: the view stays on the map.
+    const corner = zoomTo(world, c, 2.5, 0, 0);
+    expect([corner.x, corner.y]).toEqual([0, 0]);
+    expect(zoomOf(world, zoomTo(world, c, 50))).toBe(MAX_ZOOM);
+    expect(blend(c, near, 0)).toEqual(c);
+    expect(blend(c, near, 1)).toEqual(near);
+    expect(blend(c, near, 0.5).width).toBeCloseTo((c.width + near.width) / 2);
   });
 });

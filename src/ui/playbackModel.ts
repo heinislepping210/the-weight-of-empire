@@ -97,6 +97,41 @@ export function clockOf(ctx: Context, f: Frame): string {
 /** Whether an event is worth showing: wagons that arrive with nothing the group can take are not news. */
 export const newsworthy = (e: PlaybackEvent) => e.kind !== 'delivery' || Number(e.detail.food) + Number(e.detail.fodder) + Number(e.detail.ammo) > 0;
 
+/** How long the camera's focus on a moment takes, easing in and out (V7). */
+export const FOCUS_MS = 1500;
+
+/** A moment the camera focuses on: where, and when it starts and ends in the playback. */
+export interface Focus {
+  at: Point;
+  start: number;
+  end: number;
+}
+
+/**
+ * The moments that matter (a contact, a battle, a depot changing hands), one at a time: a moment that would have to
+ * wait more than 0.7 s behind the one before is passed over, so the camera never lags far behind the turn.
+ */
+export function focusesOf(frames: readonly Frame[], times: readonly number[]): Focus[] {
+  const focuses: Focus[] = [];
+  frames.forEach((f, i) => {
+    const e = f.events.find((x) => x.kind === 'contact' || x.kind === 'battle' || x.kind === 'depotTaken');
+    if (!e) return;
+    const from = times[i] as number;
+    const start = Math.max(from, focuses[focuses.length - 1]?.end ?? 0);
+    if (start - from > 700) return;
+    focuses.push({ at: POSITION[e.node] as Point, start, end: start + FOCUS_MS });
+  });
+  return focuses;
+}
+
+/** How far the camera has moved towards a moment: easing in over the first quarter, out over the last. */
+export function focusWeight(t: number, f: Focus): number {
+  const p = (t - f.start) / (f.end - f.start);
+  if (p < 0 || p > 1) return 0;
+  const smooth = (x: number) => x * x * (3 - 2 * x);
+  return p < 0.25 ? smooth(p / 0.25) : p > 0.75 ? smooth((1 - p) / 0.25) : 1;
+}
+
 /** Whether anything in the frames moves or happens, so that playing them shows something. */
 export function eventful(frames: readonly Frame[]): boolean {
   return frames.some((f, i) => {
