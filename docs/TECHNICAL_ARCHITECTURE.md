@@ -10,7 +10,7 @@ How the game is built: stack, modules, simulation integrity, turn resolution, pe
   2. **SVG interactive layer.** Locations, roads, supply flows, force markers, route previews, labels. It is crisp at any zoom and focusable for keyboard and screen readers.
   3. **Canvas 2D effects layer.** Convoys in motion, smoke, rain and dust particles.
 
-  A small custom camera built on Pointer Events handles pan, zoom, pinch and focus animations.
+  A small custom camera built on Pointer Events handles pan, zoom, pinch and focus animations. *Built (M2, first slice): `src/map/camera.ts` holds the camera as pure functions (pan, zoom about a point, clamping, the three zoom bands, keys), and `MapView` drives the SVG view box with it; labels and markers are drawn at a scale that keeps their size on screen. Focus animations are still to come.*
 - **Animation:** one `requestAnimationFrame` loop interpolates between simulation snapshots and updates elements via refs, with no React re-render per frame. In reduced-motion mode, the map snaps instead of animating.
 
 ## 3.2 Modules

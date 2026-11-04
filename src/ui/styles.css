@@ -119,11 +119,54 @@ button:disabled {
   }
 }
 
+/* The map and its camera (M2): drag to pan, so touch gestures belong to the map, not the page. */
+.map-frame {
+  position: relative;
+}
+
 .map {
+  display: block;
   width: 100%;
   height: auto;
   border: 1px solid var(--stone);
   background: var(--paper);
+  touch-action: none;
+  cursor: grab;
+}
+
+.map:active {
+  cursor: grabbing;
+}
+
+.map-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.map-controls button {
+  min-width: 2rem;
+  padding: 0.15rem 0.5rem;
+}
+
+.map-band {
+  font-family: system-ui, sans-serif;
+  font-size: 0.75rem;
+  color: var(--muted);
+  background: var(--paper);
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--stone);
+  border-radius: 3px;
+}
+
+/* Lines keep their width on screen at any zoom; labels and markers are scaled in the drawing. */
+.road,
+.planned,
+.crossing {
+  vector-effect: non-scaling-stroke;
 }
 
 .map-paper {
@@ -215,6 +258,77 @@ button:disabled {
   fill: #fff;
   font-size: 10px;
   font-family: system-ui, sans-serif;
+}
+
+/* What a group is doing (V3): a glyph sized by its strength; a worn group is dashed and says so. */
+.glyph path,
+.glyph circle,
+.glyph rect {
+  fill: #fff;
+}
+
+.friend-battle .glyph path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1.6;
+}
+
+.friend-worn rect {
+  fill: #5a6f94;
+  stroke: var(--paper);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 2;
+}
+
+/* The map as a list (G7). */
+.map-list > ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.map-list > ul > li {
+  border-top: 1px solid #e2d8c2;
+  padding: 0.35rem 0;
+}
+
+.map-list-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: baseline;
+}
+
+.map-list-head button {
+  margin-left: auto;
+  font-size: 0.8rem;
+}
+
+.map-list-objective {
+  background: #efe3c5;
+}
+
+button.link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--navy);
+  text-decoration: underline;
+  font-size: inherit;
+}
+
+/* A report two turns old or more: a "last seen" ghost with its date. */
+.enemy-ghost rect {
+  fill: var(--paper);
+  stroke: var(--russian);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 2;
+}
+
+.enemy-ghost text {
+  fill: var(--russian);
 }
 
 .legend,

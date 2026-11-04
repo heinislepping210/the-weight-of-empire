@@ -67,7 +67,7 @@ The first release is **The Vitebsk Decision only**, made genuinely excellent bef
 
   (GAMEPLAY_BALANCING.md, contacts corrected.)
 - **Open:** among the tested bots one approach dominates (F3: the southern envelopment is best on 85% of seeds). The strategy now explains 39% of the outcome against 4% for the scenario (F4, rules 0.12.0), but that reflects one dominant bot more than skill measured well. Better bots and an adaptive policy that re-decides every turn are still needed.
-- **Still to do:** your play session.
+- **Waived (4 November, your decision, D-049):** you chose to skip your play session and continue building. Whether the game is fun is now first checked by the human playtests of M3 (Day ~15); the risk is that a problem with the mechanics shows up later, when it costs more to fix. The targeted playtest script and the agent brief remain available.
 
 **M2 — The Living Map (Day ~13) — an explicit gate before battles, events and the report are polished**
 
@@ -98,6 +98,16 @@ The first release is **The Vitebsk Decision only**, made genuinely excellent bef
 4. Playback: columns march, convoys follow, Cossacks raid a convoy, and a supply corridor turns into a bottleneck.
 5. The Russians shift to cover Krasnyi.
 6. A storm turns the roads to mud.
+
+*M2 status (4 November 2026):*
+- **Done, first slice (the map's camera and markers):**
+  - The camera: drag to pan, pinch or Ctrl + scroll to zoom (plain scrolling zooms once the map has focus, so the page still scrolls past it), arrow keys, + and −, 0 for the whole theatre, and on-screen buttons. Three zoom bands: theatre, operations, local.
+  - Labels and markers keep a readable size on any screen. Where the map is drawn small (a phone, the whole theatre), markers show only their sign and strength, and only the main places are named until you zoom in.
+  - Markers show what a group is doing (marching, in battle, dispersed to feed, concentrated), sized by strength; a worn group is dashed and says so (V3, in part).
+  - Enemy reports fade with age and become dated "last seen" markers after two turns (G6, in part).
+  - Smolensk's Old Town and north-bank suburb share one label and stack until the local zoom; no labels overlap at the default zoom at 1280 × 800, 1440 × 900 or phone width, though a marching marker can still cover part of a place's label (V8, in part).
+  - The map as a list, for keyboard and screen-reader play (G7, in part).
+- **Next slices:** route previews on hover or tap (G1, G3); playback of the turn, with columns and convoys moving and supply corridors (G4, G5, V4); geography from real data (V1, G2), which needs your OK to download public-domain geodata, and rule changes for marsh, forest and road capacity, measured first; the painted terrain and the Canva art (your approval for each generation and its credits); weather, lasting consequences and the camera's focus moments (V5–V7); a frame-rate measurement (V2).
 
 You accept it, or list changes.
 
