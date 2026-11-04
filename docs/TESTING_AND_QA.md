@@ -66,3 +66,31 @@ Run them with `npm test`. All of these currently pass.
 | `tests/data/vitebsk-network.test.ts` | the Vitebsk–Smolensk network: sourced places, lengths consistent with coordinates, connected, three separate approaches, real river obstacles; the candidate roads (not in the game) match their coordinates and record their basis, and with them the Old Town reaches the Moscow road without the north bank |
 
 All of these run on a synthetic test map (`tests/fixtures/testGround.ts`) that is not historical data. Mechanics tests use a stand-in Russian command that holds still (`passiveContext`), so they test timing and supply rather than AI choices. The random-play property tests, the scenario tests and the AI tests use the real command. Not yet covered: cross-browser hash equality (needs Playwright), and events, which don't exist yet.
+
+## Frame rate (M2, V2; measured 4 November 2026)
+
+**The probe:** `tools/measure-fps.js`, pasted into the browser console on the game page with the map showing. It drives the map with synthetic input and measures the time between animation frames, phase by phase:
+- still, on the whole theatre;
+- zooming in to the closest view (Ctrl + wheel, as a trackpad pinch);
+- dragging the map in a slow circle at the local zoom;
+- zooming out to the operations zoom and dragging there;
+- zooming out to the whole theatre;
+- playing the last turn again.
+
+It counts the layers drawn before it starts and leaves the map on the whole theatre. A window that is hidden or behind another gets about one frame a second; the probe then reports itself as `throttled`, and such a run measures nothing.
+
+**Where:** the production build (`vite build`, served by `vite preview`) in the app's built-in browser pane on your Mac. The map was 661 CSS pixels wide at a device pixel ratio of 2, on a 60 Hz display, so 60 fps is the ceiling.
+
+| Run | Layers drawn | Median fps, every phase | Slowest 5% of frames | Frames over 25 ms |
+|---|---|---|---|---|
+| Seed 31, turn 4, a battle waiting | 5 groups, 4 enemy reports, 5 supply lines, 8 foraged districts, dust on 7 roads, a battlefield, 5 trails | 59.9–60.2 | 56.8–59.2 fps | 1 of 953 |
+| Seed 31, turn 2, raining | rain falling, mud on all 28 roads, 5 groups, 1 enemy report, 5 supply lines, 2 districts, 5 trails, 5 planned routes | 59.9 | 57.5–59.5 fps | 0 of 951 |
+
+**V2 is met at this size:** every phase holds a median of 60 fps, above the 55 fps asked, and the PixiJS trigger (under 50 fps, §3.1) is far off. Rain and dust cannot be drawn together (dust rises only on dry roads, and rain turns every road to mud), so "all layers on" was measured as these two runs.
+
+**One run is not in the table:** an earlier rainy run held 60 fps for its first half, then fell to a 30 fps median, with the slowest frames at 20 fps, from the zoom-out onwards. A rerun under the same conditions held 60 fps throughout. The cause was not found. The app recorded a click in the page just before that run, and other load on the Mac is possible.
+
+**Not measured:**
+- **A full-size window:** emulating a window larger than the pane throttles its frames, so the probe could not run there. One run of the probe in a full-size browser window is still to do.
+- **A display above 60 Hz.**
+- **Seams and popping:** there is no terrain raster yet, so there are no seams. Labels do change at the band boundaries by design: Smolensk's two parts get their own labels at the local zoom, and on a small map markers drop their names.

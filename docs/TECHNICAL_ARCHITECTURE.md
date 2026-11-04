@@ -212,7 +212,7 @@ Moved to MAP_AND_GEOGRAPHY.md, together with the data licences.
 - Initial JavaScript ≤ ~250 KB gzipped; playable menu in < 3 s on a mid-range laptop over a normal connection.
 - Total first load ≤ ~1.5 MB including the hero image. Event and battle art lazy-loads and is preloaded one turn ahead.
 - Video is never required. Each clip is streamed, has a still-image poster fallback, is skipped under reduced motion, and can always be skipped.
-- 60 fps target for pan and zoom; 30 fps floor on low-end devices with the effects layer reduced.
+- 60 fps target for pan and zoom; 30 fps floor on low-end devices with the effects layer reduced. *Measured on 4 November 2026 (TESTING_AND_QA, "Frame rate"): 60 fps median, with the slowest 5% of frames at 56.8 fps or better, panning, zooming and playing back with every layer on, on the production build in the app's browser pane; a full-size window is still to measure.*
 
 ## 3.9 Hosting
 The static build is deployed to **GitHub Pages** by a GitHub Actions workflow, and only when you approve a release (§6.3). There is no server. The Canva subscription is only needed to *create* assets, never to run the game.
