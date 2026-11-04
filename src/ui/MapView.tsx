@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { when } from '../engine';
 import type { Context, Force, Frame, GameState, PlannedOrder, SupplyLine } from '../engine';
-import { bandOf, fit, onKey, panBy, viewBoxOf, zoomAbout, zoomOf, type Camera } from '../map/camera';
+import { bandOf, fit, heightOf, onKey, panBy, viewBoxOf, zoomAbout, zoomOf, type Camera } from '../map/camera';
 import { shortName, thousands } from './names';
 import { condition } from './OrdersPanel';
 import { battleText, burnedText, districtText, dustOf, strippingOf, type Consequences } from './consequences';
 import { PlaybackLayer, type PlaybackBar, type PlaybackView } from './Playback';
+import { TerrainLayer } from './TerrainLayer';
 import { isShort, supplyText, trailsOf } from './playbackModel';
 import { MAP_HEIGHT, MAP_WIDTH, POSITION, along, type Point } from './projection';
 
@@ -255,6 +256,7 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick, playb
           </pattern>
         </defs>
         <rect width={MAP_WIDTH} height={MAP_HEIGHT} className="map-paper" />
+        <TerrainLayer band={band} u={u} view={{ x: cam.x, y: cam.y, width: cam.width, height: heightOf(WORLD, cam) }} />
 
         {consequences &&
           [...consequences.districts].map(([node, d]) => {

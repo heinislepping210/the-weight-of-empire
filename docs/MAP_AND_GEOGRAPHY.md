@@ -26,7 +26,40 @@ Target: 16–20 locations with alternative routes and real obstacles (acceptance
 - **Relief:** SRTM (public domain).
 - **1812 roads:** hand-authored from period maps, **with a source recorded per segment**.
 - **Forest extent:** approximated from period maps and labelled as an approximation. Today's forests are not 1812's.
-- **Projection:** a conic projection centred on the theatre, computed at build time. The runtime only sees projected coordinates.
+- **Projection:** the places' own projection (longitude scaled by the cosine of the theatre's mean latitude), applied when the game loads to geodata stored in longitude and latitude. Places, roads and terrain share it, so nothing is misplaced against anything else. Compared with a conic projection it stretches the map east to west by up to about 2.5% at its northern and southern edges, a few pixels at the default zoom. *Decided 4 November 2026, in place of the conic projection first planned.*
+
+## Real geography (built 4 November 2026, steps 1–3 of the geodata plan)
+
+- **The pipeline.**
+  - `tools/geo/fetch.mjs` downloads only the approved batch (batch 1, approved 4 November) into `assets-incoming/geo/`, which git ignores, and records each file's URL, licence, size and SHA-256 hash in `tools/geo/manifest.json`.
+  - `tools/geo/build.mjs` checks every input against its hash. It clips the rivers and lakes to the theatre and simplifies them to about 150 m, then averages the SRTM heights into 30 × 45 arc-second cells (about 0.9 by 0.8 km).
+  - It writes `src/data/vitebsk/geo.json`: 119 KB, 80 KB compressed, loaded after the game starts. Its output is byte-identical on every run.
+  - Node alone, no new packages.
+- **What it holds:**
+  - **Natural Earth's rivers at 1:10 million:** the Dnieper, the Western Dvina, the Kasplya, the Sozh, the Desna, the Iput, the Pronya, the Druts and the Besed, and one small lake.
+  - **Missing from that source:** smaller rivers such as the Luchesa at Vitebsk and the Vop. They can be added from the period maps.
+  - **Accuracy:** about a kilometre. That is enough for which bank a town stands on, not for the streets of a town on both banks.
+  - **The relief:** 127 to 289 m, complete, with no voids.
+- **Checks against the network** (`tests/data/vitebsk-geo.test.ts`):
+  - The Dnieper passes within 1.5 km of Orsha, Dubrovna, Rasasna, both parts of Smolensk, Dorogobuzh and Mogilev, and the Dvina passes Vitebsk and Velizh.
+  - Smolensk's Old Town is on the south bank and its suburb on the north; Dubrovna and Liady are south, Valutino north.
+  - The Dnieper's line runs at least 15 m below the theatre's mean height, which shows the relief grid lies the right way round.
+- **Findings, for your decision** (each would change the rules: a crossing slows a road and makes it a difficult exit in battle):
+  1. **Rasasna:** the August 1812 pontoon crossing is set on the Rasasna–Liady road, but in the data Rasasna lies 0.7 km south of the Dnieper. The river therefore falls on the Liubavichi–Rasasna road, and the Rasasna–Liady road crosses none.
+  2. **Valutino–Dorogobuzh:** the road crosses the Dnieper with no crossing marked. The Solovyovo crossing is the candidate to check in the sources.
+  3. **Orsha–Mogilev:** which bank the road kept, and where it crossed, is not established.
+  4. **Mogilev–Mstislavl:** the road must cross the Dnieper and the Pronya; neither crossing is marked.
+
+  Nine other roads whose straight lines cross a river are explained in the test: a town on both banks, or a straight line cutting a bend.
+- **On the map** (`src/ui/TerrainLayer.tsx`, maths in `src/map/terrain.ts`):
+  - **Relief:** a watercolour wash painted once from the heights, smoothed over about 2 km. SRTM measures the tree canopy, and the smoothing drops today's woods. Sepia shadows face away from the north-west light, the valleys are washed green-grey and the higher ground ochre, on a fine paper grain.
+  - **Hachures:** from the operations zoom in, engraved strokes run down the steepest fifth of the ground, and only those in and around the view are drawn.
+  - **Rivers and lakes:** ink lines with their corners rounded for display, and the Dnieper and the Dvina named along their course, clear of the places.
+  - **Credit:** under the map, "rivers from Natural Earth, relief from SRTM data courtesy of the U.S. Geological Survey".
+- **Next, each with its own approval:**
+  - forest and marsh from a rights-checked 19th-century survey (download batch 2);
+  - the 28 roads checked on Piadyshev's maps of 1820–21;
+  - the G2 rules for terrain and road capacity, measured first.
 
 ## Data licences and separation
 

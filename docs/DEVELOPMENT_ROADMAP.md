@@ -120,7 +120,14 @@ The first release is **The Vitebsk Decision only**, made genuinely excellent bef
   - During playback the camera moves in on a contact, a battle or a depot changing hands for about 1.5 s and back; "Follow events" turns it off (remembered on this device), it is off with reduced motion, and it stops once you move the map.
   - **Not drawn, because the game does not simulate them:** heat, haze and mist (the dust is only what dry roads and marching show), and a storm as more than a day's rain. Each would need a weather rule, measured first, and your decision. *Requisitioned* and *Hostile* districts wait for the requisition policy.
 - **Measured, frame rate (V2):** a median of 60 fps in every phase, the most a 60 Hz display shows, against the 55 fps asked. The slowest 5% of frames stayed at 56.8 fps or better while panning, zooming through the three bands and playing a turn back. Two runs on the production build in the app's browser pane covered every layer, with rain and mud in one and dust and a battlefield in the other. One earlier rainy run slowed to 30 fps in its second half and was not repeated by a rerun (TESTING_AND_QA, "Frame rate"). Still to do: one run of the probe (`tools/measure-fps.js`) in a full-size browser window. There is no terrain yet, so no seams; labels change at the band boundaries by design.
-- **Next slices:** geography from real data (V1, G2), which needs your OK to download public-domain geodata, and rule changes for marsh, forest and road capacity, measured first; the painted terrain and the Canva art (your approval for each generation and its credits).
+- **Done, fifth slice (real geography, steps 1–3 of the geodata plan; V1 in part):**
+  - Download batch 1 (approved 4 November): Natural Earth rivers and lakes, 15 SRTM relief tiles, and Piadyshev's provincial maps of 1820–21, 91.5 MB, kept out of the repository and hashed in `tools/geo/manifest.json`.
+  - Built into a 119 KB data file that loads after the game starts.
+  - The map now shows the real relief as a watercolour wash, engraved hachures from the operations zoom in, and the rivers in ink with the Dnieper and the Dvina named. It is credited under the map, with rows R-003 to R-005 in the rights register.
+  - Checked against the network: four findings for your decision, chiefly that the Rasasna pontoon sits on a road that crosses no river in the data (MAP_AND_GEOGRAPHY, "Real geography").
+  - V2 holds with the terrain on, after a fix: a 60 fps median, the slowest 5% of frames at 58.1 fps or better, while zooming and panning.
+  - **Checkpoint A passed (4 November, your decision, D-051):** you judged the terrain against V1's bar ("you'd show it to a professor without apology") and said "Looks right". V1 stays in part until forest and marsh are painted.
+- **Next slices:** forest and marsh from a rights-checked 19th-century survey (download batch 2, your approval); the roads checked on Piadyshev's maps; the G2 rules for terrain and road capacity, measured first; the Canva art (your approval for each generation and its credits).
 
 You accept it, or list changes.
 

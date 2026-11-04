@@ -1,0 +1,225 @@
+{
+  "batch": "download batch 1, approved 2026-11-04",
+  "files": [
+    {
+      "id": "ne-10m-rivers-europe",
+      "file": "natural-earth/ne_10m_rivers_europe.geojson",
+      "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_rivers_europe.geojson",
+      "licence": "Public domain (Natural Earth terms of use; no permission or attribution needed)",
+      "use": "rivers and lakes",
+      "bytes": 2534505,
+      "sha256": "90712202ac46985812e90840df9acd5101599a9c649868d5bc55ee96c2fedd4c",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "ne-10m-rivers-lake-centerlines",
+      "file": "natural-earth/ne_10m_rivers_lake_centerlines.geojson",
+      "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_rivers_lake_centerlines.geojson",
+      "licence": "Public domain (Natural Earth terms of use; no permission or attribution needed)",
+      "use": "rivers and lakes",
+      "bytes": 7307743,
+      "sha256": "bb854a900ecbd3b408df46d5e16e3e0f974ba55993f9d8b5c26e855273c0905a",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "ne-10m-lakes",
+      "file": "natural-earth/ne_10m_lakes.geojson",
+      "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_lakes.geojson",
+      "licence": "Public domain (Natural Earth terms of use; no permission or attribution needed)",
+      "use": "rivers and lakes",
+      "bytes": 5043554,
+      "sha256": "2d036f53dedec578001c5c30c2959ee7d4eebc1306900fa4367c49929ec8f2d9",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "ne-10m-lakes-europe",
+      "file": "natural-earth/ne_10m_lakes_europe.geojson",
+      "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_lakes_europe.geojson",
+      "licence": "Public domain (Natural Earth terms of use; no permission or attribution needed)",
+      "use": "rivers and lakes",
+      "bytes": 1008063,
+      "sha256": "b4dd9e7a5edd0d07b54768b5404d1ebe77f80b9d579c85fff65f90cf50369769",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "srtm-N53E029",
+      "file": "srtm/N53E029.hgt.gz",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N53/N53E029.hgt.gz",
+      "licence": "Public domain (SRTM, with GMTED2010 and ETOPO1 filling any voids); credit: \"SRTM data courtesy of the U.S. Geological Survey\"",
+      "use": "relief",
+      "bytes": 4171115,
+      "sha256": "610a1cb85335ec8f75610262dabc289300652e70ecdddf99b0f7a5dc2f5d866c",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "srtm-N53E030",
+      "file": "srtm/N53E030.hgt.gz",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N53/N53E030.hgt.gz",
+      "licence": "Public domain (SRTM, with GMTED2010 and ETOPO1 filling any voids); credit: \"SRTM data courtesy of the U.S. Geological Survey\"",
+      "use": "relief",
+      "bytes": 4168231,
+      "sha256": "5fcad6d4f6ace8adcadb07de8e1e2b478a44d41cb112e2423d9997e09479bc13",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "srtm-N53E031",
+      "file": "srtm/N53E031.hgt.gz",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N53/N53E031.hgt.gz",
+      "licence": "Public domain (SRTM, with GMTED2010 and ETOPO1 filling any voids); credit: \"SRTM data courtesy of the U.S. Geological Survey\"",
+      "use": "relief",
+      "bytes": 4314487,
+      "sha256": "3f7698fed6ef804cabaa8441a7f4ec2562e6cebb2043d65da504d8aaa2d07f84",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "srtm-N53E032",
+      "file": "srtm/N53E032.hgt.gz",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N53/N53E032.hgt.gz",
+      "licence": "Public domain (SRTM, with GMTED2010 and ETOPO1 filling any voids); credit: \"SRTM data courtesy of the U.S. Geological Survey\"",
+      "use": "relief",
+      "bytes": 4432440,
+      "sha256": "8e259106081d953029e1b0210f064f4716ac62a99080453180b8bf4e633da56b",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "srtm-N53E033",
+      "file": "srtm/N53E033.hgt.gz",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N53/N53E033.hgt.gz",
+      "licence": "Public domain (SRTM, with GMTED2010 and ETOPO1 filling any voids); credit: \"SRTM data courtesy of the U.S. Geological Survey\"",
+      "use": "relief",
+      "bytes": 4581280,
+      "sha256": "8a11544c2e081028bd317f73fd5d1bc90b75f6cc7cd98335343bffd7e22c5a05",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "srtm-N54E029",
+      "file": "srtm/N54E029.hgt.gz",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N54/N54E029.hgt.gz",
+      "licence": "Public domain (SRTM, with GMTED2010 and ETOPO1 filling any voids); credit: \"SRTM data courtesy of the U.S. Geological Survey\"",
+      "use": "relief",
+      "bytes": 4252653,
+      "sha256": "e3b7e1da0366c1607f5af9a10543dcf403937197c21f1070b6168a4dee75b099",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "srtm-N54E030",
+      "file": "srtm/N54E030.hgt.gz",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N54/N54E030.hgt.gz",
+      "licence": "Public domain (SRTM, with GMTED2010 and ETOPO1 filling any voids); credit: \"SRTM data courtesy of the U.S. Geological Survey\"",
+      "use": "relief",
+      "bytes": 4313743,
+      "sha256": "a1488d03de76797d9dea2ca8c1abddc185598a49e91a16d414b011d880402220",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "srtm-N54E031",
+      "file": "srtm/N54E031.hgt.gz",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N54/N54E031.hgt.gz",
+      "licence": "Public domain (SRTM, with GMTED2010 and ETOPO1 filling any voids); credit: \"SRTM data courtesy of the U.S. Geological Survey\"",
+      "use": "relief",
+      "bytes": 4216898,
+      "sha256": "77c228403698b05d13672b2f2b36329c311d7913bd4c4ed85fa522ef17632721",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "srtm-N54E032",
+      "file": "srtm/N54E032.hgt.gz",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N54/N54E032.hgt.gz",
+      "licence": "Public domain (SRTM, with GMTED2010 and ETOPO1 filling any voids); credit: \"SRTM data courtesy of the U.S. Geological Survey\"",
+      "use": "relief",
+      "bytes": 4466673,
+      "sha256": "dee72e107fc35d33c8171c4b6cda55cd01996033f9eac1131976fe7405684ce5",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "srtm-N54E033",
+      "file": "srtm/N54E033.hgt.gz",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N54/N54E033.hgt.gz",
+      "licence": "Public domain (SRTM, with GMTED2010 and ETOPO1 filling any voids); credit: \"SRTM data courtesy of the U.S. Geological Survey\"",
+      "use": "relief",
+      "bytes": 4552509,
+      "sha256": "557904195e97a1c79e02de3a84fd7b7e26aa2ee7b9d062e31323e7893a2475f1",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "srtm-N55E029",
+      "file": "srtm/N55E029.hgt.gz",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N55/N55E029.hgt.gz",
+      "licence": "Public domain (SRTM, with GMTED2010 and ETOPO1 filling any voids); credit: \"SRTM data courtesy of the U.S. Geological Survey\"",
+      "use": "relief",
+      "bytes": 4089350,
+      "sha256": "b3f91067652fd20cce2e2786ebf85118c00a234fec61a8d593f3fe92e6f7870a",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "srtm-N55E030",
+      "file": "srtm/N55E030.hgt.gz",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N55/N55E030.hgt.gz",
+      "licence": "Public domain (SRTM, with GMTED2010 and ETOPO1 filling any voids); credit: \"SRTM data courtesy of the U.S. Geological Survey\"",
+      "use": "relief",
+      "bytes": 4381931,
+      "sha256": "bedbc3e62d4773a4a1da6a4da5eb6265ddad44791472baf54b938ca172d5193c",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "srtm-N55E031",
+      "file": "srtm/N55E031.hgt.gz",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N55/N55E031.hgt.gz",
+      "licence": "Public domain (SRTM, with GMTED2010 and ETOPO1 filling any voids); credit: \"SRTM data courtesy of the U.S. Geological Survey\"",
+      "use": "relief",
+      "bytes": 4348956,
+      "sha256": "452cbf0d15ce67579c0b38b904811e67020bf6bf4d2c7b1f2b8d43840901b11c",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "srtm-N55E032",
+      "file": "srtm/N55E032.hgt.gz",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N55/N55E032.hgt.gz",
+      "licence": "Public domain (SRTM, with GMTED2010 and ETOPO1 filling any voids); credit: \"SRTM data courtesy of the U.S. Geological Survey\"",
+      "use": "relief",
+      "bytes": 4539554,
+      "sha256": "92cae4615b59d9bbf6c77026c4aca7d09e71b916115fc10fa952a14d224bbbc0",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "srtm-N55E033",
+      "file": "srtm/N55E033.hgt.gz",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N55/N55E033.hgt.gz",
+      "licence": "Public domain (SRTM, with GMTED2010 and ETOPO1 filling any voids); credit: \"SRTM data courtesy of the U.S. Geological Survey\"",
+      "use": "relief",
+      "bytes": 4709162,
+      "sha256": "284b2f1a08394ea0adb0706600ab72abc1cf12c4c546a66135b5d292f6a47141",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "piadyshev-vitebsk-1820",
+      "file": "period-maps/piadyshev-vitebsk-1820-LOC-2018688646.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/2/21/General%CA%B9nai%EF%B8%A0a%EF%B8%A1_Karta_Vitebsko%C4%AD_Gubernii_S%CA%BA_pokazaniem%CA%BA_pochtovykh%CA%BA_i_bol%CA%B9shikh%CA%BA_proi%EF%B8%A0e%EF%B8%A1zzhikh%CA%BA_dorog%CA%BA%2C_stant%EF%B8%A0s%EF%B8%A1i%C4%AD_i_razstoi%EF%B8%A0a%EF%B8%A1nii%EF%B8%A0a%EF%B8%A1_mezhdu_onymi_verst%CA%BA._LOC_2018688646.jpg",
+      "licence": "Public domain; Library of Congress, no known restrictions (Wikimedia Commons file record)",
+      "use": "checking roads and rivers (Piadyshev, Geographical Atlas of the Russian Empire, Vitebsk province, 1820)",
+      "bytes": 3370149,
+      "sha256": "872f32202e0e39620bf280106edb27d0ff1f247f3861ba65fa0f5db58eefbd56",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "piadyshev-mogilev-1821",
+      "file": "period-maps/piadyshev-mogilev-1821-LOC-2018688648.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/a/a4/General%CA%B9nai%EF%B8%A0a%EF%B8%A1_Karta_Mogilevsko%C4%AD_Gubernii_S%CA%BA_pokazaniem%CA%BA_pochtovykh%CA%BA_i_bol%CA%B9shikh%CA%BA_proi%EF%B8%A0e%EF%B8%A1zzhikh%CA%BA_dorog%CA%BA%2C_stant%EF%B8%A0s%EF%B8%A1i%C4%AD_i_razstoi%EF%B8%A0a%EF%B8%A1nii%EF%B8%A0a%EF%B8%A1_mezhdu_onymi_verst%CA%BA._LOC_2018688648.jpg",
+      "licence": "Public domain; Library of Congress, no known restrictions (Wikimedia Commons file record)",
+      "use": "checking roads and rivers (Piadyshev, Mogilev province, 1821)",
+      "bytes": 3324448,
+      "sha256": "e6f5c4f83bf92a6bf0375a3d06153c34b505dc35a32c8516b25467151a0a37ef",
+      "obtained": "2026-11-04"
+    },
+    {
+      "id": "piadyshev-smolensk-1821",
+      "file": "period-maps/piadyshev-smolensk-1821-LOC-2018688655.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/8/8b/General%CA%B9nai%EF%B8%A0a%EF%B8%A1_Karta_Smolensko%C4%AD_Gubernii_S%CA%BA_pokazaniem%CA%BA_pochtovykh%CA%BA_i_bol%CA%B9shikh%CA%BA_proi%EF%B8%A0e%EF%B8%A1zzhikh%CA%BA_dorog%CA%BA%2C_stant%EF%B8%A0s%EF%B8%A1i%C4%AD_i_razstoi%EF%B8%A0a%EF%B8%A1nii%EF%B8%A0a%EF%B8%A1_mezhdu_onymi_verst%CA%BA._LOC_2018688655.jpg",
+      "licence": "Public domain; Library of Congress, no known restrictions (Wikimedia Commons file record)",
+      "use": "checking roads and rivers (Piadyshev, Smolensk province, 1821)",
+      "bytes": 3352601,
+      "sha256": "d688131e40064072deed1709e018a9bf4f118f055fc8ad9206b77f87b5f26d49",
+      "obtained": "2026-11-04"
+    }
+  ]
+}

@@ -6,7 +6,12 @@ How the game is built: stack, modules, simulation integrity, turn resolution, pe
 - **React + TypeScript + Vite.** Exact versions are pinned at setup. The game is UI-heavy — panels, reports, tooltips, accessibility — which is React's strength.
 - **No game framework.** Phaser would fight React for the UI and brings physics and scene systems we don't need. **PixiJS** (WebGL 2D) is the fallback for the map layer only, if a measured trigger occurs: under 50 fps while panning or zooming, with all layers on, on a mid-range laptop. The map renderer sits behind an interface, so that swap is contained.
 - **The map is three stacked layers:**
-  1. **Terrain base.** A raster painted in code from real geodata — rivers, marshes, forests, relief — with watercolour washes, paper texture and engraved linework. Rendered once per zoom band and cached.
+  1. **Terrain base.** A raster painted in code from real geodata — rivers, marshes, forests, relief — with watercolour washes, paper texture and engraved linework. Rendered once per zoom band and cached. *Built (M2, 4 November 2026), in part:*
+     - the relief is one raster, 1536 pixels wide, painted once when the geodata arrives and placed in the SVG as an image;
+     - the engraved hachures, rivers and lakes are SVG paths, so they stay sharp at any zoom;
+     - only the hachures in and around the view are drawn, sized with the zoom rather than as non-scaling strokes, which made panning at the operations zoom drop to 20 fps.
+
+     Forest and marsh are still to come (MAP_AND_GEOGRAPHY, "Real geography").
   2. **SVG interactive layer.** Locations, roads, supply flows, force markers, route previews, labels. It is crisp at any zoom and focusable for keyboard and screen readers.
   3. **Canvas 2D effects layer.** Convoys in motion, smoke, rain and dust particles.
 

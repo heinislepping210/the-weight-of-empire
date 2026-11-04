@@ -41,6 +41,8 @@
       worst5PercentFps: Math.round(10_000 / at(0.95)) / 10,
       framesOver25ms: times.filter((t) => t > 25).length,
       band: document.querySelector('.map-band')?.textContent ?? null,
+      // About one frame a second: the window was hidden or covered during this phase, which then measures nothing.
+      throttled: sorted.length > 0 && at(0.5) > 200,
     };
   }
 
@@ -78,6 +80,8 @@
     trails: count('.trail'),
     planned: count('.planned'),
     raining: document.querySelector('.rain-overlay.raining') !== null,
+    rivers: count('.river'),
+    terrain: document.querySelector('.terrain image') !== null,
   };
   const screen = { mapWidthPx: Math.round(svg.getBoundingClientRect().width), devicePixelRatio: window.devicePixelRatio };
 
@@ -96,7 +100,7 @@
     results.push(await phase('playing the last turn', 3500));
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   }
-  // A window that is hidden or behind another gets about one frame a second: such a run measures nothing.
-  const throttled = (results[0]?.medianFps ?? 0) < 30;
+  // A window that is hidden or behind another gets about one frame a second: such a phase measures nothing.
+  const throttled = results.filter((r) => r.throttled).map((r) => r.phase);
   return { throttled, results, screen, layers };
 })();

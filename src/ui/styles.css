@@ -170,6 +170,52 @@ button:disabled {
   vector-effect: non-scaling-stroke;
 }
 
+/* The terrain (V1): relief as a watercolour wash with engraved hachures, rivers and lakes in ink. The hachures are
+   sized with the zoom (TerrainLayer), not as non-scaling strokes, which would be recomputed on every frame of a pan. */
+.hachures {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.river,
+.river-wash,
+.lake {
+  vector-effect: non-scaling-stroke;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hachures {
+  stroke: #6b5a45;
+  opacity: 0.5;
+}
+
+.river {
+  stroke: #3f6684;
+}
+
+.river-wash {
+  stroke: #a9c4d4;
+  opacity: 0.5;
+}
+
+.lake {
+  fill: #b7cdd9;
+  stroke: #3f6684;
+  stroke-width: 1;
+}
+
+.river-label {
+  fill: #3f6079;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  letter-spacing: 0.08em;
+  paint-order: stroke;
+  stroke: var(--paper);
+  stroke-width: 2.5px;
+}
+
 /* What the campaign leaves on the map (V5). A district foragers have taken from is hatched around its place,
    darker as less is left; burned stores and battlefields are marked beside the place; columns on dry roads raise
    dust; mud is a brown wash along the road. */
