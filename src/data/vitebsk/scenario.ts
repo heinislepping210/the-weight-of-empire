@@ -101,15 +101,16 @@ function atStrength(f: ForceInit, strength: FrenchStrength): ForceInit {
 const DISTRICTS: Record<string, District> = Object.fromEntries(PLACES.map((p) => [p.id, { food: 150_000, fodder: 150_000 }]));
 
 /**
- * The scenario. For what-if runs only: `candidateRoads` adds the roads not yet adopted (MAP_AND_GEOGRAPHY.md), and
- * `frenchStrength` starts the French at another strength, their wagon trains grown with them.
+ * The scenario. For what-if runs only: `candidateRoads` adds the roads not yet adopted (MAP_AND_GEOGRAPHY.md),
+ * `frenchStrength` starts the French at another strength, their wagon trains grown with them, and `roadReadings`
+ * uses the lengths the road audit read from the maps of 1820–21.
  */
-export function vitebskDecision(options: { candidateRoads?: boolean; frenchStrength?: FrenchStrength } = {}): ScenarioDef {
-  const { nodes, edges } = vitebskNetwork({ candidates: options.candidateRoads ?? false });
+export function vitebskDecision(options: { candidateRoads?: boolean; frenchStrength?: FrenchStrength; roadReadings?: boolean } = {}): ScenarioDef {
+  const { nodes, edges } = vitebskNetwork({ candidates: options.candidateRoads ?? false, readings: options.roadReadings ?? false });
   const strength = options.frenchStrength ?? 'mid-august';
   const served = new Map(FORCES.map((f) => [f.id, growth(f, strength)]));
   return {
-    id: ['vitebsk-decision', ...(options.candidateRoads ? ['candidate-roads'] : []), ...(strength !== 'mid-august' ? [strength] : [])].join('+'),
+    id: ['vitebsk-decision', ...(options.candidateRoads ? ['candidate-roads'] : []), ...(strength !== 'mid-august' ? [strength] : []), ...(options.roadReadings ? ['road-readings'] : [])].join('+'),
     title: 'The Vitebsk Decision',
     startDate: '1812-08-05',
     turns: 10,

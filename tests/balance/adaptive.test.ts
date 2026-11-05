@@ -39,7 +39,8 @@ const tercile = (values: number[]) => {
 };
 
 it.skipIf(env.BALANCE !== '1')('adaptive policy on held-out seeds', () => {
-  const ctx = createContext(vitebskDecision());
+  // What-if roads, as in the batch: BALANCE_SCENARIO=road-audit-lengths (HISTORICAL_RESEARCH).
+  const ctx = createContext(vitebskDecision({ roadReadings: env.BALANCE_SCENARIO === 'road-audit-lengths' }));
   const candidates = Object.keys(BOTS).filter((n) => n !== 'random');
   // Endings per approach, scenario and roll of the dice.
   const ending: Record<string, EndingId[][]> = Object.fromEntries(candidates.map((n) => [n, []]));

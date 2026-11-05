@@ -7,7 +7,7 @@
 export type CutOffCredit = 'stands' | 'atEnd' | 'graded';
 
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.18.1';
+export const RULES_VERSION = '0.19.0';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside

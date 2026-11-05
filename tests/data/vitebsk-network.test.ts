@@ -48,6 +48,8 @@ describe('Vitebsk–Smolensk network (provisional)', () => {
       const b = at.get(r.b)!;
       const h = Math.sin(((b.lat - a.lat) * rad) / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(((b.lon - a.lon) * rad) / 2) ** 2;
       const direct = 2 * 6371008.8 * Math.asin(Math.sqrt(h));
+      // The one road with its length from a map, not from G-007 (D-052).
+      if (r.id === 'liozno-liubavichi') continue;
       const factor = r.id === 'smolensk-bridges' ? 1 : 1.25;
       expect(Math.abs(r.metres - direct * factor), r.id).toBeLessThan(60);
     }
@@ -71,7 +73,7 @@ describe('Vitebsk–Smolensk network (provisional)', () => {
   });
 
   it('makes the Dnieper and the Smolensk bridges real obstacles (G2)', () => {
-    expect(ROADS.find((r) => r.id === 'rasasna-liady')?.crossing).toBe('pontoon');
+    expect(ROADS.find((r) => r.id === 'liubavichi-rasasna')?.crossing).toBe('pontoon');
     // The Moscow road starts from the north bank; from the Old Town it is reached over the bridges, or by the
     // ford at Prudichevo that Junot took (H-022, D-044): a river crossing either way.
     expect(neighboursOf(graph, 'valutino').map((n) => n.node).sort()).toEqual(['dorogobuzh', 'smolensk', 'smolensk-north']);

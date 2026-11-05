@@ -11,10 +11,13 @@ const directive = (over: Partial<Directive>): Directive => ({ objective: null, a
 describe('axes: genuinely different routes to an objective', () => {
   const axes = axesTo(ctx, 'liozno', 'smolensk-north');
 
-  it('finds the Rudnia road, the southern swing and the northern flank, shortest first', () => {
+  it('finds the Rudnia road, the southern swing and the road by Orsha, shortest first, and with a fourth the northern flank', () => {
     expect(axes).toHaveLength(3);
-    expect(axes.map((a) => a.label)).toEqual([expect.stringContaining('Rudnia'), expect.stringContaining('Rasasna'), expect.stringContaining('Porechye')]);
+    expect(axes.map((a) => a.label)).toEqual([expect.stringContaining('Rudnia'), expect.stringContaining('Rasasna'), expect.stringContaining('Orsha')]);
     for (let i = 1; i < axes.length; i++) expect(axes[i]!.metres).toBeGreaterThan(axes[i - 1]!.metres);
+    // The route cards ask for four, so that G1's three approaches are always among them.
+    const four = axesTo(ctx, 'liozno', 'smolensk-north', 4);
+    expect(four.map((a) => a.label)).toEqual([expect.stringContaining('Rudnia'), expect.stringContaining('Rasasna'), expect.stringContaining('Orsha'), expect.stringContaining('Porechye')]);
     for (const a of axes) {
       expect(a.places[0]).toBe('liozno');
       expect(a.places.at(-1)).toBe('smolensk-north');

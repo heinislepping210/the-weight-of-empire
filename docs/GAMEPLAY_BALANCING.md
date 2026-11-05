@@ -780,3 +780,59 @@ Only the four southern-envelopment bots choose a route (always the one by Rasasn
 - Zero invariant violations in every run.
 
 **Your decision (4 November 2026): adopt on-route** (rules 0.18.1, D-050). In the table above, "adopted" is the rule before 0.18.1, now the what-if `shortest`. Both golden games are unchanged apart from the rules version they record, and the route cards on the opening turn no longer say "Same orders as …".
+
+## The road audit, measured (4 November 2026)
+
+The road audit (HISTORICAL_RESEARCH, "The road audit") read the game's roads on the maps of 1820–21. Each correction was first measured alone, as a what-if. **The crossings and classes are now adopted (rules 0.19.0, D-052); the lengths are not.** Only the lengths remain as a what-if (`BALANCE_SCENARIO=road-audit-lengths`; `ROAD_READINGS` in `roads.ts`): the other what-if levels went when their corrections were adopted, and their reports stay as the record. In this table "now" is rules 0.18.1. 1,000 seeds, first roll, zero invariant violations in every run. "Won" is Decisive Success, Costly Victory and Operational Success together.
+
+| Bot (now → classes → crossings → lengths → lengths with scaled ranges) | Won | Decisive Success | Repulse |
+|---|---|---|---|
+| southern-envelopment-guard-at-base | 31.4% → 35.3% → 37.3% → 4.9% → 8.5% | 4.6% → 3.6% → 8.8% → 0% → 0% | 44.5% → 21.2% → 34.7% → 90.5% → 74.3% |
+| southern-envelopment-hold | 19.8% → 30.0% → 27.6% → 9.5% → 24.6% | 0% → 2.1% → 6.1% → 0% → 0% | 52.7% → 26.1% → 31.6% → 67.9% → 37.2% |
+| southern-envelopment-wait-for-trains | 19.2% → 27.2% → 22.2% → 5.8% → 31.7% | 0.2% → 0.7% → 0% → 0% → 0% | 24.9% → 25.7% → 29.7% → 59.9% → 18.0% |
+| southern-envelopment | 7.4% → 13.3% → 14.0% → 2.0% → 6.9% | 0% → 0.2% → 1.9% → 0% → 0% | 21.7% → 11.9% → 16.8% → 38.4% → 22.5% |
+
+The other bots stay at about nothing won under every setting.
+
+**Reading:**
+- **Crossings:** the bridge moves from Babinovichi–Orsha to Orsha–Dubrovna, the pontoon from Rasasna–Liady to Liubavichi–Rasasna, and crossings are added at Pnewa and Mogilev, with the new road Liozno–Liubavichi. The trap plans gain, and Decisive Success rises, chiefly on the holding plans. The likely cause is the crossing on the Moscow road: any crossing makes an exit contested, and this is the Russians' line of retreat. That cause is inferred, not separately measured.
+- **Classes:** main post roads get their class, and the Rudnia road loses it. The envelopments gain, and their Repulses fall by about half on the two best plans.
+- **Lengths:** shortening 15 roads by 13% in all collapses the trap plans. On guard-at-base the French lose three times as many battles (0.84 → 2.46 a game), and the Russian main armies lose less than half as much (24.7% → 10.9%).
+- **Part of that is the Russian command's ranges.** Its strike reach, threat radius and isolation distance are set in metres, on the longer map. Scaling those three by the same 13% (the last column) restores the holding plan and the wait-for-trains plan. Guard-at-base stays at 8.5%, and no plan reaches Decisive Success. Why that plan does not recover is not known.
+
+**What this cannot say:**
+- 13 roads have no reading, the Rudnia road among them, so they stay at G-007's lengths while the others shrink. The what-if map is lopsided, and it favours the routes the maps could read.
+- The bots were written and timed on the longer map, so a plan's collapse may belong to the bot, not the map.
+- Other values in metres (foraging reach, contested-exit distance, the staff's depot spacing) were not scaled.
+- The cumulative levels with lengths were run only at 300 seeds, and show lengths dominating.
+- The table above is first roll only. Crossings and classes together have the full batch, below.
+
+Reports: [classes](balance/2026-11-04-whatif-road-audit-classes.md), [crossings](balance/2026-11-04-whatif-road-audit-crossings.md), [lengths](balance/2026-11-04-whatif-road-audit-lengths.md), [lengths with scaled ranges](balance/2026-11-04-whatif-road-audit-lengths-scaled-ranges.md).
+
+### Crossings and classes together (full batch)
+
+Every correction but the lengths, with the new Liozno–Liubavichi road: 1,000 seeds × 3 sets of dice, against the same run on the roads of rules 0.18.1. Zero invariant violations in both.
+
+| Bot | Won | Decisive Success | Repulse | Operational Collapse |
+|---|---|---|---|---|
+| southern-envelopment-guard-at-base | 31.7% → 35.1% | 5.2% → 3.5% | 43.3% → 24.4% | 0% → 0.2% |
+| southern-envelopment-hold | 20.3% → 31.8% | 0% → 1.3% | 51.5% → 22.7% | 0.8% → 3.8% |
+| southern-envelopment-wait-for-trains | 19.5% → 31.2% | 0.2% → 2.0% | 25.2% → 20.8% | 1.4% → 2.2% |
+| southern-envelopment | 8.0% → 9.9% | 0% → 0.1% | 21.9% → 8.8% | 1.0% → 3.4% |
+| concentrated-push-staged | 0.1% → 0.1% | 0% | 1.4% → 3.1% | 0.3% → 6.4% |
+| pinning-attack | 0% | 0% | 25.3% → 39.0% | 0% |
+| pinning-fix-first | 0.1% → 0% | 0% | 26.5% → 46.6% | 0% |
+
+**Reading:**
+- **Three trap plans instead of one.** Guard-at-base led alone; now it, the holding plan and the wait-for-trains plan all win about a third of their games, and Repulses fall on all of them.
+- **Decisive Success spreads rather than grows.** Guard-at-base loses some (5.2% → 3.5%) and the other plans gain. At least one purposeful bot reaches it on 5.9% of seeds, up from 4.6%. The effects don't add: crossings alone gave guard-at-base 8.8% on the first roll, and classes alone 3.6%.
+- **The Rudnia road costs something.** Downgraded from post road, it serves the staged push worse: it ends with 0.5 days' food instead of 1.4, and collapses in 6.4% of games instead of 0.3%. Line trains also move less food (about 795,000 → 660,000 rations). The link between those is inferred.
+- **The pinning attacks do worse,** with Repulses up on all of them, and still no wins.
+- **Reading the scenario matters more.** On held-out seeds the best fixed approach is still bait-and-converge (rank 3.04), but a perfect reader of the scenario now beats it by 0.29 ranks, up from 0.15, and wins 32.9% of games, up from 27.3%. The adaptive policy, reading two figures at the first decision, still captures none of it.
+- **F3 and F4:** no family is best on more than 38% of seeds. Strategy still explains more of the ending than the scenario (14.1% against 10.1%; before, 19.4% against 6.1%), by less than before.
+
+Nothing here was tuned towards a target. Two values are assumptions: the crossings at Pnewa and Mogilev are entered as bridges, because the maps mark no bridge or ferry there. The Liubavichi–Liady reading stays uncertain.
+
+Reports: [batch, rules 0.18.1](balance/2026-11-04-rules-0.18.1.md), [batch, what-if](balance/2026-11-04-whatif-road-audit-no-lengths.md), [batch, rules 0.19.0](balance/2026-11-04-rules-0.19.0.md), [adaptive, rules 0.18.1](balance/2026-11-04-adaptive-0.18.1.md), [adaptive, what-if](balance/2026-11-04-whatif-road-audit-no-lengths-adaptive.md), [adaptive, rules 0.19.0](balance/2026-11-04-adaptive-0.19.0.md).
+
+**Your decision (4 November 2026): adopt them** (rules 0.19.0, D-052). The full batch and the adaptive run on the adopted game match the what-if reports above line for line, apart from the headings, so the figures in this section stand for rules 0.19.0. The lengths stay a separate phase, since adopting them means revisiting the Russian ranges and the bots first.

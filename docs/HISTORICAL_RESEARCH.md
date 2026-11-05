@@ -241,3 +241,50 @@ A few units grew (the 25th Line, 2,004 to 2,918; detachments rejoining), and the
 
 Sources consulted: Foord (1914), Project Gutenberg #57185, pp. 118–155; *Voennaya entsiklopediya* (Sytin, 1911–1915), vol. 5, "Valutina gora", via Russian Wikisource; Nafziger, "French Grande Armée, 1 August 1812" (812HAB) and "Grande Armée, 15 August 1812" (812HDA), via the Wayback Machine copies of the US Army Combined Arms Research Library's collection; Wikidata Q13635925 (Lubino).
 
+
+## The road audit (4 November 2026)
+
+All 28 roads the game then had, checked against the nearest good maps to 1812: Piadyshev's general maps of Vitebsk (1820), Mogilev (1821) and Smolensk (1821) provinces, which draw "post and large passable roads, stations and the distances between them in versts". Schubert's Special Map of Western Russia (1853, Estonian National Archives) was read in the archive's zoom viewer as a second reference, only where Piadyshev is silent. **The road classes and crossings below are adopted in rules 0.19.0, with the new Liozno–Liubavichi road (D-052).** The lengths are not: they stay in `ROAD_READINGS` in `src/data/vitebsk/roads.ts`, offered only as a what-if. A verst is taken as 1,066.8 m.
+
+**Lengths.** 15 of the 28 roads can be read, and together they come to 809 km against the game's 929 km, 13% shorter. The typical road runs about 1.07 times the straight line, not the × 1.25 of G-007; only the Porechye road fits that factor.
+
+| Road | Stages on the map (versts) | Maps | Game | Change |
+|---|---|---|---|---|
+| Vitebsk–Liozno | 21¾ to Polowiki, about 11 to Gryshanki (unnumbered, by scale), 9 | 44.5 km | 54.5 km | −18% |
+| Vitebsk–Surazh | 19¾ to Naponovshchina, 20¼ | 42.7 km | 53.8 km | −21% |
+| Surazh–Velizh | 20 to Verkhovye, 21 | 43.7 km | 46.3 km | −5% |
+| Velizh–Porechye | 18 to Kariaki, 23 | 43.7 km | 52.6 km | −17% |
+| Porechye–Smolensk | 14 to Peresud, 18 to Kiseleva, 18 to Perikhova, 23 | 77.9 km | 77.7 km | 0% |
+| Vitebsk–Babinovichi | 21¾ to Polowiki, 25 | 49.9 km | 58.2 km | −14% |
+| Babinovichi–Orsha | 18 to Orekhi, 20 | 40.5 km | 47.0 km | −14% |
+| Orsha–Dubrovna | 16¼ | 17.3 km | 23.0 km | −25% |
+| Dubrovna–Liady | 13 to Kozyany, 17½ | 32.5 km | 38.8 km | −16% |
+| Liady–Krasnyi | 16 | 17.1 km | 22.1 km | −23% |
+| Krasnyi–Smolensk | 23 to Korytnia, 23 | 49.1 km | 58.0 km | −15% |
+| Valutino–Dorogobuzh | From Smolensk: 23 to Bredikhino, 17 to Pnewa, 25 to Mikhailovka, 23; less the game's 12.8 km to Valutino | 81.1 km | 90.2 km | −10% |
+| Orsha–Mogilev | 21¾ to Alexandria, 17 to Shklov, 13 to Dobreika, 20 | 76.5 km | 83.7 km | −9% |
+| Mogilev–Mstislavl | 16¼ to Bryle, 12¾ to Sukhari, 19 to Suslovka, 13½ to Riasna, 15¼ to Bystritsa, 17 | 100.0 km | 114.0 km | −12% |
+| Mstislavl–Smolensk | 15 to Mazyki, 17 to Khislavichi, 28, 27 | 92.8 km | 109.2 km | −15% |
+
+Two readings fall just under the straight line between the game's town coordinates (Orsha–Dubrovna 0.94, Vitebsk–Surazh 0.99). A stage ran between stations at a town's edge, not between today's town centres. The last two stages of Mstislavl–Smolensk are thin lines, read less surely than the post roads.
+
+**Road classes.** Several roads the game has as secondary are drawn as main post roads: Vitebsk–Surazh, Vitebsk–Babinovichi–Orsha and Smolensk–Porechye. Velizh–Porechye is a district road, not a track.
+
+**The Rudnia road.** The game has Vitebsk–Liozno–Rudnia–Smolensk as a post road. Piadyshev doesn't draw it at all, and Rudnia isn't on his maps. His branch to Liozno is a lesser road off the Vitebsk–Orsha post road. By 1853 Schubert shows Rudnia on a heavy dashed road, with a heavy solid road just north of it towards Smolensk. So the route existed, and accounts of August 1812 use it, but "post road" in 1812 looks too high. Its length can't be read from either map.
+
+**Crossings.** These settle or sharpen the findings from the real geography (MAP_AND_GEOGRAPHY):
+- **Orsha (new):** the town stands west of the Dnieper. The Vitebsk road reaches it without crossing, and the river falls on the road to Dubrovna. The game had the bridge on Babinovichi–Orsha, the wrong side; it now stands on Orsha–Dubrovna.
+- **Orsha–Mogilev:** the road keeps to the west bank, so it needs no crossing once Orsha is on the right side.
+- **Rasasna:** Schubert's Rosasna stands on the Dnieper, with Novoe Tukhino across the river, and a road runs south to Kozyany on the post road. So the river falls on Liubavichi–Rasasna, not Rasasna–Liady, as the geodata suggested, and the pontoon has moved there. Piadyshev doesn't name Rasasna.
+- **The Moscow road:** the post road crosses the Dnieper just east of Pnewa, 40 versts from Smolensk. The map marks no bridge or ferry there, so the bridge now on Valutino–Dorogobuzh is an assumption; Pnewa is the place to check for the Solovyovo crossing.
+- **Mogilev–Mstislavl:** Mogilev stands west of the Dnieper, so the road crosses at the town; the bridge now on this road is an assumption of the same kind. The Pronya crossing is unconfirmed.
+
+**Roads the game has that the maps don't:** Surazh–Porechye, Liozno–Babinovichi, Liubavichi–Rudnia, Rudnia–Porechye, Mstislavl–Krasnyi and Babinovichi–Liubavichi as a numbered road. These maps show only post and large roads, so country tracks may well have existed; the game keeps them as tracks. Smolensk's bridges and the Prudichevo ford are too local for these maps.
+
+**A road the maps have that the game didn't:** Liozno–Liubavichi, 25¾ versts (27.5 km), now in the game as a secondary road. It is the one road with its length from a map.
+
+**Other finds.** Inkovo, left out for want of a location, is on the Smolensk map, north-west of Smolensk near the province boundary. A 23½-verst road runs from Liubavichi by Novoe Tukhino, apparently towards Dubrovna; that reading is uncertain.
+
+What these corrections do to the game is measured in GAMEPLAY_BALANCING, "The road audit, measured".
+
+Sources: V. P. Piadyshev, *Geographical Atlas of the Russian Empire*, sheets of Vitebsk (1820), Mogilev and Smolensk (1821), Library of Congress scans LOC 2018688646, 2018688648 and 2018688655 via Wikimedia Commons; T. F. Schubert, *Special Map of the Western Part of Russia*, sheet XIII, 1853, National Archives of Estonia, EAA.46.2.348, read in the viewer only.

@@ -30,6 +30,8 @@ const WITH_CANDIDATE_ROADS = env.BALANCE_SCENARIO === 'candidate-roads';
  * and french-5-august-cavalry with their cavalry from the returns too (HISTORICAL_RESEARCH, the history audit).
  */
 const FRENCH: FrenchStrength = env.BALANCE_SCENARIO === 'french-5-august' ? 'returns-5-august' : env.BALANCE_SCENARIO === 'french-5-august-cavalry' ? 'returns-5-august-cavalry' : 'mid-august';
+/** What-if roads: BALANCE_SCENARIO=road-audit-lengths uses the lengths the road audit read from the maps (HISTORICAL_RESEARCH). */
+const ROAD_READINGS = env.BALANCE_SCENARIO === 'road-audit-lengths';
 const enabled = env.BALANCE === '1';
 
 /** Share of the French wagon trains' draught horses lost over the game, in permille (G-019). */
@@ -143,7 +145,7 @@ function battleFigures(end: GameState, log: LogEntry[], decisive: boolean): Pick
 
 it.skipIf(!enabled)('balance batch', () => {
   const rules = OVERRIDES ? (overridden(RULES, OVERRIDES, 'rules') as Rules) : RULES;
-  const ctx = createContext(vitebskDecision({ candidateRoads: WITH_CANDIDATE_ROADS, frenchStrength: FRENCH }), rules);
+  const ctx = createContext(vitebskDecision({ candidateRoads: WITH_CANDIDATE_ROADS, frenchStrength: FRENCH, roadReadings: ROAD_READINGS }), rules);
   const names = Object.keys(BOTS);
   const results: Record<string, Result[]> = {};
   const problems: string[] = [];
@@ -201,6 +203,7 @@ it.skipIf(!enabled)('balance batch', () => {
   lines.push(`# Balance report: rules ${RULES_VERSION}${OVERRIDES || WITH_CANDIDATE_ROADS || FRENCH !== 'mid-august' ? ' (what-if)' : ''}, The Vitebsk Decision, seeds 1–${SEEDS}${DICE > 1 ? `, ${DICE} sets of dice each` : ''}`, '');
   if (OVERRIDES) lines.push(`**What-if run, not the adopted rules.** Overrides: \`${JSON.stringify(OVERRIDES)}\``, '');
   if (WITH_CANDIDATE_ROADS) lines.push('**What-if map, not the adopted network:** with the candidate roads (MAP_AND_GEOGRAPHY.md, "Missing").', '');
+  if (ROAD_READINGS) lines.push('**What-if map, not the adopted network:** with the lengths of the road audit (HISTORICAL_RESEARCH, "The road audit").', '');
   if (FRENCH !== 'mid-august') lines.push(`**What-if strength, not the adopted scenario:** the French start at their 5 August strength by Nafziger's returns of 1 and 15 August, each group's horses, wagons and carried stocks grown with it${FRENCH === 'returns-5-august-cavalry' ? ', and its cavalry from the returns' : ', its cavalry in the same proportion'}; guns, depots and the Russians as adopted (HISTORICAL_RESEARCH, the history audit).`, '');
   lines.push(`Bots: ${names.join(', ')}. Approach families: ${FAMILIES.join(', ')}. Battles are left to the marshal.`, '');
   lines.push(`**Invariant violations: ${problems.length}**${problems.length ? ` (first: ${problems.slice(0, 5).join('; ')})` : ''}`, '');

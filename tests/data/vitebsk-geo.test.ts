@@ -1,6 +1,6 @@
 // The theatre's real geography (MAP_AND_GEOGRAPHY §3.7) against the game's places and roads. The rivers come from
 // Natural Earth at 1:10 million, good to about a kilometre: enough for which bank a town stands on, not for the
-// streets of a town on both banks. Findings that would change the rules are listed here for a decision, not fixed.
+// streets of a town on both banks. The crossings follow the maps of 1820–21 (the road audit, D-052).
 
 import { describe, expect, it } from 'vitest';
 import geoJson from '../../src/data/vitebsk/geo.json';
@@ -54,11 +54,8 @@ function riverLatAt(lon: number, lines: readonly (readonly LonLat[])[]): number[
 
 const NAMED = ['Dnieper', 'Western Dvina', 'Kasplya', 'Sozh', 'Pronya'];
 
-/**
- * Roads whose straight line crosses a named river with no crossing marked, each with why. `finding` marks one that
- * may need a crossing the rules lack: a decision for you, since a crossing slows a road and makes it a difficult exit.
- */
-const UNMARKED: Record<string, { reason: string; finding?: true }> = {
+/** Roads whose straight line crosses a named river with no crossing marked, each with why. */
+const UNMARKED: Record<string, { reason: string }> = {
   'vitebsk-liozno': { reason: 'Vitebsk stands on both banks of the Dvina; the crossing is the town\'s own' },
   'vitebsk-babinovichi': { reason: 'Vitebsk stands on both banks of the Dvina; the crossing is the town\'s own' },
   'vitebsk-surazh': { reason: 'Vitebsk stands on both banks of the Dvina; the valley road keeps to one bank' },
@@ -66,12 +63,9 @@ const UNMARKED: Record<string, { reason: string; finding?: true }> = {
   'velizh-porechye': { reason: 'Porechye stands on the Kasplya' },
   'surazh-porechye': { reason: 'Porechye stands on the Kasplya' },
   'porechye-smolensk-north': { reason: 'Porechye stands on the Kasplya' },
-  'orsha-dubrovna': { reason: 'Orsha stands on the river; the road keeps to the south bank, and the straight line cuts a bend' },
+  'babinovichi-orsha': { reason: 'on Piadyshev the road reaches Orsha on the west bank; the straight line cuts the river\'s bend into the town' },
   'smolensk-north-valutino': { reason: 'both on the north bank; the straight line cuts a bend' },
-  'liubavichi-rasasna': { reason: 'Rasasna lies south of the Dnieper in the data, so the river falls on this road, while the August 1812 pontoon crossing is set on Rasasna–Liady', finding: true },
-  'valutino-dorogobuzh': { reason: 'Valutino lies north of the Dnieper and Dorogobuzh on it; no crossing is marked on the Moscow road (the Solovyovo crossing is the candidate to check in the sources)', finding: true },
-  'orsha-mogilev': { reason: 'which bank the Orsha–Mogilev road kept, and where it crossed, is not established', finding: true },
-  'mogilev-mstislavl': { reason: 'Mogilev stands on the Dnieper and Mstislavl east of it, beyond the Pronya: neither crossing is marked', finding: true },
+  'orsha-mogilev': { reason: 'on Piadyshev the road keeps to the west bank; the straight line cuts the river\'s bends' },
 };
 
 describe('the geography data', () => {
@@ -114,17 +108,16 @@ describe('the rivers and the game\'s places', () => {
     expect([bank('smolensk'), bank('smolensk-north'), bank('dubrovna'), bank('liady'), bank('valutino')]).toEqual(['south', 'north', 'south', 'south', 'north']);
   });
 
-  it('every marked crossing crosses its river, apart from the pontoon at Rasasna (a finding)', () => {
+  it('every marked crossing crosses its river', () => {
     const lines = NAMED.flatMap(linesOf);
     const marked = ROADS.filter((r) => r.crossing !== null);
     const missed = marked.filter((r) => !crosses(place(r.a), place(r.b), lines)).map((r) => r.id);
-    expect(missed).toEqual(['rasasna-liady']);
+    expect(missed).toEqual([]);
   });
 
   it('every road that crosses a named river with no crossing marked is accounted for', () => {
     const lines = NAMED.flatMap(linesOf);
     const unmarked = ROADS.filter((r) => r.crossing === null && crosses(place(r.a), place(r.b), lines)).map((r) => r.id).sort();
     expect(unmarked).toEqual(Object.keys(UNMARKED).sort());
-    expect(Object.entries(UNMARKED).filter(([, x]) => x.finding).map(([id]) => id)).toEqual(['liubavichi-rasasna', 'valutino-dorogobuzh', 'orsha-mogilev', 'mogilev-mstislavl']);
   });
 });

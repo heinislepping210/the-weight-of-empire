@@ -64,7 +64,8 @@ export function OrdersPanel({ s, ctx, directive, onDirective, plan, summary, sup
   const places = [...ctx.graph.nodes.values()].sort((a, b) => a.name.localeCompare(b.name));
   const lead = directive.objective ? leadGroup(s, ctx, directive.objective) : null;
   // The routes traced from the current lead group, and the chosen one even when it was traced from another.
-  const traced = directive.objective && lead ? axesTo(ctx, lead.at, directive.objective) : [];
+  // Up to four: from Liozno the new road to Liubavichi puts Orsha ahead of the northern flank by Porechye (G1, D-052).
+  const traced = directive.objective && lead ? axesTo(ctx, lead.at, directive.objective, 4) : [];
   const kept = directive.axis && !traced.some((a) => a.id === directive.axis?.id) ? directive.axis : null;
   const routes: Axis[] = kept ? [kept, ...traced] : traced;
   const set = (change: Partial<Directive>) => onDirective({ ...directive, ...change });

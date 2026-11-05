@@ -124,10 +124,13 @@ The first release is **The Vitebsk Decision only**, made genuinely excellent bef
   - Download batch 1 (approved 4 November): Natural Earth rivers and lakes, 15 SRTM relief tiles, and Piadyshev's provincial maps of 1820–21, 91.5 MB, kept out of the repository and hashed in `tools/geo/manifest.json`.
   - Built into a 119 KB data file that loads after the game starts.
   - The map now shows the real relief as a watercolour wash, engraved hachures from the operations zoom in, and the rivers in ink with the Dnieper and the Dvina named. It is credited under the map, with rows R-003 to R-005 in the rights register.
-  - Checked against the network: four findings for your decision, chiefly that the Rasasna pontoon sits on a road that crosses no river in the data (MAP_AND_GEOGRAPHY, "Real geography").
+  - Checked against the network: four findings, chiefly that the Rasasna pontoon sat on a road that crosses no river in the data (MAP_AND_GEOGRAPHY, "Real geography"). The road audit settled them.
   - V2 holds with the terrain on, after a fix: a 60 fps median, the slowest 5% of frames at 58.1 fps or better, while zooming and panning.
   - **Checkpoint A passed (4 November, your decision, D-051):** you judged the terrain against V1's bar ("you'd show it to a professor without apology") and said "Looks right". V1 stays in part until forest and marsh are painted.
-- **Next slices:** forest and marsh from a rights-checked 19th-century survey (download batch 2, your approval); the roads checked on Piadyshev's maps; the G2 rules for terrain and road capacity, measured first; the Canva art (your approval for each generation and its credits).
+- **Road audit (step 5 of the geodata plan), done; classes and crossings adopted as rules 0.19.0 (D-052):** all 28 roads checked on the maps of 1820–21, with Schubert's map of 1853 as a second reference. On the 15 roads the maps number, the game's lengths run 13% long, several road classes were wrong, and the Orsha bridge and the Rasasna pontoon sat on the wrong roads (HISTORICAL_RESEARCH, "The road audit"). Crossings and classes together, on the full batch, give three trap plans winning about a third of their games instead of one (GAMEPLAY_BALANCING, "The road audit, measured").
+  - **The new road moved a route off the cards, now fixed:** with Liozno–Liubavichi in the network, the staff's third route from Liozno to the north bank became the one by Orsha, and the northern flank that G1 asks for dropped out. The route cards now ask for four routes. The bots still use three, so nothing measured changes.
+  - **Still a what-if: the lengths.** Alone they collapse the trap plans, partly because the Russian ranges are set in metres. Adopting them is a phase of its own, with the Russian ranges and the bots revisited first.
+- **Next slices:** forest and marsh: Schubert's map shows marsh but no woodland symbol was seen, and the Public Domain sheets at RCIN need checking in your own browser (download batch 2, your approval); the G2 rules for terrain and road capacity, measured first; the Canva art (your approval for each generation and its credits).
 
 You accept it, or list changes.
 

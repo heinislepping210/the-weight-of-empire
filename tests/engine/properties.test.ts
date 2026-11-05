@@ -63,6 +63,8 @@ const GOLDEN: Record<string, string> = {
   // A group already on a chosen route follows it (D-050). The same game as 0.18.0, which no route enters: with the
   // version label set back to 0.18.0 it reproduces ace0bdbfd267a81a; the state records the rules version.
   '0.18.1': 'ae00ce353d5b3ca1',
+  // The test ground has its own roads: the same game, with the rules version recorded in it.
+  '0.19.0': 'e0fa7f6f01420b6c',
 };
 
 /**
@@ -87,6 +89,8 @@ const GOLDEN_VITEBSK: Record<string, string> = {
   '0.18.0': '78bd0b273d8bc56e',
   // The same game as 0.18.0 (it reproduces 78bd0b273d8bc56e with the version label set back): D-050.
   '0.18.1': 'b8fd258c60f4a523',
+  // The road audit's classes and crossings, and the road from Liozno to Liubavichi (D-052).
+  '0.19.0': 'e524b9bf1bf1ca6d',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */

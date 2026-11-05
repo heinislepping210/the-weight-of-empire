@@ -120,11 +120,13 @@ describe('the army-level summary comes first', () => {
   });
 
   it('names the groups that would arrive only after the campaign ends', () => {
-    // Eugène sent all the way round the southern route, against the staff's advice.
-    const plan = planDirective(start(), ctx, directive({ objective: 'smolensk', axis: southern(), overrides: { 'fr-left': { road: 'route' } } }));
+    // Eugène sent all the way round the southern route, against the staff's advice, with the campaign nearly over.
+    const s = start();
+    s.resolution.turn = ctx.scenario.turns - 1;
+    const plan = planDirective(s, ctx, directive({ objective: 'smolensk', axis: southern(), overrides: { 'fr-left': { road: 'route' } } }));
     const late = plan.filter((p) => p.arrival && slotIndexOf(p.arrival.dry) > slotIndexOf({ turn: ctx.scenario.turns, slot: 3 }));
     expect(late.length).toBeGreaterThan(0);
-    expect(summarizePlan(start(), ctx, plan).lines[0]).toContain(`After the campaign ends: ${late.map((p) => p.name).join('; ')}.`);
+    expect(summarizePlan(s, ctx, plan).lines[0]).toContain(`After the campaign ends: ${late.map((p) => p.name).join('; ')}.`);
   });
 
   it('names a group that would meet a stronger known enemy on its own', () => {
@@ -192,9 +194,9 @@ describe('route previews (M2, G1 and G3): each route read before it is chosen', 
     twinsAgree(old);
     const orsha = old.find((p) => p.axis?.label.includes('Orsha'))!;
     expect(orsha.sameAs).toBe(old.find((p) => p.axis?.label.includes('Rasasna'))!.axis!.label);
-    // The southern swing crosses the Dnieper on the pontoons between Rasasna and Liady.
+    // The southern swing crosses the Dnieper on the pontoons between Liubavichi and Rasasna (D-052).
     const south = previews.find((p) => p.axis?.label.includes('Rasasna'))!;
-    expect(south.crossings).toContainEqual({ between: 'Rasasna and Liady', by: 'pontoon' });
+    expect(south.crossings).toContainEqual({ between: 'Liubavichi and Rasasna', by: 'pontoon' });
   });
 
   it('forecasts fatigue on arrival, higher on a forced march', () => {
