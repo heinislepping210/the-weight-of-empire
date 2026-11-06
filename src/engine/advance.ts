@@ -652,7 +652,7 @@ interface March {
  * of its own side and waits to set out until the road is clear. Of columns ready at one moment the shorter goes
  * first, and only between equal columns do names decide.
  */
-export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: number[], hour: number, log: LogEntry[]): void {
+export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: number[], hour: number, log: LogEntry[], queued?: (f: Force, lead: Force) => void): void {
   const res = s.resolution;
   const queueing = ctx.rules.march.columnMetresPerThousand > 0;
   const lengthOf = (edgeId: string) => must(ctx.graph.edges.get(edgeId), edgeId).metres;
@@ -759,6 +759,7 @@ export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: n
         // Closed up: from now on it moves at the pace of the column ahead.
         tr.metres = Math.min(here, limit(f, lead, now));
         r.behind = lead;
+        if (lead.side === f.side) queued?.(f, lead);
       } else {
         // The column it was closing on has just reached the end of the road: it goes on at its own pace.
         Object.assign(r, { t0: now, m0: here });
@@ -785,15 +786,19 @@ export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: n
     if (enemyPresent(s, f.side, f.at) || f.route.length === 0) r.done = true;
   };
 
-  /** The moment a column of its own side on this road will have gone its length, and left room to set out. */
-  const roadClearAt = (f: Force, edge: EdgeDef, to: NodeId, now: number): number =>
+  /** The column of its own side that fills this road longest, and the moment it will have gone its length. */
+  const roadClearAt = (f: Force, edge: EdgeDef, to: NodeId, now: number): { at: number; lead: Force | null } =>
     sortedValues(s.forces)
       .filter((e) => e.side === f.side && e.men > 0 && e.transit?.edge === edge.id && e.transit.to === to)
-      .reduce((t, e) => {
-        const short = columnMetres(e, ctx.rules) - pos(e, now);
-        if (short <= 0) return t;
-        return Math.max(t, rateOf(e) > 0 ? now + Math.ceil((short * PER_HOUR) / rateOf(e)) : Infinity);
-      }, now);
+      .reduce<{ at: number; lead: Force | null }>(
+        (best, e) => {
+          const short = columnMetres(e, ctx.rules) - pos(e, now);
+          if (short <= 0) return best;
+          const at = rateOf(e) > 0 ? now + Math.ceil((short * PER_HOUR) / rateOf(e)) : Infinity;
+          return best.lead === null || at > best.at ? { at, lead: e } : best;
+        },
+        { at: now, lead: null },
+      );
 
   /** Setting out along the next road of its route, if nothing bars the way. */
   const setOut = (r: March, now: number) => {
@@ -809,8 +814,11 @@ export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: n
     // A column of its own side still filling the road: it waits, this hour if the road clears in time.
     if (queueing) {
       const clear = roadClearAt(f, edge, to, now);
-      if (clear <= HOUR && clear > now) Object.assign(r, { done: false, t0: clear });
-      if (clear > now) return;
+      if (clear.lead) {
+        queued?.(f, clear.lead);
+        if (clear.at <= HOUR) Object.assign(r, { done: false, t0: clear.at });
+        return;
+      }
     }
     // An enemy at the far end setting out towards us at this same moment: a draw decides who gets onto the road.
     const rival = runs.some(

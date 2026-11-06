@@ -144,12 +144,13 @@ describe('a column closed up behind one enemy column, with another ahead of it',
   // Third review, measuring the retreat rule: Russians closed up behind a fast French corps followed it past a
   // slower French corps it overtook. Both French corps are on the road before the Russians, so neither is passed.
   it('when the column it follows overtakes a slower enemy column, the follower is held behind that one', () => {
+    // Columns of one side pass each other only with road capacity off (G-024), which is what sets this case up.
     const ctx = createContext(
       testGround((d) => {
         d.forces = d.forces.filter((f) => f.id !== 'ru-post');
         d.convoys = [];
       }),
-      RULES,
+      { ...RULES, march: { ...RULES.march, columnMetresPerThousand: 0 } },
       { russianCommand: (s: GameState) => void Object.assign(s.forces['ru-main']!, { route: ['C'], pace: 'forced' }) },
     );
     const start = newGame(ctx, 3);

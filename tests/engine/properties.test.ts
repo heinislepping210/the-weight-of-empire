@@ -71,6 +71,8 @@ const GOLDEN: Record<string, string> = {
   // A Russian strike stays within reach (D-054). No strike happens here: with the version label set back to 0.20.0
   // it reproduces a31ef12d3a72c678.
   '0.21.0': 'ac6f394a8c2bc287',
+  // A real change: columns of one side queue on a road (D-055).
+  '0.22.0': 'f9ca3d9b08457fda',
 };
 
 /**
@@ -101,6 +103,8 @@ const GOLDEN_VITEBSK: Record<string, string> = {
   '0.20.0': '1382a748cbfbf44f',
   // A real change: the Russians strike no further than Rudnia (D-054).
   '0.21.0': '5b9201b2b685d979',
+  // A real change: columns of one side queue on a road (D-055).
+  '0.22.0': '304bdefc00f226e7',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */

@@ -176,7 +176,7 @@ All quantities (wagon capacity, march rates, consumption) come from Phase 2 rese
 
 ## 2.7 Movement and geography
 - Routes form a network of locations and road segments. Each segment has: length (from real geodata), road class (post road / secondary / track), terrain (open / forest / marsh), crossing type (bridge / ford / none — pontoon needed), condition (dry / muddy, driven by weather), and **capacity**.
-- **Road capacity matters.** A big force on one road moves slowly because its column is very long. Splitting across parallel roads is faster — which is why Napoleonic armies marched divided. This creates a real reason to use multiple routes.
+- **Road capacity matters.** A big force on one road moves slowly because its column is very long. Splitting across parallel roads is faster — which is why Napoleonic armies marched divided. This creates a real reason to use multiple routes. *Built in rules 0.22.0 (D-055, G-024): columns of one side queue on a road, and the staff's plans, the route cards and the summary show it.*
 - **Route preview** (hover or drag): arrival day as a range, fatigue cost, supply forecast at arrival, known threats, and the crossings involved.
 
 ## 2.8 Intelligence and fog of war

@@ -125,8 +125,8 @@ describe('over whole games on the real map', () => {
     }
   });
 
-  it('the Russians beaten back from the block on the last morning are still cut off (seed 2)', () => {
-    const run = play(ctx, 2, BOTS['southern-envelopment-hold']!(ctx));
+  it('the Russians beaten back from the block on the last morning are still cut off (seed 13)', () => {
+    const run = play(ctx, 13, BOTS['southern-envelopment-hold']!(ctx));
     expect(run.final.resolution.turn).toBe(ctx.scenario.turns + 1);
     expect(evaluate(run.states[0] as GameState, run.final, ctx).russian).toBe('cutOff');
   });

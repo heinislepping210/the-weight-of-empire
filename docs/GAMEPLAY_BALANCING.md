@@ -868,7 +868,7 @@ Reports: [batch, 0.20.0](balance/2026-11-04-rules-0.20.0.md), [adaptive, 0.20.0]
 
 ## The Russian strike and road capacity (what-ifs, 5 November 2026)
 
-With the ending judged properly, the trap won about three games in four. Two what-ifs bore on that. **The strike limit is now adopted (rules 0.21.0, D-054); road capacity is not.** In this section "0.20.0" is the rule before the limit, what-if `russian.strikeMarchMetres: 0`.
+With the ending judged properly, the trap won about three games in four. Two what-ifs bore on that. **Both are now adopted: the strike limit in rules 0.21.0 (D-054), road capacity in 0.22.0 (D-055).** In this section "0.20.0" is the game with neither, what-if `russian.strikeMarchMetres: 0` and `march.columnMetresPerThousand: 0`.
 
 **Why the trap is so strong.** On the holding plan the Russians march out on turns 1–2 (70–83% of games) to strike the vanguard at Liozno, 106 km from Smolensk, and leave the city empty. Its depot falls by turn 5 in 86% of games, and they arrive back after the French hold Valutino. A strike at Krasnyi from Rudnia also takes the shortest road, 92 km round by Liubavichi, Rasasna and Liady, away from home and into the French rear.
 
@@ -905,11 +905,13 @@ With the ending judged properly, the trap won about three games in four. Two wha
 **What this cannot say:**
 - The bots were written for a game without queues and with Russians who go to Liozno. A player who divides the army and watches where the Russians march may do better than any of them.
 - Only one family can win under any option. The push and the bait still end in Limited Success, so F1 and F2 stay far from their targets.
-- Road capacity is left out of the staff's forecasts. They plan each group alone, so queues would surprise the player until the forecasts learn them. It must not be adopted before that.
+- When these runs were made the staff's forecasts planned each group alone. They now forecast the army together, so a plan, the route cards and the summary all show queues. Forecasts change no order, so the figures stand.
 - The Russian command does not plan around queues either. A command that did might suffer less from them.
 - The Rudnia limit rests on G-007's length for a road the maps could not read.
 - The pontoon road is open to the Russians too, though they had no bridge there. G2's rule that the Dnieper needs a bridge or the pontoon train is not built yet.
 
 Reports: [queues](balance/2026-11-05-whatif-road-capacity.md) and [adaptive](balance/2026-11-05-whatif-road-capacity-adaptive.md); [strike limit](balance/2026-11-05-whatif-strike-limit.md) and [adaptive](balance/2026-11-05-whatif-strike-limit-adaptive.md); [both](balance/2026-11-05-whatif-strike-limit-road-capacity.md) and [adaptive](balance/2026-11-05-whatif-strike-limit-road-capacity-adaptive.md); first roll only, [strike reach 90 km](balance/2026-11-04-whatif-strike-reach-90.md) and [resolve 70](balance/2026-11-04-whatif-strike-resolve-70.md). The queue runs took about 20 hours of wall time because the computer slept, so vitest marked them failed on its three-hour limit; their reports are complete.
 
-**Your decision (5 November 2026): adopt the strike limit** (rules 0.21.0, D-054). The full batch and the adaptive run on the adopted game match the what-if reports line for line, apart from their headings: [batch](balance/2026-11-05-rules-0.21.0.md), [adaptive](balance/2026-11-05-adaptive-0.21.0.md). Road capacity comes next, once the staff's forecasts can see queues. The game to aim for is the two together: until then the trap ranks below a safe Limited Success on average, a cost accepted with this decision.
+**Your decision (5 November 2026): adopt the strike limit** (rules 0.21.0, D-054). The full batch and the adaptive run on the adopted game match the what-if reports line for line, apart from their headings: [batch](balance/2026-11-05-rules-0.21.0.md), [adaptive](balance/2026-11-05-adaptive-0.21.0.md). Until road capacity came, the trap ranked below a safe Limited Success on average, a cost accepted with this decision.
+
+**Your decision (6 November 2026): adopt road capacity** (rules 0.22.0, D-055), with the staff's forecasts now seeing queues. The full batch and the adaptive run on the adopted game match the what-if reports line for line, apart from their headings: [batch](balance/2026-11-06-rules-0.22.0.md), [adaptive](balance/2026-11-06-adaptive-0.22.0.md). Known costs: guard-at-base is the clear best fixed plan, and the Russian command does not plan around queues.

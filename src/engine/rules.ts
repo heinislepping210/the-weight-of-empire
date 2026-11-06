@@ -7,7 +7,7 @@
 export type CutOffCredit = 'stands' | 'atEnd' | 'graded';
 
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.21.0';
+export const RULES_VERSION = '0.22.0';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -23,11 +23,11 @@ export const RULES = {
     crossingPermille: 600,
     fatigueSlowdownFrom: 500,
     /**
-     * Road capacity (G-024, L-013), a what-if, off at 0: the road a column takes up, in metres per thousand men.
-     * On one road, going one way, a column stays that far behind a column of its own side and waits to set out
-     * until the road is clear. Clausewitz has the next division an hour behind: 230 at the game's pace (L-013).
+     * Road capacity (G-024, L-013, D-055): the road a column takes up, in metres per thousand men. On one road, going
+     * one way, a column stays that far behind a column of its own side and waits to set out until the road is clear.
+     * Clausewitz has the next division an hour behind: 230 at the game's pace. At 0, the rule before: no queues.
      */
-    columnMetresPerThousand: 0 as number,
+    columnMetresPerThousand: 230 as number,
   },
   convoy: {
     // L-002: 18 km/day

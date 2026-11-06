@@ -1,11 +1,11 @@
-// Road capacity (G-024, L-013), a what-if: off in the adopted rules, measured before any decision. The contract:
+// Road capacity (G-024, L-013, D-055). The contract, shown here at 500 m per 1,000 men so that the distances are round:
 //   1. On one road, going one way, a column stays at least the length of the column of its side ahead of it behind
 //      that column, and never passes it.
 //   2. A column waits to set out until the road is clear; of columns ready at one moment the shorter goes first.
 //   3. Other roads, the other direction and places are not limited: a place is where columns pass one another.
 //   4. Enemy columns behave as before. Both sides are under the same rule.
 //   5. It keeps no state of its own, so a column that waited a whole sub-step has simply rested.
-//   6. With the rule off, nothing changes (the golden games in properties.test.ts).
+//   6. At 0 the rule is off, and columns of one side do not block each other.
 
 import { describe, expect, it } from 'vitest';
 import { RULES, advance, createContext, newGame, statusOf, submit } from '../../src/engine';
@@ -18,6 +18,7 @@ import { violations } from '../fixtures/invariants';
 import { holdStill, testGround } from '../fixtures/testGround';
 
 const QUEUE: Rules = { ...RULES, march: { ...RULES.march, columnMetresPerThousand: 500 } };
+const OFF: Rules = { ...RULES, march: { ...RULES.march, columnMetresPerThousand: 0 } };
 
 /** Both French columns at B with a long post road to C; the Russians out of the way at F. */
 function ground(edit: (d: ScenarioDef) => void = () => {}): ScenarioDef {
@@ -46,10 +47,14 @@ function march(rules: Rules, scenario: ScenarioDef, orders: GroupOrder[], prepar
 
 const metres = (s: GameState, id: string) => s.forces[id]!.transit?.metres ?? null;
 
-describe('with the rule off, as adopted', () => {
-  it('has no road capacity: two columns set out together and march level', () => {
-    expect(RULES.march.columnMetresPerThousand).toBe(0);
-    const { final } = march(RULES, ground(), [order('fr-main', ['C']), order('fr-flank', ['C'])]);
+describe('the rule', () => {
+  it('is adopted at 230 m per 1,000 men: an hour behind a division of 8,000 at the game\'s pace', () => {
+    expect(RULES.march.columnMetresPerThousand).toBe(230);
+    expect(columnMetres({ men: 8_000 } as never, RULES)).toBeLessThan(RULES.march.metresPerSlot.steady / 6 + 100);
+  });
+
+  it('at 0, two columns set out together and march level', () => {
+    const { final } = march(OFF, ground(), [order('fr-main', ['C']), order('fr-flank', ['C'])]);
     expect(metres(final, 'fr-main')).toBe(metres(final, 'fr-flank'));
   });
 });
@@ -57,12 +62,12 @@ describe('with the rule off, as adopted', () => {
 describe('columns of one side on one road', () => {
   it('measures a column by its men', () => {
     expect(columnMetres({ men: 40_000 } as never, QUEUE)).toBe(20_000);
-    expect(columnMetres({ men: 40_000 } as never, RULES)).toBe(0);
+    expect(columnMetres({ men: 40_000 } as never, OFF)).toBe(0);
   });
 
   it('sends the shorter column first, and the longer waits until it has gone its length', () => {
     const { final, hours } = march(QUEUE, ground(), [order('fr-main', ['C']), order('fr-flank', ['C'])]);
-    const alone = march(RULES, ground(), [order('fr-flank', ['C'])]).final;
+    const alone = march(OFF, ground(), [order('fr-flank', ['C'])]).final;
     // The shorter column is not held up at all.
     expect(metres(final, 'fr-flank')).toBe(metres(alone, 'fr-flank'));
     expect(metres(final, 'fr-flank')! - metres(final, 'fr-main')!).toBeGreaterThanOrEqual(10_000);
@@ -95,7 +100,7 @@ describe('columns of one side on one road', () => {
     const gaps = hours.filter((h) => h.forces['fr-flank']!.transit).map((h) => metres(h, 'fr-flank')! - metres(h, 'fr-main')!);
     expect(gaps.at(-1)!).toBeGreaterThan(gaps[0]!);
     // Nothing has held it back: four sub-steps at a steady pace, on a post road.
-    expect(metres(hours.at(-1)!, 'fr-main')).toBe(metres(march(RULES, ground(), [order('fr-main', ['C'])]).final, 'fr-main'));
+    expect(metres(hours.at(-1)!, 'fr-main')).toBe(metres(march(OFF, ground(), [order('fr-main', ['C'])]).final, 'fr-main'));
   });
 
   it('a column on the road that has stopped holds up those behind it, and a column that waits a whole sub-step rests', () => {
@@ -142,7 +147,7 @@ describe('columns of one side on one road', () => {
 describe('what road capacity leaves alone', () => {
   it('columns on different roads', () => {
     const orders = [order('fr-main', ['C']), order('fr-flank', ['E'])];
-    const [on, off] = [march(QUEUE, ground(), orders).final, march(RULES, ground(), orders).final];
+    const [on, off] = [march(QUEUE, ground(), orders).final, march(OFF, ground(), orders).final];
     expect(metres(on, 'fr-main')).toBe(metres(off, 'fr-main'));
     expect(on.forces['fr-flank']!.at).toBe(off.forces['fr-flank']!.at);
   });
@@ -150,7 +155,7 @@ describe('what road capacity leaves alone', () => {
   it('columns going opposite ways', () => {
     const scenario = ground((d) => (d.forces.find((f) => f.id === 'fr-flank')!.at = 'C'));
     const orders = [order('fr-main', ['C']), order('fr-flank', ['B'])];
-    const [on, off] = [march(QUEUE, scenario, orders).final, march(RULES, scenario, orders).final];
+    const [on, off] = [march(QUEUE, scenario, orders).final, march(OFF, scenario, orders).final];
     expect(metres(on, 'fr-main')).toBe(metres(off, 'fr-main'));
     expect(metres(on, 'fr-flank')).toBe(metres(off, 'fr-flank'));
   });
@@ -176,7 +181,7 @@ describe('what road capacity leaves alone', () => {
       if (!r.ok) throw new Error(r.reason);
       return r.state;
     };
-    expect(play1(QUEUE).forces).toEqual(play1(RULES).forces);
+    expect(play1(QUEUE).forces).toEqual(play1(OFF).forces);
   });
 });
 
