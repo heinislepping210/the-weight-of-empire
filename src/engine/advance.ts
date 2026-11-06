@@ -267,8 +267,19 @@ function applyInput(s: GameState, input: Input, ctx: Context, log: LogEntry[]): 
 
 // --------------------------------------------------------------------------------- stages
 
+/** A battle not yet decided, whether its rounds have begun or not. */
+const battleOpen = (s: GameState) => sortedValues(s.battles).some((b) => b.phase !== 'over');
+
+function endCampaign(s: GameState, log: LogEntry[]): void {
+  s.ended = 'scenarioEnd';
+  note(s, log, 'ended');
+}
+
 function stageActivity(s: GameState, ctx: Context, log: LogEntry[]): void {
   const res = s.resolution;
+  // After the last turn only the last battles go on (G-025), and the campaign ends with them.
+  const lastBattles = res.turn > ctx.scenario.turns;
+  if (lastBattles && !battleOpen(s)) return endCampaign(s, log);
   if (res.slot === 0 || res.slot === 2) {
     // Weather is scenario randomness, keyed only by the day: the same for everyone on a seed (§2.12).
     s.rainToday = chance(s.seed, ['weather', dayIndex(res)], ctx.rules.weather.rainPermille);
@@ -279,6 +290,10 @@ function stageActivity(s: GameState, ctx: Context, log: LogEntry[]): void {
   for (const f of sortedValues(s.forces)) {
     f.movedThisSlot = false;
     f.arrivedAt = null;
+    if (lastBattles && f.battle === null) {
+      f.activity = 'halt';
+      continue;
+    }
     // A dispersed force must assemble before it can march (§2.4b).
     if (f.posture === 'dispersed' && f.gathering === 0 && f.battle === null && f.pace !== 'rest' && nextEdgeOf(ctx, f)) {
       f.gathering = ctx.rules.posture.gatherSlots;
@@ -329,6 +344,11 @@ export function hourlyShare(total: number, hour: number): number {
 /** A force's march budget for a sub-step, set by its pace and its fatigue at the start (§3.4a step 3). */
 export function marchBudget(f: Force, rules: Context['rules']): number {
   return Math.floor((rules.march.metresPerSlot[f.pace] * fatiguePermille(f.fatigue, rules)) / 1000);
+}
+
+/** The road a column takes up, in metres (G-024). */
+export function columnMetres(f: Force, rules: Context['rules']): number {
+  return Math.floor((f.men * rules.march.columnMetresPerThousand) / 1000);
 }
 
 function stageMovement(s: GameState, ctx: Context, log: LogEntry[], watch?: Watch): void {
@@ -454,12 +474,10 @@ function stageEndOfTurn(s: GameState, ctx: Context, log: LogEntry[]): void {
   updatePressure(s, ctx, log);
   updateIntel(s, ctx);
   const next = s.resolution.turn + 1;
-  if (next > ctx.scenario.turns) {
-    s.ended = 'scenarioEnd';
-    note(s, log, 'ended');
-    return;
-  }
-  s.resolution = { turn: next, slot: 0, stage: 'orders', encounterQueue: null, battleSeq: 0 };
+  const last = ctx.scenario.turns;
+  if (next > last && (!battleOpen(s) || next > last + ctx.rules.outcome.lastBattleTurns)) return endCampaign(s, log);
+  if (next === last + 1) note(s, log, 'lastBattles');
+  s.resolution = { turn: next, slot: 0, stage: next > last ? 'activity' : 'orders', encounterQueue: null, battleSeq: 0 };
 }
 
 const STAGES: Record<RunStage, (s: GameState, ctx: Context, log: LogEntry[], watch?: Watch) => void> = {
@@ -615,7 +633,7 @@ interface March {
   /** The moment (seconds into the hour) and distance from which it moves at `rate`; for a force standing at a place, when it may set out. */
   t0: number;
   m0: number;
-  /** The enemy column it has closed up behind on this road: it moves at that column's pace. */
+  /** The column it has closed up behind on this road: it moves at that column's pace. */
   behind: Force | null;
   /** Holds its place, or the road, for the rest of the hour. */
   done: boolean;
@@ -629,9 +647,14 @@ interface March {
  * ahead of it closes up and follows at its pace, and reaches the next place just after it; it is never led
  * past a slower enemy column that the one it follows overtakes. Nothing depends on
  * the order of the forces' names, except between forces of one side, which do not block each other.
+ *
+ * With road capacity (G-024) they do: on one road, going one way, a column stays a column's length behind one
+ * of its own side and waits to set out until the road is clear. Of columns ready at one moment the shorter goes
+ * first, and only between equal columns do names decide.
  */
 export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: number[], hour: number, log: LogEntry[]): void {
   const res = s.resolution;
+  const queueing = ctx.rules.march.columnMetresPerThousand > 0;
   const lengthOf = (edgeId: string) => must(ctx.graph.edges.get(edgeId), edgeId).metres;
   const runs: March[] = movers.map((f, i) => {
     const share = shares[i] as number;
@@ -651,17 +674,22 @@ export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: n
     const [x, y] = [must(a.transit, a.id), must(b.transit, b.id)];
     return x.seq < y.seq || (x.seq === y.seq && a.id < b.id);
   };
-  /** The enemy columns ahead of a force on its road, going the same way: those that set out before it. */
-  const enemiesAhead = (f: Force): Force[] => sortedValues(s.forces).filter((e) => e.side !== f.side && e.men > 0 && sameRoad(f, e) && earlier(e, f));
-  /** How far along its road a force is at moment `t`: never past an enemy column that set out before it. */
+  /** The columns ahead of a force on its road that hold it up, going the same way: those that set out before it. */
+  const columnsAhead = (f: Force): Force[] => sortedValues(s.forces).filter((e) => (e.side !== f.side || queueing) && e.men > 0 && sameRoad(f, e) && earlier(e, f));
+  /** How far a column ahead lets a force go at moment `t`: to an enemy, or a column's length short of a friend. */
+  const limit = (f: Force, e: Force, t: number): number => {
+    if (e.side !== f.side) return pos(e, t);
+    return Math.max(pos(e, t) - columnMetres(e, ctx.rules), runOf.get(f.id)?.m0 ?? 0);
+  };
+  /** How far along its road a force is at moment `t`: never past a column that set out before it. */
   const pos = (f: Force, t: number): number => {
     if (!f.transit) return 0;
     const length = lengthOf(f.transit.edge);
     const r = runOf.get(f.id);
     if (!r || r.done) return f.transit.metres;
     // Closed up: at the tail of the column ahead, or at the end of the road once that column has left it.
-    if (r.behind) return sameRoad(f, r.behind) ? Math.min(pos(r.behind, t), length) : length;
-    return enemiesAhead(f).reduce((m, e) => Math.min(m, pos(e, t)), Math.min(length, r.m0 + Math.floor((r.rate * (t - r.t0)) / PER_HOUR)));
+    if (r.behind) return sameRoad(f, r.behind) ? Math.min(limit(f, r.behind, t), length) : length;
+    return columnsAhead(f).reduce((m, e) => Math.min(m, limit(f, e, t)), Math.min(length, r.m0 + Math.floor((r.rate * (t - r.t0)) / PER_HOUR)));
   };
   /** The pace at which a force on the road is moving now: never faster than its own. */
   const rateOf = (f: Force): number => {
@@ -669,18 +697,18 @@ export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: n
     if (!r || r.done || !f.transit) return 0;
     return r.behind && sameRoad(f, r.behind) ? Math.min(r.rate, rateOf(r.behind)) : r.rate;
   };
-  /** The nearest enemy column ahead on the same road, going the same way; of two level with each other, the slower. */
+  /** The nearest column ahead on the same road, going the same way; of two level with each other, the slower. */
   const aheadOf = (f: Force, t: number): Force | null =>
-    enemiesAhead(f).reduce<Force | null>((best, e) => (best === null || pos(e, t) < pos(best, t) || (pos(e, t) === pos(best, t) && rateOf(e) < rateOf(best)) ? e : best), null);
+    columnsAhead(f).reduce<Force | null>((best, e) => (best === null || limit(f, e, t) < limit(f, best, t) || (limit(f, e, t) === limit(f, best, t) && rateOf(e) < rateOf(best)) ? e : best), null);
   /**
-   * The moment the column a follower is closed up behind draws level with a slower enemy column further ahead:
+   * The moment the column a follower is closed up behind draws level with a slower column further ahead:
    * from then on that slower column holds the follower up (third review).
    */
   const drawsLevel = (f: Force, lead: Force, now: number): number => {
-    const [at, pace] = [pos(lead, now), rateOf(lead)];
+    const [at, pace] = [limit(f, lead, now), rateOf(lead)];
     let t = Infinity;
-    for (const e of enemiesAhead(f)) {
-      const gap = pos(e, now) - at;
+    for (const e of columnsAhead(f)) {
+      const gap = limit(f, e, now) - at;
       if (e !== lead && rateOf(e) < pace && gap >= 0) t = Math.min(t, now + Math.ceil((gap * PER_HOUR) / (pace - rateOf(e))));
     }
     return t;
@@ -706,7 +734,7 @@ export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: n
     let t = r.rate > 0 ? Math.max(now, r.t0 + Math.ceil(((length - r.m0) * PER_HOUR) / r.rate)) : Infinity;
     const lead = aheadOf(r.f, now);
     if (lead) {
-      const gap = pos(lead, now) - here;
+      const gap = limit(r.f, lead, now) - here;
       const closing = r.rate - rateOf(lead);
       if (closing > 0) t = Math.min(t, gap <= 0 ? now : now + Math.ceil((gap * PER_HOUR) / closing));
     }
@@ -729,7 +757,7 @@ export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: n
       const lead = aheadOf(f, now);
       if (lead) {
         // Closed up: from now on it moves at the pace of the column ahead.
-        tr.metres = Math.min(here, pos(lead, now));
+        tr.metres = Math.min(here, limit(f, lead, now));
         r.behind = lead;
       } else {
         // The column it was closing on has just reached the end of the road: it goes on at its own pace.
@@ -738,7 +766,13 @@ export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: n
       }
       return;
     }
-    // The end of the road: it arrives.
+    // The end of the road: it arrives. Columns of its side closed up behind it go on at their own pace.
+    for (const b of runs) {
+      if (b.behind !== f || b.f.side !== f.side) continue;
+      const at = pos(b.f, now);
+      Object.assign(b, { behind: null, t0: now, m0: at });
+      must(b.f.transit, b.f.id).metres = at;
+    }
     f.cameFrom = f.at;
     f.at = tr.to;
     f.transit = null;
@@ -751,6 +785,16 @@ export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: n
     if (enemyPresent(s, f.side, f.at) || f.route.length === 0) r.done = true;
   };
 
+  /** The moment a column of its own side on this road will have gone its length, and left room to set out. */
+  const roadClearAt = (f: Force, edge: EdgeDef, to: NodeId, now: number): number =>
+    sortedValues(s.forces)
+      .filter((e) => e.side === f.side && e.men > 0 && e.transit?.edge === edge.id && e.transit.to === to)
+      .reduce((t, e) => {
+        const short = columnMetres(e, ctx.rules) - pos(e, now);
+        if (short <= 0) return t;
+        return Math.max(t, rateOf(e) > 0 ? now + Math.ceil((short * PER_HOUR) / rateOf(e)) : Infinity);
+      }, now);
+
   /** Setting out along the next road of its route, if nothing bars the way. */
   const setOut = (r: March, now: number) => {
     const f = r.f;
@@ -762,6 +806,12 @@ export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: n
     if (enemyPresent(s, f.side, f.at)) return;
     // An enemy column on this road coming the other way: hold this place and meet it here.
     if (oncoming(s, f.side, edge.id, f.at)) return;
+    // A column of its own side still filling the road: it waits, this hour if the road clears in time.
+    if (queueing) {
+      const clear = roadClearAt(f, edge, to, now);
+      if (clear <= HOUR && clear > now) Object.assign(r, { done: false, t0: clear });
+      if (clear > now) return;
+    }
     // An enemy at the far end setting out towards us at this same moment: a draw decides who gets onto the road.
     const rival = runs.some(
       (e) => !e.done && e.f.side !== f.side && e.f.transit === null && e.f.at === to && e.f.route[0] === f.at && e.t0 === now && !enemyPresent(s, e.f.side, to),
@@ -783,7 +833,7 @@ export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: n
       if (due.length === 0) break;
       const onRoad = due.filter((r) => r.f.transit !== null);
       if (onRoad.length > 0) for (const r of onRoad) onTheRoad(r, now);
-      else for (const r of due) setOut(r, now);
+      else for (const r of queueing ? [...due].sort((a, b) => a.f.men - b.f.men) : due) setOut(r, now);
     }
   }
 

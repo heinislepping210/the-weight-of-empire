@@ -65,6 +65,12 @@ const GOLDEN: Record<string, string> = {
   '0.18.1': 'ae00ce353d5b3ca1',
   // The test ground has its own roads: the same game, with the rules version recorded in it.
   '0.19.0': 'e0fa7f6f01420b6c',
+  // How the ending is judged, and the last battles (D-053). The same game: with the version label set back to 0.19.0
+  // it reproduces e0fa7f6f01420b6c.
+  '0.20.0': 'a31ef12d3a72c678',
+  // A Russian strike stays within reach (D-054). No strike happens here: with the version label set back to 0.20.0
+  // it reproduces a31ef12d3a72c678.
+  '0.21.0': 'ac6f394a8c2bc287',
 };
 
 /**
@@ -91,6 +97,10 @@ const GOLDEN_VITEBSK: Record<string, string> = {
   '0.18.1': 'b8fd258c60f4a523',
   // The road audit's classes and crossings, and the road from Liozno to Liubavichi (D-052).
   '0.19.0': 'e524b9bf1bf1ca6d',
+  // As above, the same game with a new version label: 0.19.0 reproduces e524b9bf1bf1ca6d.
+  '0.20.0': '1382a748cbfbf44f',
+  // A real change: the Russians strike no further than Rudnia (D-054).
+  '0.21.0': '5b9201b2b685d979',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */

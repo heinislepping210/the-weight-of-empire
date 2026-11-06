@@ -160,3 +160,15 @@ export function varianceSplit(x: (s: number, i: number, r: number) => number, st
   const sum = Math.max(1e-12, c.strategy + c.scenario + c.interaction + c.sharedDice + c.ownDice);
   return { raw, pooled, components: { strategy: c.strategy / sum, scenario: c.scenario / sum, interaction: c.interaction / sum, sharedDice: c.sharedDice / sum, ownDice: c.ownDice / sum } };
 }
+
+/** Rule values with the overrides laid over them; an unknown key is an error, so a typo cannot pass silently. */
+export function overridden(base: unknown, over: unknown, path: string): unknown {
+  if (over === null || typeof over !== 'object' || Array.isArray(over)) return over;
+  if (base === null || typeof base !== 'object') throw new Error(`no rule group at ${path}`);
+  const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
+  for (const [k, v] of Object.entries(over as Record<string, unknown>)) {
+    if (!(k in out)) throw new Error(`unknown rule ${path}.${k}`);
+    out[k] = overridden(out[k], v, `${path}.${k}`);
+  }
+  return out;
+}

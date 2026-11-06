@@ -1,0 +1,34 @@
+# Adaptive policy on held-out seeds: rules 0.20.0 (what-if: `{"russian":{"strikeMarchMetres":85000}}`), seeds 1–1000
+
+Candidates: concentrated-push, southern-envelopment, bait-and-converge, methodical, prudent-halt, rush, concentrated-push-staged, southern-envelopment-hold, southern-envelopment-wait-for-trains, southern-envelopment-guard-at-base, concentrated-strike, pinning-attack, pinning-attack-search, pinning-fix-first, supplied-halt. The adaptive policy picks one at the first decision from two things the French see: their own strength and the Russians their scouts report (each in thirds), learned on seeds 1–500 and judged on seeds 501–1000. Each scenario is played with 3 sets of dice and scored by its mean rank over them. A lower rank is better; "won" means Decisive Success, Costly Victory or Operational Success, over every game.
+
+| Policy on the held-out seeds | Mean ending rank | Against the best fixed approach (middle 95% of 200 bootstrap redraws) | Won |
+|---|---|---|---|
+| Best fixed approach, chosen on the training seeds (methodical) | 3.03 | — | 0.0% |
+| Adaptive: reads strength and scouting reports | 3.04 | +0.01 (-0.01 to 0.03) | 0.0% |
+| Scenario oracle: chooses on a scenario's other rolls, so it knows the scenario but not the dice it is scored on | 2.80 | -0.23 (-0.30 to -0.16) | 37.6% |
+| Full oracle: knows the dice too (includes luck no player can read) | 2.28 | -0.75 (-0.80 to -0.71) | 64.3% |
+
+| Each approach on the held-out seeds | Mean ending rank | Most common ending |
+|---|---|---|
+| concentrated-push | 3.11 | Limited Success (94.5%) |
+| southern-envelopment | 3.64 | Limited Success (37.7%) |
+| bait-and-converge | 3.04 | Limited Success (96.7%) |
+| methodical | 3.03 | Limited Success (98.2%) |
+| prudent-halt | 4.00 | Precarious Halt (100.0%) |
+| rush | 3.06 | Limited Success (97.9%) |
+| concentrated-push-staged | 3.14 | Limited Success (92.4%) |
+| southern-envelopment-hold | 3.50 | Costly Victory (45.9%) |
+| southern-envelopment-wait-for-trains | 3.66 | Inconclusive (30.3%) |
+| southern-envelopment-guard-at-base | 3.41 | Repulse (46.0%) |
+| concentrated-strike | 3.49 | Limited Success (66.1%) |
+| pinning-attack | 3.83 | Limited Success (58.4%) |
+| pinning-attack-search | 3.66 | Limited Success (67.0%) |
+| pinning-fix-first | 3.75 | Limited Success (62.6%) |
+| supplied-halt | 4.00 | Precarious Halt (100.0%) |
+
+Choices learned per cell (own strength third × scouted Russian strength third): 00: bait-and-converge; 01: rush; 02: methodical; 10: rush; 11: bait-and-converge; 12: methodical; 20: bait-and-converge; 21: rush; 22: methodical.
+
+**Reading:** a perfect reader of the scenario could improve on the best fixed approach by 0.23 ranks on average (knowing the dice as well, by 0.75); this adaptive policy, reading two figures at the first decision, captures -0.01. That bounds what this policy can read, not what a player can.
+
+*The intervals redraw the held-out scenarios only; they do not repeat the learning on the training seeds, so they understate the uncertainty of the learned choices.*

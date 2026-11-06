@@ -288,3 +288,19 @@ Two readings fall just under the straight line between the game's town coordinat
 What these corrections do to the game is measured in GAMEPLAY_BALANCING, "The road audit, measured".
 
 Sources: V. P. Piadyshev, *Geographical Atlas of the Russian Empire*, sheets of Vitebsk (1820), Mogilev and Smolensk (1821), Library of Congress scans LOC 2018688646, 2018688648 and 2018688655 via Wikimedia Commons; T. F. Schubert, *Special Map of the Western Part of Russia*, sheet XIII, 1853, National Archives of Estonia, EAA.46.2.348, read in the viewer only.
+
+## Road capacity (4 November 2026)
+
+G2 asks that a single-road march be slow. Until now a whole army could march down one road together, with no column delaying another.
+
+**What Clausewitz gives.** Book 5 of *On War* treats the march as a matter of road space:
+- A division of 8,000 men, with its artillery and some vehicles, takes about a league of road, in German a *Stunde*. That is about 3.8–4.8 km, or roughly 470–600 m per 1,000 men.
+- A second division on the same road arrives about an hour after the first.
+- A march of three German miles, about 22 km and close to the game's steady day, takes a division 8–10 hours. Several divisions in one column take about two hours more, not counting the gaps between them, and a column of about 40,000 men takes about 13 hours.
+- A column of 100,000 on one road would stretch so far that its rear could not arrive the same day as its head. Larger forces therefore divide over several roads.
+
+**How far to trust it.** It is one author's rule of thumb, though he served in the 1812 campaign. It describes ordinary cases, not any corps of the Grande Armée. A wargame-design source, naming Nafziger and Engels, gives 16–24 km for a corps of 20,000. That is 800–1,200 m per 1,000 men and may include trains, so the true figure could be up to twice Clausewitz's. I haven't read Nafziger or Engels directly, or a French staff regulation.
+
+**A caution on converting it.** A column walks at about 4 km/h, while the game's steady pace averages 1.8 km/h over twelve marching hours, halts included. So a gap in metres costs more game hours than the same gap cost in walking time: behind a corps of 40,000, Clausewitz implies about five hours, and the game's gap about eleven. So the rule is measured at 230 m per 1,000 men, which keeps his hour per division at the game's speed, and at longer lengths too.
+
+Sources: Carl von Clausewitz, *On War*, Book 5, chapters 10 and 11, in [Graham's 1873 translation](https://clausewitzstudies.org/readings/OnWar1873/BK5ch10.html) and the [German text](https://projekt-gutenberg.org/authors/carl-von-clausewitz/books/vom-kriege-band-2/chapter/25); [Appendix D: Historical Movement Rates](https://lerugray.github.io/wargame-design-book/appendix_d_march_rates.html), a wargame-design source.

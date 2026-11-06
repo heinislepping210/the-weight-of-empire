@@ -10,17 +10,19 @@
 // them. It prints a markdown report between ADAPTIVE-REPORT markers. A diagnostic, not a target.
 
 import { it } from 'vitest';
-import { ENDING_NAMES, ENDING_RANK, RULES_VERSION, createContext, evaluate, newGame } from '../../src/engine';
-import type { EndingId, GameState } from '../../src/engine';
+import { ENDING_NAMES, ENDING_RANK, RULES, RULES_VERSION, createContext, evaluate, newGame } from '../../src/engine';
+import type { EndingId, GameState, Rules } from '../../src/engine';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
 import { keyHash } from '../../src/engine/rng';
 import { play } from '../fixtures/driver';
+import { overridden } from './analysis';
 import { BOTS } from './bots';
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const SEEDS = Number(env.BALANCE_SEEDS ?? 1000);
 const DICE = Math.max(1, Number(env.BALANCE_DICE ?? 1));
 const BOOT = Math.max(0, Number(env.BALANCE_BOOT ?? 200));
+const OVERRIDES = env.BALANCE_OVERRIDES ? (JSON.parse(env.BALANCE_OVERRIDES) as Record<string, unknown>) : null;
 /** The dice for roll `r` of a scenario seed: the seed itself first, then fresh ones (as in the batch). */
 const diceFor = (seed: number, r: number) => (r === 0 ? seed : keyHash(seed, ['dice', r]));
 
@@ -40,7 +42,8 @@ const tercile = (values: number[]) => {
 
 it.skipIf(env.BALANCE !== '1')('adaptive policy on held-out seeds', () => {
   // What-if roads, as in the batch: BALANCE_SCENARIO=road-audit-lengths (HISTORICAL_RESEARCH).
-  const ctx = createContext(vitebskDecision({ roadReadings: env.BALANCE_SCENARIO === 'road-audit-lengths' }));
+  const rules = OVERRIDES ? (overridden(RULES, OVERRIDES, 'rules') as Rules) : RULES;
+  const ctx = createContext(vitebskDecision({ roadReadings: env.BALANCE_SCENARIO === 'road-audit-lengths' }), rules);
   const candidates = Object.keys(BOTS).filter((n) => n !== 'random');
   // Endings per approach, scenario and roll of the dice.
   const ending: Record<string, EndingId[][]> = Object.fromEntries(candidates.map((n) => [n, []]));
@@ -100,7 +103,7 @@ it.skipIf(env.BALANCE !== '1')('adaptive policy on held-out seeds', () => {
   };
   const bestEnding = (i: number, r: number) => candidates.map((n) => ending[n]![i]![r]!).reduce((a, b) => (ENDING_RANK[b] < ENDING_RANK[a] ? b : a));
   const lines = [
-    `# Adaptive policy on held-out seeds: rules ${RULES_VERSION}, seeds 1–${SEEDS}`,
+    `# Adaptive policy on held-out seeds: rules ${RULES_VERSION}${OVERRIDES ? ` (what-if: \`${JSON.stringify(OVERRIDES)}\`)` : ''}, seeds 1–${SEEDS}`,
     '',
     `Candidates: ${candidates.join(', ')}. The adaptive policy picks one at the first decision from two things the French see: their own strength and the Russians their scouts report (each in thirds), learned on seeds 1–${half} and judged on seeds ${half + 1}–${SEEDS}. Each scenario is played with ${DICE} set${DICE === 1 ? '' : 's'} of dice and scored by its mean rank over them. A lower rank is better; "won" means Decisive Success, Costly Victory or Operational Success, over every game.`,
     '',

@@ -783,6 +783,8 @@ Only the four southern-envelopment bots choose a route (always the one by Rasasn
 
 ## The road audit, measured (4 November 2026)
 
+*Every "won" figure in this section was measured before rules 0.20.0 and understates the trap plans: see "How the ending was misjudged". The comparisons between roads still hold, as far as the misjudged games fell evenly on both sides of them; the lengths were rechecked and do.*
+
 The road audit (HISTORICAL_RESEARCH, "The road audit") read the game's roads on the maps of 1820–21. Each correction was first measured alone, as a what-if. **The crossings and classes are now adopted (rules 0.19.0, D-052); the lengths are not.** Only the lengths remain as a what-if (`BALANCE_SCENARIO=road-audit-lengths`; `ROAD_READINGS` in `roads.ts`): the other what-if levels went when their corrections were adopted, and their reports stay as the record. In this table "now" is rules 0.18.1. 1,000 seeds, first roll, zero invariant violations in every run. "Won" is Decisive Success, Costly Victory and Operational Success together.
 
 | Bot (now → classes → crossings → lengths → lengths with scaled ranges) | Won | Decisive Success | Repulse |
@@ -836,3 +838,78 @@ Nothing here was tuned towards a target. Two values are assumptions: the crossin
 Reports: [batch, rules 0.18.1](balance/2026-11-04-rules-0.18.1.md), [batch, what-if](balance/2026-11-04-whatif-road-audit-no-lengths.md), [batch, rules 0.19.0](balance/2026-11-04-rules-0.19.0.md), [adaptive, rules 0.18.1](balance/2026-11-04-adaptive-0.18.1.md), [adaptive, what-if](balance/2026-11-04-whatif-road-audit-no-lengths-adaptive.md), [adaptive, rules 0.19.0](balance/2026-11-04-adaptive-0.19.0.md).
 
 **Your decision (4 November 2026): adopt them** (rules 0.19.0, D-052). The full batch and the adaptive run on the adopted game match the what-if reports above line for line, apart from the headings, so the figures in this section stand for rules 0.19.0. The lengths stay a separate phase, since adopting them means revisiting the Russian ranges and the bots first.
+
+## How the ending was misjudged (rules 0.20.0, 4 November 2026)
+
+Measuring road capacity turned up two faults in how a campaign is judged, neither of them in how it is played. Both are fixed in rules 0.20.0 (D-053).
+
+**A retreating army counted as free.** A column on the road keeps the place it left as its position, and the test for a cut road excused an army standing at the block. So a Russian army thrown back west from Valutino, deeper into the trap, counted as standing at Valutino with the road east open, and the game said it had broken out. The Russians kept assaulting the block and being thrown back, so at the end of a campaign they were often on that road. The fault dates from rules 0.5.0 and has mattered since 0.14.0, when the ending came to depend on the army being cut off at the end.
+
+**A battle left unfought.** On the holding plan about one game in five ended with a battle at Valutino that had not begun: a contact on the last afternoon waits for morning, and the clock stopped first. About 150,000 French stood against 77,000 Russians, and with no result the Russians counted as not cut off. Now a battle open when the last turn ends is fought out (G-025), with no new orders and everyone else standing where they are, for at most one more turn. On five bots, 120 seeds each, one more turn left 1 battle open in 600 games, and two settled no more.
+
+1,000 seeds × 3 sets of dice, zero invariant violations:
+
+| Bot (0.19.0 → scoring fix alone → 0.20.0) | Won | Decisive Success | Inconclusive | Repulse | "Broke out at a heavy cost" |
+|---|---|---|---|---|---|
+| southern-envelopment-guard-at-base | 35.1% → 61.0% → 76.2% | 3.5% → 7.7% → 9.5% | 39.9% → 14.8% → 0.1% | 24.4% → 23.6% → 23.0% | 48.0% → 19.0% → 7.1% |
+| southern-envelopment-hold | 31.8% → 60.9% → 76.7% | 1.3% → 1.9% → 2.5% | 41.6% → 14.4% → 0.2% | 22.7% → 20.8% → 19.0% | 47.1% → 18.4% → 5.7% |
+| southern-envelopment-wait-for-trains | 31.2% → 60.0% → 70.3% | 2.0% → 2.4% → 2.9% | 39.4% → 18.0% → 10.1% | 20.8% → 13.9% → 11.0% | 29.9% → 9.5% → 2.4% |
+| southern-envelopment | 9.9% → 11.0% → 11.3% | 0.1% → 0.1% → 0.1% | 36.2% → 35.2% → 34.7% | 8.8% → 8.8% → 8.9% | 11.5% → 10.9% → 10.8% |
+
+**Reading:**
+- **Repulses barely move.** The games that change are the ones scored Inconclusive, which were really traps that had closed. The games themselves are the same: both golden replays reproduce under the old version label.
+- **Most of these wins are Costly Victories.** The army is cut off, but the French are in no state to go on: 66–74% of games, against 2.5–9.5% Decisive Success.
+- **One plan family now dominates.** The holding envelopments win about three games in four, and no other family wins at all. On held-out seeds the best fixed approach wins 76.7%, and the adaptive policy, choosing among all the plans, only ever picks one of the holding envelopments.
+- **Every report from 0.14.0 to 0.19.0 understates the trap plans,** including the figures behind D-050 and D-052. The reports are kept as they were.
+
+**The road lengths, rechecked.** With the scoring fix, the what-if lengths on 1,000 seeds, first roll, still collapse the trap: the holding plan 60.5% → 26.5%, wait-for-trains 60.2% → 22.9%, guard-at-base 60.5% → 2.2%, and the road cut in 25–44% of games instead of 77–88%. So that collapse was real, and the lengths stay a phase of their own.
+
+Reports: [batch, 0.20.0](balance/2026-11-04-rules-0.20.0.md), [adaptive, 0.20.0](balance/2026-11-04-adaptive-0.20.0.md), [lengths with the scoring fix](balance/2026-11-04-whatif-road-audit-lengths-scoring-fix.md).
+
+## The Russian strike and road capacity (what-ifs, 5 November 2026)
+
+With the ending judged properly, the trap won about three games in four. Two what-ifs bore on that. **The strike limit is now adopted (rules 0.21.0, D-054); road capacity is not.** In this section "0.20.0" is the rule before the limit, what-if `russian.strikeMarchMetres: 0`.
+
+**Why the trap is so strong.** On the holding plan the Russians march out on turns 1–2 (70–83% of games) to strike the vanguard at Liozno, 106 km from Smolensk, and leave the city empty. Its depot falls by turn 5 in 86% of games, and they arrive back after the French hold Valutino. A strike at Krasnyi from Rudnia also takes the shortest road, 92 km round by Liubavichi, Rasasna and Liady, away from home and into the French rear.
+
+**One value decides it.** The strike reach is a placeholder of 110 km, and Liozno stands inside it. At 90 km or 75 km the Russians stay at home, and the trap plans fall from 70–77% won to 1–4% (1,000 seeds, first roll), with the road cut in 2–15% of games. Nothing lies between, because Liozno is the only French force in sight on turn 1. Lowering the Russians' resolve to strike works by degrees instead: at 70 the trap plans win 41–43%.
+
+**The two what-ifs:**
+- **The strike stops at Rudnia** (`russian.strikeMarchMetres: 85000`, G-026). The command may still choose a distant target, but its armies go only by places within 85 km of the base. The offensive of August 1812 made for Rudnia and stalled (H-003, H-012), and Rudnia stands 82 km from Smolensk at G-007's lengths. It also ends the loop by Liubavichi, since a strike keeps within reach and comes home by Smolensk.
+- **Road capacity** (`march.columnMetresPerThousand: 230`, G-024, L-013). On one road a column stays its length behind another of its side, and waits to set out until the road is clear. Clausewitz gives 8,000 men a league of road and has the next division arrive an hour later. An hour at the game's 1.8 km/h gives 230 m per 1,000 men; his road space taken literally gives about 500.
+
+1,000 seeds × 3 sets of dice, zero invariant violations in every run:
+
+| Bot (0.20.0 → queues → strike limit → both) | Won | Repulse | Cut off at the end |
+|---|---|---|---|
+| southern-envelopment-guard-at-base | 76.2% → 83.7% → 47.8% → 66.8% | 23.0% → 13.1% → 45.6% → 22.5% | 75.8% → 83.4% → 43.9% → 65.3% |
+| southern-envelopment-hold | 76.7% → 82.7% → 48.4% → 66.5% | 19.0% → 5.6% → 41.2% → 12.8% | 76.6% → 82.7% → 47.4% → 65.9% |
+| southern-envelopment-wait-for-trains | 70.3% → 69.0% → 25.6% → 30.6% | 11.0% → 7.6% → 25.7% → 19.7% | 70.2% → 69.0% → 23.3% → 30.6% |
+| southern-envelopment | 11.3% → 33.7% → 9.9% → 12.6% | 8.9% → 8.8% → 16.0% → 15.1% | |
+| concentrated-push-staged | 0.1% → 0% → 0.1% → 0% | 3.0% → 10.0% → 2.6% → 6.1% | |
+| pinning-attack | 0% → 0.1% → 0% → 0.1% | 39.0% → 50.9% → 40.3% → 51.0% | |
+
+| On held-out seeds (0.20.0 → queues → strike limit → both) | |
+|---|---|
+| Best fixed approach | guard-at-base → guard-at-base → methodical → guard-at-base |
+| Its mean rank (lower is better) | 2.60 → 2.35 → 3.03 → 2.76 |
+| Its share of games won | 76.7% → 84.8% → 0% → 68.5% |
+| What a perfect reader of the scenario gains | 0.33 → 0.12 → 0.23 → 0.24 ranks |
+
+**Reading:**
+- **Queues alone make the dominance worse.** The trap plans use several roads, and the Russians' two main armies share one. On 80 seeds queues held the Russians up by about 28 more column-hours a game, against 11–14 for the French. The single-road plans pay as G2 intends: Repulses on the staged push go from 3.0% to 10.0%, where the French lost 45 more column-hours and the Russians 9. Adaptive play then has nothing to read: guard-at-base is the choice in all nine situations.
+- **The strike limit alone makes the trap a losing gamble.** It wins about half its games and is repulsed in about 45%. Its mean rank, 3.41–3.66, is worse than a safe Limited Success at about 3.03.
+- **Together, the trap is the best plan but not a sure one.** Two plans win about two games in three, and Repulses return to 13–23%. Their mean rank, 2.76–2.82, beats the safe plans at about 3.06, and F3 is the most even of the four: 36.6%, 31.5% and 31.9%.
+- **Waiting for the trains now costs the race.** That plan falls to 25–31% under the limit, because the halt lets the Russians come home.
+
+**What this cannot say:**
+- The bots were written for a game without queues and with Russians who go to Liozno. A player who divides the army and watches where the Russians march may do better than any of them.
+- Only one family can win under any option. The push and the bait still end in Limited Success, so F1 and F2 stay far from their targets.
+- Road capacity is left out of the staff's forecasts. They plan each group alone, so queues would surprise the player until the forecasts learn them. It must not be adopted before that.
+- The Russian command does not plan around queues either. A command that did might suffer less from them.
+- The Rudnia limit rests on G-007's length for a road the maps could not read.
+- The pontoon road is open to the Russians too, though they had no bridge there. G2's rule that the Dnieper needs a bridge or the pontoon train is not built yet.
+
+Reports: [queues](balance/2026-11-05-whatif-road-capacity.md) and [adaptive](balance/2026-11-05-whatif-road-capacity-adaptive.md); [strike limit](balance/2026-11-05-whatif-strike-limit.md) and [adaptive](balance/2026-11-05-whatif-strike-limit-adaptive.md); [both](balance/2026-11-05-whatif-strike-limit-road-capacity.md) and [adaptive](balance/2026-11-05-whatif-strike-limit-road-capacity-adaptive.md); first roll only, [strike reach 90 km](balance/2026-11-04-whatif-strike-reach-90.md) and [resolve 70](balance/2026-11-04-whatif-strike-resolve-70.md). The queue runs took about 20 hours of wall time because the computer slept, so vitest marked them failed on its three-hour limit; their reports are complete.
+
+**Your decision (5 November 2026): adopt the strike limit** (rules 0.21.0, D-054). The full batch and the adaptive run on the adopted game match the what-if reports line for line, apart from their headings: [batch](balance/2026-11-05-rules-0.21.0.md), [adaptive](balance/2026-11-05-adaptive-0.21.0.md). Road capacity comes next, once the staff's forecasts can see queues. The game to aim for is the two together: until then the trap ranks below a safe Limited Success on average, a cost accepted with this decision.

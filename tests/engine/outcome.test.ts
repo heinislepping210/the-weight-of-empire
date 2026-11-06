@@ -164,6 +164,24 @@ describe('what cuts the Russians off (§2.13)', () => {
     expect(holding('valutino')).toBe(true);
     expect(holding('dorogobuzh')).toBe(true);
   });
+
+  describe('a main army on the road, with the French at Valutino', () => {
+    const onRoad = (at: string, edge: string, to: string) => {
+      const s = structuredClone(start);
+      Object.assign(s.forces['fr-right']!, { at: 'valutino', transit: null });
+      Object.assign(s.forces['ru-2nd']!, { at, transit: { edge, to, metres: 1_000, seq: 0 } });
+      return lineOfRetreatBlocked(s, ctx, ['ru-1st', 'ru-2nd']);
+    };
+
+    it('falling back west from the block is still shut in: it has left the place, and not by the road east', () => {
+      expect(onRoad('valutino', 'smolensk-north-valutino', 'smolensk-north')).toBe(true);
+    });
+
+    it('marching on the block is shut in, and one already going east from it has got past', () => {
+      expect(onRoad('smolensk-north', 'smolensk-north-valutino', 'valutino')).toBe(true);
+      expect(onRoad('valutino', 'valutino-dorogobuzh', 'dorogobuzh')).toBe(false);
+    });
+  });
 });
 
 describe('the engine tracks how long the line of retreat is held', () => {

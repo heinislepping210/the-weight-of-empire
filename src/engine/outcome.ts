@@ -99,11 +99,11 @@ export function lineOfRetreatBlocked(s: GameState, ctx: Context, mainIds: readon
   const blocks = new Set((ctx.scenario.cutOffPlaces ?? []).filter((n) => holders(n) >= ctx.rules.outcome.blockMen));
   if (blocks.size === 0) return false;
   const mains = sideOf(s, 'ru').filter((f) => mainIds.includes(f.id) && f.men > 0);
-  return (
-    exits.length > 0 &&
-    mains.length > 0 &&
-    mains.every((f) => !exits.includes(f.at) && exits.every((x) => shortestPath(ctx.graph, f.at, x, new Set([...blocks].filter((b) => b !== f.at))) === null))
-  );
+  // A column on the road has left the place it set out from: it counts from where it is going, unless the French
+  // hold that. Only an army standing at a block is not shut in by it.
+  const from = (f: Force) => (f.transit !== null && !blocks.has(f.transit.to) ? f.transit.to : f.at);
+  const barring = (f: Force) => new Set([...blocks].filter((b) => f.transit !== null || b !== f.at));
+  return exits.length > 0 && mains.length > 0 && mains.every((f) => !exits.includes(from(f)) && exits.every((x) => shortestPath(ctx.graph, from(f), x, barring(f)) === null));
 }
 
 export function evaluate(start: GameState, end: GameState, ctx: Context): Outcome {

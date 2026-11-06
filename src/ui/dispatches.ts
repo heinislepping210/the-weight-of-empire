@@ -155,6 +155,9 @@ export function dispatches(entries: readonly LogEntry[], s: GameState, ctx: Cont
             : `${force(d.force)}'s horses went short: ${horses}.`;
         break;
       }
+      case 'lastBattles':
+        text = 'The campaign has run its time, but a battle has still to be fought out. Everyone else stands where they are.';
+        break;
       case 'ended':
         text = 'The campaign has reached its end.';
         break;

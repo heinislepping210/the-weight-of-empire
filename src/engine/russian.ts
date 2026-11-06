@@ -17,6 +17,26 @@ function routeTo(ctx: Context, f: Force, dest: NodeId): NodeId[] {
   return f.transit ? [from, ...path] : path;
 }
 
+/**
+ * A strike's road, kept within reach of the base (G-026). A target within the limit is reached by places within it,
+ * if any such road leads there; at a target beyond it the march stops at the first place too far out. A column on
+ * the road finishes the stretch it is on.
+ */
+function strikeRoute(ctx: Context, f: Force, target: NodeId, base: NodeId): NodeId[] {
+  const limit = ctx.rules.russian.strikeMarchMetres;
+  const route = routeTo(ctx, f, target);
+  if (limit <= 0) return route;
+  const tooFar = (node: NodeId) => roadDistance(ctx.graph, node, base) > limit;
+  if (tooFar(target)) {
+    const beyond = route.findIndex((node, i) => !(f.transit && i === 0) && tooFar(node));
+    return beyond < 0 ? route : route.slice(0, beyond);
+  }
+  const from = f.transit ? f.transit.to : f.at;
+  const inside = shortestPath(ctx.graph, from, target, new Set([...ctx.graph.nodes.keys()].filter((node) => node !== from && tooFar(node))));
+  if (inside === null) return route;
+  return f.transit ? [from, ...inside] : inside;
+}
+
 /** The Russian depot with the largest stock of food: the army's base. */
 function baseOf(s: GameState): NodeId | null {
   const depots = sortedValues(s.depots).filter((d) => d.side === 'ru');
@@ -90,8 +110,8 @@ export function planRussianTurn(s: GameState, ctx: Context, log: LogEntry[]): vo
   for (const f of main) {
     if (f.battle !== null) continue;
     const home = base !== null && roadDistance(ctx.graph, f.at, base) > r.homeRadiusMetres ? routeTo(ctx, f, base) : [];
-    if (plan === 'strike' && cmd.target) {
-      f.route = routeTo(ctx, f, cmd.target);
+    if (plan === 'strike' && cmd.target && base !== null) {
+      f.route = strikeRoute(ctx, f, cmd.target, base);
       f.engagement = 'seek';
       f.pace = 'steady';
       setPosture(f, 'concentrated', ctx.rules);

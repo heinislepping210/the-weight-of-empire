@@ -109,6 +109,7 @@ A turn is 2 days: **four daylight sub-steps** of 6 hours (06:00–12:00 and 12:0
    - **Within each hour, in time order** (rules 0.13.0, D-038). Each force moves at a steady speed set by its hourly share and the road, so it reaches places and sets out at definite moments, timed to the second. These moments are taken in time order across both sides. What a force finds at a place or on a road is what is there at that moment, and the order of the forces' names makes no difference.
      - **At one moment, every arrival is placed before anyone sets out again.** Forces of both sides reaching a place at the same moment meet there.
      - **A force falling back stands on the road, not at the place it left** (from the moment it leaves). An enemy may enter that place at once, but contact, pursuit and blocking all treat the retreating force as on the road.
+     - **Road capacity, a what-if, off in the adopted rules** (`march.columnMetresPerThousand`, G-024). On one road, going one way, a column stays a column's length behind one of its own side and never passes it, and it waits to set out until the road is clear. Of columns ready at one moment the shorter goes first; only between equal columns do names decide. Other roads, the other direction and places are not limited, enemies behave as before, and the rule keeps no state of its own. The staff's forecasts plan each group alone, so they don't yet see queues: that must change before the rule could be adopted.
    - **Contact happens at places, never on the road:**
      - A force that reaches a place held by the enemy stops there; that is contact.
      - A force standing where the enemy also stands does not march on: the contact must be resolved first.
@@ -140,6 +141,8 @@ A turn is 2 days: **four daylight sub-steps** of 6 hours (06:00–12:00 and 12:0
 5. **Roads.** Road condition is updated from the day's rain.
 
 **End of turn:** events, political pressure, new intelligence reports (with their age), the next turn's weather forecast, autosave, then `awaitingOrders`. *Built so far:* political pressure and intelligence reports. Events, the forecast and autosave are not built yet.
+
+**After the last turn (rules 0.20.0, D-053, G-025):** with a battle still open, the campaign does not end. The turn counter passes the scenario's last turn and the sub-steps go on with no orders stage: every force not in a battle is set to *halt*, on the road too, so nothing marches and no new contact arises, while supply and the night go on as usual. The campaign ends at the first sub-step with no battle open, or at the end of `outcome.lastBattleTurns` more turns whatever remains. No new state is kept: `resolution.turn > scenario.turns` says where the game stands.
 
 **Conservation and exclusivity.** Men, horses, wagons, food, fodder and ammunition are conserved: every unit is in exactly one place — with a force, in a depot or on a convoy — or lost with a recorded cause. Each force has one activity per sub-step and belongs to at most one encounter in it.
 

@@ -19,7 +19,7 @@ import { lineOfRetreat } from '../../src/engine/battle';
 import { keyHash } from '../../src/engine/rng';
 import { play, type Run } from '../fixtures/driver';
 import { violations } from '../fixtures/invariants';
-import { freshRegret, standing, varianceSplit, withinTies } from './analysis';
+import { freshRegret, overridden, standing, varianceSplit, withinTies } from './analysis';
 import { BOTS, FAMILIES, PIN_STAGES, pinStages, pinTraceOf } from './bots';
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
@@ -45,18 +45,6 @@ const DICE = Math.max(1, Number(env.BALANCE_DICE ?? 1));
 const diceFor = (seed: number, r: number) => (r === 0 ? seed : keyHash(seed, ['dice', r]));
 const BOOT = Math.max(0, Number(env.BALANCE_BOOT ?? 200));
 const OVERRIDES = env.BALANCE_OVERRIDES ? (JSON.parse(env.BALANCE_OVERRIDES) as Record<string, unknown>) : null;
-
-/** Rule values with the overrides laid over them; an unknown key is an error, so a typo cannot pass silently. */
-function overridden(base: unknown, over: unknown, path: string): unknown {
-  if (over === null || typeof over !== 'object' || Array.isArray(over)) return over;
-  if (base === null || typeof base !== 'object') throw new Error(`no rule group at ${path}`);
-  const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
-  for (const [k, v] of Object.entries(over as Record<string, unknown>)) {
-    if (!(k in out)) throw new Error(`unknown rule ${path}.${k}`);
-    out[k] = overridden(out[k], v, `${path}.${k}`);
-  }
-  return out;
-}
 
 interface Result {
   ending: EndingId;

@@ -7,7 +7,7 @@
 export type CutOffCredit = 'stands' | 'atEnd' | 'graded';
 
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.19.0';
+export const RULES_VERSION = '0.21.0';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -22,6 +22,12 @@ export const RULES = {
     mudPermille: 650,
     crossingPermille: 600,
     fatigueSlowdownFrom: 500,
+    /**
+     * Road capacity (G-024, L-013), a what-if, off at 0: the road a column takes up, in metres per thousand men.
+     * On one road, going one way, a column stays that far behind a column of its own side and waits to set out
+     * until the road is clear. Clausewitz has the next division an hour behind: 230 at the game's pace (L-013).
+     */
+    columnMetresPerThousand: 0 as number,
   },
   convoy: {
     // L-002: 18 km/day
@@ -113,6 +119,11 @@ export const RULES = {
     decisiveWindowDays: 4,
     /** Cut off: the line of retreat blocked for at least this many consecutive sub-steps (§2.13). */
     cutOffSlots: 2,
+    /**
+     * The last battles (G-025): a battle still open when the last turn ends is fought out, for at most this many
+     * more turns, with everyone else standing where they are. At 0, the rule before: it is left undecided.
+     */
+    lastBattleTurns: 1 as number,
     /** D-039: see `CutOffCredit`. */
     cutOffCredit: 'graded' as CutOffCredit,
   },
@@ -135,6 +146,12 @@ export const RULES = {
     mustStandPressure: 80,
     isolationMetres: 40_000,
     strikeReachMetres: 110_000,
+    /**
+     * How far from the base a strike marches, whatever its target (G-026, D-054): the armies go only by places within
+     * this reach. The offensive of August 1812 made for Rudnia and stalled (H-003, H-012); 85 km takes it as far as
+     * Rudnia. At 0, the rule before: a strike takes the shortest road to its target, however far.
+     */
+    strikeMarchMetres: 85_000 as number,
     strikeAdvantagePermille: 2000,
     strikeResolve: 60,
     standResolve: 50,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createContext, newGame, stateHash } from '../../src/engine';
+import { RULES, createContext, newGame, stateHash } from '../../src/engine';
 import type { GameState, LogEntry, Sighting } from '../../src/engine';
 import { vitebskDecision } from '../../src/data/vitebsk/scenario';
 import { planRussianTurn, updatePressure } from '../../src/engine/russian';
@@ -59,12 +59,46 @@ describe('Russian command (§2.9)', () => {
     expect(s.russianCommand).toMatchObject({ plan: 'strike', target: 'liozno' });
     for (const id of ['ru-1st', 'ru-2nd']) {
       const f = s.forces[id]!;
-      expect(f.route.at(-1)).toBe('liozno');
+      // Liozno is within the strike's reach of choice, but the march stops at Rudnia (G-026).
+      expect(f.route.at(-1)).toBe('rudnia');
       expect(f).toMatchObject({ engagement: 'seek', gathering: ctx.rules.posture.gatherSlots });
     }
   });
 
-  it('does not strike when its resolve is low; it holds, spread out to feed', () => {
+  it('with the limit off, the rule before, a strike marches all the way to Liozno', () => {
+    const unlimited = createContext(vitebskDecision(), { ...RULES, russian: { ...RULES.russian, strikeMarchMetres: 0 } });
+    const s = structuredClone(situation({ 'fr-vanguard': { at: 'liozno', men: 40_000, turn: 1 } }, 70));
+    planRussianTurn(s, unlimited, []);
+    expect(s.russianCommand).toMatchObject({ plan: 'strike', target: 'liozno' });
+    for (const id of ['ru-1st', 'ru-2nd']) expect(s.forces[id]!.route.at(-1)).toBe('liozno');
+  });
+
+  it('a strike keeps within reach: from Rudnia to Krasnyi it comes back by Smolensk, not round by Liubavichi', () => {
+    const s = structuredClone(situation({ 'fr-right': { at: 'krasnyi', men: 40_000, turn: 1 } }, 70));
+    Object.assign(s.forces['ru-1st']!, { at: 'rudnia', transit: null });
+    planRussianTurn(s, ctx, []);
+    expect(s.russianCommand).toMatchObject({ plan: 'strike', target: 'krasnyi' });
+    expect(s.forces['ru-1st']!.route).toEqual(['smolensk-north', 'smolensk', 'krasnyi']);
+  });
+
+  it('an army already out beyond the limit still reaches a target within it', () => {
+    const s = structuredClone(situation({ 'fr-right': { at: 'krasnyi', men: 40_000, turn: 1 } }, 70));
+    // Liubavichi stands 100 km from Smolensk, and the shortest way to Krasnyi leads by Rasasna, 104 km out.
+    Object.assign(s.forces['ru-1st']!, { at: 'liubavichi', transit: null });
+    planRussianTurn(s, ctx, []);
+    expect(s.russianCommand).toMatchObject({ plan: 'strike', target: 'krasnyi' });
+    expect(s.forces['ru-1st']!.route.at(-1)).toBe('krasnyi');
+  });
+
+  it('a column already on the road finishes the stretch it is on, even past the limit', () => {
+    const limited = createContext(vitebskDecision(), { ...RULES, russian: { ...RULES.russian, strikeMarchMetres: 30_000 } });
+    const s = structuredClone(situation({ 'fr-vanguard': { at: 'liozno', men: 40_000, turn: 1 } }, 70));
+    Object.assign(s.forces['ru-1st']!, { at: 'smolensk-north', transit: { edge: 'rudnia-smolensk-north', to: 'rudnia', metres: 5_000, seq: 0 } });
+    planRussianTurn(s, limited, []);
+    expect(s.forces['ru-1st']!.route).toEqual(['rudnia']);
+  });
+
+    it('does not strike when its resolve is low; it holds, spread out to feed', () => {
     const s = decide(situation({ 'fr-vanguard': { at: 'liozno', men: 40_000, turn: 1 } }, 40, -10));
     expect(s.russianCommand.plan).toBe('hold');
     expect(s.forces['ru-2nd']).toMatchObject({ route: [], posture: 'dispersed' });

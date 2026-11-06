@@ -160,7 +160,7 @@ export function App() {
           The Weight of Empire <span>The Vitebsk Decision · prototype</span>
         </h1>
         <p className="status" aria-live="polite">
-          {when(ctx, s.resolution)} · turn {s.resolution.turn} of {ctx.scenario.turns} · {s.rainToday ? 'rain' : 'dry'} · {thousands(frMen)} men · {thousands(total(s, 'fr', 'horses'))} horses · {(food / Math.max(1, frMen)).toFixed(1)} days' food in hand{hungriest ? ` (least: ${shortName(hungriest.id, hungriest.name)}, ${(hungriest.stock.food / hungriest.men).toFixed(1)})` : ''}
+          {when(ctx, s.resolution)} · {s.resolution.turn > ctx.scenario.turns ? 'the last battle' : `turn ${s.resolution.turn} of ${ctx.scenario.turns}`} · {s.rainToday ? 'rain' : 'dry'} · {thousands(frMen)} men · {thousands(total(s, 'fr', 'horses'))} horses · {(food / Math.max(1, frMen)).toFixed(1)} days' food in hand{hungriest ? ` (least: ${shortName(hungriest.id, hungriest.name)}, ${(hungriest.stock.food / hungriest.men).toFixed(1)})` : ''}
         </p>
         <div className="controls">
           <label>
