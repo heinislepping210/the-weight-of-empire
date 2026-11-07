@@ -108,13 +108,13 @@ export interface Focus {
 }
 
 /**
- * The moments that matter (a contact, a battle, a depot changing hands), one at a time: a moment that would have to
+ * The moments that matter (a contact, a battle, a depot changing hands, a raid), one at a time: a moment that would have to
  * wait more than 0.7 s behind the one before is passed over, so the camera never lags far behind the turn.
  */
 export function focusesOf(frames: readonly Frame[], times: readonly number[]): Focus[] {
   const focuses: Focus[] = [];
   frames.forEach((f, i) => {
-    const e = f.events.find((x) => x.kind === 'contact' || x.kind === 'battle' || x.kind === 'depotTaken');
+    const e = f.events.find((x) => x.kind === 'contact' || x.kind === 'battle' || x.kind === 'depotTaken' || x.kind === 'raid');
     if (!e) return;
     const from = times[i] as number;
     const start = Math.max(from, focuses[focuses.length - 1]?.end ?? 0);
@@ -180,6 +180,8 @@ export function eventText(e: PlaybackEvent, s: GameState, ctx: Context): string 
       return d.success ? `The Russians fall back from ${at}` : `The Russians cannot get away from ${at}`;
     case 'depotTaken':
       return d.by === 'fr' ? `The depot at ${at} is ours` : `The depot at ${at} is lost`;
+    case 'raid':
+      return `Cossacks raid a wagon train near ${at}: ${thousands(Number(d.food))} rations burned`;
     case 'delivery': {
       const f = d.force ? s.forces[String(d.force)] : undefined;
       return f ? `Wagons reach ${shortName(f.id, f.name)} at ${at}: ${thousands(Number(d.food))} rations` : `Wagons stock the depot at ${at}`;
@@ -192,6 +194,11 @@ export const isShort = (l: SupplyLine) => l.need !== null && l.perDay < l.need;
 
 /** A supply line in words, for the map's tooltip and the list. */
 export function supplyText(l: SupplyLine, s: GameState, ctx: Context): string {
+  const roads = l.exposed.map((id) => ctx.graph.edges.get(id)).flatMap((e) => (e ? [`${place(ctx, e.a)} and ${place(ctx, e.b)}`] : []));
+  return `${loadText(l, s, ctx)}${roads.length > 0 ? ` Exposed to raids between ${roads.join('; ')}.` : ''}`;
+}
+
+function loadText(l: SupplyLine, s: GameState, ctx: Context): string {
   const from = place(ctx, l.home);
   const f = l.serves ? s.forces[l.serves] : undefined;
   const who = f ? shortName(f.id, f.name) : `the depot at ${place(ctx, l.to)}`;

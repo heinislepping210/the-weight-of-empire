@@ -155,6 +155,9 @@ export function dispatches(entries: readonly LogEntry[], s: GameState, ctx: Cont
             : `${force(d.force)}'s horses went short: ${horses}.`;
         break;
       }
+      case 'raided':
+        if (s.convoys[String(d.convoy)]?.side === 'fr') text = `Cossacks fell on a wagon train between ${place(d.node)} and ${place(d.to)}: ${Number(d.food).toLocaleString('en-GB')} rations burned, ${Number(d.horses).toLocaleString('en-GB')} horses driven off.`;
+        break;
       case 'bridging':
         text = `The pontoon train has reached the Dnieper. The engineers are bridging it between ${place(d.a)} and ${place(d.b)}.`;
         break;

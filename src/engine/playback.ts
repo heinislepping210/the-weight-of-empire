@@ -28,7 +28,7 @@ export interface Mark {
   activity: Activity | ConvoyLeg;
 }
 
-export type PlaybackEventKind = 'contact' | 'battle' | 'skirmish' | 'withdrawal' | 'depotTaken' | 'delivery';
+export type PlaybackEventKind = 'contact' | 'battle' | 'skirmish' | 'withdrawal' | 'depotTaken' | 'delivery' | 'raid';
 
 /** Something the French would know happened, and where. */
 export interface PlaybackEvent {
@@ -95,6 +95,7 @@ function eventsOf(s: GameState, entries: readonly LogEntry[]): PlaybackEvent[] {
     } else if (e.kind === 'minorAction') events.push({ kind: 'skirmish', node: String(d.node), detail: d });
     else if (e.kind === 'withdrawal') events.push({ kind: 'withdrawal', node: String(d.node), detail: d });
     else if (e.kind === 'depotCaptured') events.push({ kind: 'depotTaken', node: String(d.node), detail: d });
+    else if (e.kind === 'raided' && s.convoys[String(d.convoy)]?.side === 'fr') events.push({ kind: 'raid', node: String(d.node), detail: d });
     else if (e.kind === 'delivered') {
       const c = s.convoys[String(d.convoy)];
       if (c && c.side === 'fr') events.push({ kind: 'delivery', node: c.at, detail: d });

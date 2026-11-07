@@ -267,6 +267,12 @@ button:disabled {
   stroke-width: 0.8;
 }
 
+.scar-raid path {
+  fill: var(--crimson);
+  stroke: var(--paper);
+  stroke-width: 1;
+}
+
 .scar-battle path {
   fill: none;
   stroke: var(--charcoal);
@@ -830,6 +836,14 @@ label.choice {
   text-align: left;
   color: var(--muted);
   margin-bottom: 0.3rem;
+}
+
+/* Raids (G-028): a cross on a stretch of supply line the Cossacks could reach. */
+.supply-exposed {
+  fill: none;
+  stroke: var(--crimson);
+  stroke-width: 2.5;
+  pointer-events: none;
 }
 
 /* Tracing the top bar (G4): a figure that changed opens what changed it, and rings on the map show where. */

@@ -7,7 +7,7 @@
 export type CutOffCredit = 'stands' | 'atEnd' | 'graded';
 
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.23.0';
+export const RULES_VERSION = '0.24.0';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -35,6 +35,11 @@ export const RULES = {
    * before: no train, and the road open to all.
    */
   pontoons: { bridgeSlots: 2 as number },
+  /**
+   * Raids on the wagon trains (V4, G-028, D-057): the chance, in permille, that a raider falls on a train within reach
+   * each sub-step, off at 0, and what a raid burns and drives off. A flying party's 110 km is the Russian strike's reach.
+   */
+  raids: { permille: 100 as number, reachMetres: 110_000 as number, cargoPermille: 500 as number, horsesPermille: 200 as number },
   convoy: {
     // L-002: 18 km/day
     metresPerSlot: 9_000,

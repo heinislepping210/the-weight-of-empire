@@ -76,6 +76,9 @@ const GOLDEN: Record<string, string> = {
   // The Dnieper needs a bridge (D-056). The test ground has no train: with the version label set back to 0.22.0 it
   // reproduces f9ca3d9b08457fda.
   '0.23.0': '9736cf1906d25c9c',
+  // Raids on the wagon trains (D-057). The test ground has no raiders: with the version label set back to 0.23.0 it
+  // reproduces 9736cf1906d25c9c.
+  '0.24.0': 'ed1c0b33c84cc03c',
 };
 
 /**
@@ -110,6 +113,8 @@ const GOLDEN_VITEBSK: Record<string, string> = {
   '0.22.0': '304bdefc00f226e7',
   // A real change: the Dnieper needs a bridge or the pontoon train (D-056).
   '0.23.0': '9bab609b827df71f',
+  // A real change: Cossacks raid the wagon trains (D-057).
+  '0.24.0': 'cea3bb07fd3ee343',
 };
 
 /** T8: men, horses, wagons, food, fodder and ammunition are conserved, stores burned on capture included; nothing goes negative. */

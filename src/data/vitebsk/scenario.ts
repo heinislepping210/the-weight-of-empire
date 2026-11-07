@@ -124,6 +124,7 @@ export function vitebskDecision(options: { candidateRoads?: boolean; frenchStren
     pressurePlaces: ['rudnia', 'porechye', 'krasnyi', 'smolensk', 'smolensk-north', 'valutino', 'dorogobuzh'],
     keyPlaces: ['smolensk', 'smolensk-north'],
     pontoonStart: options.pontoonStart ?? 'orsha',
+    raiders: ['ru-cossacks'],
     // The walled Old Town (H-006); the north-bank suburb is fought over as open ground for now (G-022).
     battlefields: { smolensk: 'smolensk' },
     // The Moscow road eastwards: the Russian line of retreat.

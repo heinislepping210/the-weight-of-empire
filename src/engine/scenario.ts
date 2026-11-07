@@ -78,6 +78,8 @@ export interface ScenarioDef {
   cutOffPlaces?: NodeId[];
   /** Where the French bridging train starts (G-027); with none, the scenario has no train. */
   pontoonStart?: NodeId;
+  /** The light cavalry that raids wagon trains (G-028). */
+  raiders?: ForceId[];
 }
 
 export type CommandFn = (s: GameState, ctx: Context, log: LogEntry[]) => void;

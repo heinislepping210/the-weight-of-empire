@@ -5,7 +5,7 @@ import type { Context, Force, Frame, GameState, PlannedOrder, PontoonTrain, Supp
 import { bandOf, fit, heightOf, onKey, panBy, viewBoxOf, zoomAbout, zoomOf, type Camera } from '../map/camera';
 import { shortName, thousands } from './names';
 import { condition } from './OrdersPanel';
-import { battleText, burnedText, districtText, dustOf, pontoonText, strippingOf, type Consequences } from './consequences';
+import { battleText, burnedText, districtText, dustOf, pontoonText, raidText, strippingOf, type Consequences } from './consequences';
 import { PlaybackLayer, type PlaybackBar, type PlaybackView } from './Playback';
 import { TerrainLayer } from './TerrainLayer';
 import { isShort, supplyText, trailsOf } from './playbackModel';
@@ -345,6 +345,12 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick, playb
                   </text>
                 </g>
               )}
+              {l.exposed.map((id) => {
+                const road = ctx.graph.edges.get(id);
+                if (!road) return null;
+                const [a, b] = [POSITION[road.a] as Point, POSITION[road.b] as Point];
+                return <path key={id} className="supply-exposed" transform={`translate(${(a.x + b.x) / 2} ${(a.y + b.y) / 2}) scale(${u})`} d="M -4 -4 L 4 4 M 4 -4 L -4 4" />;
+              })}
             </g>
           );
         })}
@@ -413,6 +419,18 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick, playb
               </g>
             );
           })}
+
+        {consequences?.raids.map((r, i) => {
+          const road = ctx.graph.edges.get(r.edge);
+          if (!road) return null;
+          const [a, b] = [POSITION[road.a] as Point, POSITION[road.b] as Point];
+          return (
+            <g key={`raid-${i}`} className="scar scar-raid" transform={`translate(${(a.x + b.x) / 2} ${(a.y + b.y) / 2}) scale(${u}) translate(9 -9)`}>
+              <title>{raidText(ctx, r)}</title>
+              <path d="M 0 5 C -5 5 -6 0 -3 -3 C -3 0 -1 0 -1 -2 C -1 -5 1 -6 2 -7 C 2 -4 6 -2 5 2 C 4.5 4.5 2.5 5 0 5 Z" />
+            </g>
+          );
+        })}
 
         {playback && (
           <PlaybackLayer

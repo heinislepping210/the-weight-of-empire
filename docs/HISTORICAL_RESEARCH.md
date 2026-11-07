@@ -305,6 +305,18 @@ G2 asks that a single-road march be slow. Until now a whole army could march dow
 
 Sources: Carl von Clausewitz, *On War*, Book 5, chapters 10 and 11, in [Graham's 1873 translation](https://clausewitzstudies.org/readings/OnWar1873/BK5ch10.html) and the [German text](https://projekt-gutenberg.org/authors/carl-von-clausewitz/books/vom-kriege-band-2/chapter/25); [Appendix D: Historical Movement Rates](https://lerugray.github.io/wargame-design-book/appendix_d_march_rates.html), a wargame-design source.
 
+## Raids on the wagon trains (6 November 2026)
+
+M2 asks for Cossacks raiding a convoy, and the design has raids intercepting convoys on exposed roads. What the sources give for August 1812 is thin:
+- The Russian *Military Encyclopaedia* (Sytin, vol. 6, 1912, p. 410, article on Wintzingerode; public domain) has him given a special detachment to cover the Petersburg road. He pushed the French out of Velizh and Usvyat and, with light cavalry raids, hampered the enemy's provisioning. It gives no size, and no count of convoys taken.
+- Britannica says Cossack forays forced the French to divert troops to protect their supply train. It gives no date or figures.
+- A popular article puts the detachment at 1,300 men, formed on 2 August, and says it blocked Vitebsk and destroyed the foraging parties sent from it. A second article by the same site dates it 23 July, which may be the Old Style date. Neither names a primary source, so neither is used for a value.
+- Accounts of whole supply trains wiped out on the Smolensk road belong to the autumn, not to August.
+
+So the rule takes its shape from the sources and its numbers from nowhere: raiders work in the army's rear, on roads no troops cover, and how often is a placeholder (G-028). Wintzingerode's detachment is not in the game; Platov's Cossacks stand for all such parties. Velizh, where the encyclopaedia starts him, is 132 km from Smolensk by the game's roads, so a reach of 110 km falls short of it from there and covers it from Porechye, 53 km away.
+
+Sources: [*Military Encyclopaedia*, "Wintzingerode"](https://ru.wikisource.org/wiki/%D0%92%D0%AD/%D0%92%D0%A2/%D0%92%D0%B8%D0%BD%D1%86%D0%B5%D0%BD%D0%B3%D0%B5%D1%80%D0%BE%D0%B4%D0%B5,_%D0%A4%D0%B5%D1%80%D0%B4%D0%B8%D0%BD%D0%B0%D0%BD%D0%B4_%D0%A4%D0%B5%D0%BE%D0%B4%D0%BE%D1%80%D0%BE%D0%B2%D0%B8%D1%87,_%D0%B1%D0%B0%D1%80%D0%BE%D0%BD), Wikisource; [Battle of Smolensk](https://www.britannica.com/event/Battle-of-Smolensk-1812), Britannica; [Russian partisans of 1812](https://en.topwar.ru/182960-russkie-partizany-1812-goda-letuchie-otrjady-reguljarnyh-vojsk.html), a popular article, read in search results only.
+
 ## The pontoon train (6 November 2026)
 
 G2 asks that the Dnieper need a bridge or the pontoon train. What the sources give is thin:

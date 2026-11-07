@@ -164,7 +164,8 @@ The simulation underneath is identical; only the way you give orders changes.
 - **Founding.** A new depot can be founded where French troops hold the ground. It starts empty, and it falls if it is left unheld and the enemy arrives.
 - **Line trains** stock depots instead of supplying a force. Stores move forward in relays, a few days' haul at a time.
 - **The supply stance** is part of the directive. *Keep the depots* changes nothing. *Bring depots forward* founds one depot a turn, sends the line trains forward, and has each group's wagons load at the nearest stocked depot. Its reasons are listed before you commit.
-- **Not built yet:** garrison detachments for new depots, raids on convoys, and the free versus regulated foraging choice.
+- **Raids on convoys** (rules 0.24.0, D-057): Cossacks fall on trains on roads no French group covers, burning part of the load and driving off horses. The supply lines mark the roads at risk, from where the Cossacks were last seen, and the only cover is a group standing at one end of the road.
+- **Not built yet:** garrison detachments for new depots, escorts for the trains, and the free versus regulated foraging choice.
 
 **The forecast.** Every group and the army as a whole show *days of supply* as a range, such as "6–9 days". The range comes from carried stock, expected deliveries and expected forage under current orders. The Logistics layer marks lines delivering less than demand as **bottlenecks**, with a pattern as well as a colour.
 

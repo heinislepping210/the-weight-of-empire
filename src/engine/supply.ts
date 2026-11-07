@@ -6,7 +6,8 @@ import { roadFactor } from './advance';
 import { usableWagons } from './carriage';
 import { edgeBetween, shortestPath } from './graph';
 import type { Context } from './scenario';
-import type { Convoy, ConvoyId, ForceId, GameState, NodeId } from './types';
+import { exposedRoads } from './raids';
+import type { Convoy, ConvoyId, EdgeId, ForceId, GameState, NodeId } from './types';
 import { closedRoads, must, sortedValues } from './util';
 
 export interface SupplyLine {
@@ -28,6 +29,8 @@ export interface SupplyLine {
   perDay: number;
   /** Rations of food a day the group it serves eats; null for a line train that stocks a depot. */
   need: number | null;
+  /** The roads on its way the raiders could reach, where the French last saw them (G-028). */
+  exposed: EdgeId[];
 }
 
 /** Where a train delivers, as in turn resolution (`deliveryOf`); null when it stands idle or has no one to supply. */
@@ -43,6 +46,7 @@ function targetOf(s: GameState, c: Convoy): NodeId | null {
 /** Every French wagon train at work, with what it can bring a day. */
 export function supplyLines(s: GameState, ctx: Context): SupplyLine[] {
   const { convoy, gramsPerUnit, consumption } = ctx.rules;
+  const feared = exposedRoads(s, ctx);
   const lines: SupplyLine[] = [];
   for (const c of sortedValues(s.convoys)) {
     if (c.side !== 'fr') continue;
@@ -53,9 +57,11 @@ export function supplyLines(s: GameState, ctx: Context): SupplyLine[] {
     const path = [c.home, ...way];
     // Each road converts the train's ideal distance at its own speed, and a leg ends at its place (`travel`).
     let ideal = 0;
+    const exposed: EdgeId[] = [];
     for (let i = 1; i < path.length; i++) {
       const edge = must(edgeBetween(ctx.graph, path[i - 1] as NodeId, path[i] as NodeId), `road ${path[i - 1]}–${path[i]}`);
       ideal += Math.ceil((edge.metres * 1000) / roadFactor(s, ctx, edge));
+      if (feared.has(edge.id)) exposed.push(edge.id);
     }
     // Out in this many sub-steps, delivering at the end of the last; back in as many, loading as it arrives; two a day.
     const cycleDays = Math.max(1, Math.ceil(ideal / convoy.metresPerSlot));
@@ -76,6 +82,7 @@ export function supplyLines(s: GameState, ctx: Context): SupplyLine[] {
       load,
       perDay: Math.floor(load / cycleDays),
       need: served ? served.men * consumption.foodPerMan : null,
+      exposed,
     });
   }
   return lines;

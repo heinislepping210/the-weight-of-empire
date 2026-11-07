@@ -70,6 +70,9 @@ interface Result {
   abandonedFood: number;
   abandonedFodder: number;
   trainHorsesLostPermille: number;
+  raids: number;
+  raidFood: number;
+  raidHorses: number;
   russian: RussianResult;
   roadCut: boolean;
   stillCutOff: boolean;
@@ -158,6 +161,9 @@ it.skipIf(!enabled)('balance batch', () => {
         abandonedFood: run.final.ledger.abandoned.food,
         abandonedFodder: run.final.ledger.abandoned.fodder,
         trainHorsesLostPermille: trainHorsesLost(run.states[0]!, run.final),
+        raids: log.filter((e) => e.kind === 'raided').length,
+        raidFood: log.filter((e) => e.kind === 'raided').reduce((n, e) => n + Number(e.detail.food), 0),
+        raidHorses: log.filter((e) => e.kind === 'raided').reduce((n, e) => n + Number(e.detail.horses), 0),
         ending: o.ending,
         rank: ENDING_RANK[o.ending],
         frMen: o.frenchMenLostPermille / 10,
@@ -251,6 +257,14 @@ it.skipIf(!enabled)('balance batch', () => {
     lines.push(
       `| ${name} | ${mean(rs.map((r) => r.founded)).toFixed(2)} | ${mean(rs.map((r) => r.depotsLost)).toFixed(2)} | ${pct(rs.filter((r) => r.tookSmolensk).length, rs.length)} | ${Math.round(mean(rs.map((r) => r.lineFood))).toLocaleString('en-GB')} | ${Math.round(mean(rs.map((r) => r.burnedFood))).toLocaleString('en-GB')} | ${Math.round(mean(rs.map((r) => r.abandonedFood))).toLocaleString('en-GB')} / ${Math.round(mean(rs.map((r) => r.abandonedFodder))).toLocaleString('en-GB')} | ${(mean(rs.map((r) => r.trainHorsesLostPermille)) / 10).toFixed(1)}% | ${pct(rs.filter((r) => r.uneven).length, rs.length)} |`,
     );
+  }
+
+  if (rules.raids.permille > 0) {
+    lines.push('', '## Raids (means)', '', '| Strategy | Raids | Rations burned | Horses driven off |', '|---|---|---|---|');
+    for (const name of names) {
+      const rs = results[name]!;
+      lines.push(`| ${name} | ${mean(rs.map((r) => r.raids)).toFixed(2)} | ${Math.round(mean(rs.map((r) => r.raidFood))).toLocaleString('en-GB')} | ${Math.round(mean(rs.map((r) => r.raidHorses))).toLocaleString('en-GB')} |`);
+    }
   }
 
   lines.push(

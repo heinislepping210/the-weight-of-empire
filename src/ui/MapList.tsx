@@ -2,7 +2,7 @@ import { when } from '../engine';
 import type { Context, GameState, SupplyLine } from '../engine';
 import { shortName, thousands } from './names';
 import { condition } from './OrdersPanel';
-import { battleText, burnedText, districtText, pontoonText, strippingOf, type Consequences } from './consequences';
+import { battleText, burnedText, districtText, pontoonText, raidText, strippingOf, type Consequences } from './consequences';
 import { isShort, supplyText } from './playbackModel';
 
 interface Props {
@@ -85,6 +85,16 @@ export function MapList({ s, ctx, objective, onPick, supply = [], consequences =
               <li key={l.convoy} className={isShort(l) ? 'supply-short-text' : ''}>
                 {supplyText(l, s, ctx)}
               </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {consequences && consequences.raids.length > 0 && (
+        <>
+          <h3>Raids</h3>
+          <ul className="reasons">
+            {consequences.raids.map((r, i) => (
+              <li key={i}>{raidText(ctx, r)}</li>
             ))}
           </ul>
         </>

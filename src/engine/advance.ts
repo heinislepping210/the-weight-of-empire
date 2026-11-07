@@ -11,6 +11,7 @@ import { SECTORS, allInReserve, applyPlacements, fallBack, keyFromAction, lineOf
 import { ISSUE_ORDER, capacityGrams, issueTarget, takenUp, usableWagons, weightGrams, withinCapacity } from './carriage';
 import { lineOfRetreatBlocked } from './outcome';
 import { edgeBetween, neighboursOf, pathMetres, roadDistance, shortestPath, type EdgeDef } from './graph';
+import { raidConvoys } from './raids';
 import { chance, drawBetween } from './rng';
 import type { Context } from './scenario';
 import { ROUNDS_PER_SLOT, dayIndex, isAfternoon, nextDaylight, slotIndex } from './time';
@@ -364,6 +365,7 @@ function stageMovement(s: GameState, ctx: Context, log: LogEntry[], watch?: Watc
   for (const f of movers) if (!f.movedThisSlot) f.activity = 'halt';
   for (const c of sortedValues(s.convoys)) moveConvoy(s, ctx, c, log);
   movePontoons(s, ctx, log);
+  raidConvoys(s, ctx, log);
   s.resolution.stage = 'contacts';
 }
 

@@ -20,6 +20,8 @@ export interface Consequences {
   districts: ReadonlyMap<NodeId, SeenDistrict>;
   burned: { node: NodeId; when: SlotRef; by: Side; permille: number }[];
   battles: { node: NodeId; when: SlotRef; winner: Side | null; ourLosses: number }[];
+  /** Raids on French wagon trains, on the roads where they fell (G-028). */
+  raids: { edge: EdgeId; when: SlotRef; food: number; horses: number }[];
 }
 
 /**
@@ -47,8 +49,8 @@ export function strippingOf(ctx: Context, node: NodeId, d: SeenDistrict): { stri
   return { stripping: left >= 0.85 ? 'untouched' : left >= 0.5 ? 'foraged' : left >= 0.2 ? 'stripped' : 'bare', food, fodder };
 }
 
-/** Depots that changed hands, with the share of their stores burned, and the battles fought to the end. */
-export function scarsOf(logs: readonly LogEntry[], s: GameState): Pick<Consequences, 'burned' | 'battles'> {
+/** Depots that changed hands, with the share of their stores burned, the battles fought to the end, and the raids. */
+export function scarsOf(logs: readonly LogEntry[], s: GameState): Pick<Consequences, 'burned' | 'battles' | 'raids'> {
   const burned = logs
     .filter((e) => e.kind === 'depotCaptured')
     .map((e) => ({ node: String(e.detail.node), when: { turn: e.turn, slot: e.slot }, by: e.detail.by as Side, permille: Number(e.detail.burnedPermille) }));
@@ -56,7 +58,10 @@ export function scarsOf(logs: readonly LogEntry[], s: GameState): Pick<Consequen
     .filter((b) => b.phase === 'over')
     .sort((a, b) => (a.id < b.id ? -1 : 1))
     .map((b) => ({ node: b.node, when: b.startsAt, winner: b.winner, ourLosses: b.sides.fr.reduce((n, id) => n + (b.losses[id] ?? 0), 0) }));
-  return { burned, battles };
+  const raids = logs
+    .filter((e) => e.kind === 'raided' && s.convoys[String(e.detail.convoy)]?.side === 'fr')
+    .map((e) => ({ edge: String(e.detail.edge), when: { turn: e.turn, slot: e.slot }, food: Number(e.detail.food), horses: Number(e.detail.horses) }));
+  return { burned, battles, raids };
 }
 
 /**
@@ -109,6 +114,12 @@ export function burnedText(ctx: Context, b: Consequences['burned'][number]): str
 export function battleText(ctx: Context, b: Consequences['battles'][number]): string {
   const result = b.winner === 'fr' ? 'the field is ours' : b.winner === 'ru' ? 'our troops were driven from the field' : 'no victor';
   return `Battle at ${place(ctx, b.node)}, ${day(ctx, b.when)}: ${result}. Our losses: about ${thousands(b.ourLosses)} men.`;
+}
+
+export function raidText(ctx: Context, r: Consequences['raids'][number]): string {
+  const road = ctx.graph.edges.get(r.edge);
+  const where = road ? `between ${place(ctx, road.a)} and ${place(ctx, road.b)}` : 'on the road';
+  return `Cossacks raided a wagon train ${where} on ${day(ctx, r.when)}: about ${thousands(r.food)} rations burned, ${r.horses.toLocaleString('en-GB')} horses driven off.`;
 }
 
 /** The pontoon train in words, for the map and the list (G-027). */

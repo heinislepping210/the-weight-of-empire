@@ -944,3 +944,44 @@ The safe plans, which take Smolensk and end in Limited Success, hold steady at a
 Reports: [Orsha, by Rasasna](balance/2026-11-06-whatif-pontoons-orsha.md) and [adaptive](balance/2026-11-06-whatif-pontoons-orsha-adaptive.md); [Orsha, by the Orsha road](balance/2026-11-06-whatif-pontoons-orsha-road.md) and [adaptive](balance/2026-11-06-whatif-pontoons-orsha-road-adaptive.md); [Liozno](balance/2026-11-06-whatif-pontoons-liozno.md) and [adaptive](balance/2026-11-06-whatif-pontoons-liozno-adaptive.md).
 
 **Your decision (6 November 2026): adopt, with the train starting at Orsha** (rules 0.23.0, D-056), where the little evidence points and which comes closest to the real date. The full batch and the adaptive run on the adopted game match the what-if reports line for line, apart from their headings: [batch](balance/2026-11-06-rules-0.23.0.md), [adaptive](balance/2026-11-06-adaptive-0.23.0.md). Known costs: by Rasasna the trap ranks below a safe Limited Success on average, at 3.34–3.60 against about 3.06, and only wait-for-trains by the Orsha road beats safe play, at 3.01; the best fixed approach and the adaptive policy win nothing; Decisive Success is rare.
+
+## Raids on the wagon trains (rules 0.24.0, 6 November 2026)
+
+V4 asks that a raid be visible where it happens, and the game had no raids. The rule (G-028, `raids`, off at `permille: 0`) lets Platov's Cossacks send out flying parties while the group stays at its post. Each sub-step they may fall on the nearest train they can reach: within 110 km by roads free of French troops, on a road with no French group at either end. A raid burns half the load and drives off a fifth of the horses. The supply lines mark the roads the French have reason to fear, from where they last saw the Cossacks, and a raid leaves a flame on the road. An army that marches off lays its roads open; a group left on them covers them. **Adopted at a 10% chance in rules 0.24.0 (D-057).** "Off" below is the game before it, rules 0.23.0.
+
+1,000 seeds × 3 sets of dice, zero invariant violations in every run. Each cell runs off → a 10% chance each sub-step → a 20% chance; raids a game run 10% → 20%:
+
+| Bot | Won | Limited Success | Repulse | French men lost | Mean rank, held-out seeds | Raids a game |
+|---|---|---|---|---|---|---|
+| southern-envelopment-hold | 42.6% → 41.6% → 40.8% | 13.2% → 13.4% → 13.6% | 29.1% → 29.6% → 30.1% | 22.6% → 22.9% → 23.2% | 3.34 → 3.36 → 3.37 | 2.09 → 4.20 |
+| southern-envelopment-wait-for-trains | 28.7% → 27.3% → 26.7% | 11.4% → 12.2% → 13.1% | 26.0% → 26.4% → 26.2% | 18.6% → 19.0% → 19.3% | 3.55 → 3.56 → 3.56 | 2.16 → 4.30 |
+| southern-envelopment-guard-at-base | 41.0% → 40.2% → 39.3% | 2.3% → 2.3% → 2.2% | 43.9% → 44.6% → 45.3% | 21.6% → 22.0% → 22.3% | 3.60 → 3.62 → 3.65 | 1.74 → 3.48 |
+| southern-envelopment | 6.3% → 4.9% → 4.1% | 55.6% → 56.8% → 57.5% | 19.7% → 19.9% → 20.1% | 20.2% → 20.4% → 20.7% | 3.54 → 3.55 → 3.56 | 2.47 → 4.96 |
+| concentrated-push | 0% | 97.5% → 97.4% → 97.3% | 2.0% | 23.4% → 23.8% → 24.2% | 3.05 | 2.81 → 5.66 |
+| rush | 0% | 98.1% → 98.0% → 97.8% | 0.4% | 23.1% → 23.6% → 24.0% | 3.06 → 3.06 → 3.07 | 2.94 → 5.91 |
+| methodical | 0% | 95.7% | 2.8% | 14.4% → 14.5% → 14.6% | 3.08 | 1.70 → 3.42 |
+| bait-and-converge | 0% | 88.7% | 2.4% | 18.1% → 18.2% → 18.3% | 3.14 | 0.85 → 1.74 |
+
+What the raids cost in supply, in the same order of settings:
+
+| Bot | Rations burned in raids (10% → 20%) | Food moved up by line trains | Wagon-train horses lost | Food days at the end | Cohesion at the end |
+|---|---|---|---|---|---|
+| concentrated-push | 163,015 → 281,906 | 660,335 → 616,555 → 572,465 | 4.8% → 12.3% → 18.9% | 0.7 → 0.4 → 0.3 | 529 → 518 → 509 |
+| southern-envelopment-hold | 145,383 → 261,224 | 660,406 → 595,050 → 533,770 | 2.0% → 8.8% → 14.8% | 0.9 → 0.7 → 0.6 | 573 → 564 → 557 |
+| southern-envelopment-guard-at-base | 110,472 → 194,817 | 550,491 → 524,887 → 499,304 | 2.3% → 7.4% → 11.7% | 3.0 → 2.8 → 2.6 | 603 → 595 → 588 |
+| bait-and-converge | 40,224 → 78,086 | 660,521 → 647,956 → 634,600 | 7.6% → 10.1% → 12.5% | 0.6 | 669 → 667 → 665 |
+
+The best fixed approach stays rush, at 3.06 → 3.06 → 3.07, and it and the adaptive policy win nothing at any setting. A perfect reader of the scenario gains 0.31 → 0.30 → 0.29 ranks. F3 gives the push 39.2% → 39.7% → 40.0% of seeds and southern-envelopment 26.6% → 25.7% → 25.1% (target: none above 50%).
+
+**Reading:**
+- **Raids fall where no group stands.** The plans that march the whole army off are raided two to three times a game at 10%. Bait-and-converge is raided less than once: it stands at Liozno, on the chief supply road. Guard-at-base, which leaves the Guard at Vitebsk at the other end of that road, is raided 1.74 times. Being concentrated is not what opens the rear, since bait is concentrated too; leaving the roads empty is.
+- **They cost supply, not endings.** The trains lose horses and food, and the army ends with less to eat, but the safe plans keep their Limited Success and their rank. What they pay is under a point of men lost.
+- **The plans that lose endings are the ones already behind.** Only the trap family loses wins: at most 1.4 points at 10% and 2.2 at 20%. Raids widen the gap between the trap and safe play a little, and the plans raided most lose least. The idea that an army pays for leaving its roads empty shows in the costs, not in the endings.
+- **No raid decides a campaign.** A 5% chance gave about one raid a game (the push 1.39, bait 0.44), and the same small steps as the runs above.
+- **The ceiling is low.** The harshest test, a 20% chance with the whole load burned and two-fifths of the horses driven off (1,000 seeds × 1 set of dice, against the same seeds off): the hold plan wins 41.6% → 38.1%, guard 40.9% → 38.3%, rush collapses in 1.4% → 2.5% of games, the push keeps 97.1% Limited Success, and F3 gives it 40.2%. In that test wait-for-trains cuts the Russian road in 51.6% of games, up from 37.8%. The bot waits only for a train carrying a day's food for its group, so a burned load would end its wait early: this comes from reading the bot, not from tracing games.
+
+**What this cannot say:** the bots ignore raids, so a player who covers the roads should do better than these figures, and how much better is unmeasured. Covering a road means standing a group at one end of it: there is no order to detach an escort, though the sources say troops were diverted to guard the trains. The Russian command does not choose where to raid; the Cossacks simply take the nearest train in reach. Every value is a placeholder on thin sources (G-028; HISTORICAL_RESEARCH, "Raids on the wagon trains"). The game is only ten turns long, so the wagon horses lost may have too little time to tell; a longer game could show more.
+
+Reports: [10%](balance/2026-11-06-whatif-raids-10.md) and [adaptive](balance/2026-11-06-whatif-raids-10-adaptive.md); [20%](balance/2026-11-06-whatif-raids-20.md) and [adaptive](balance/2026-11-06-whatif-raids-20-adaptive.md); [the harshest test](balance/2026-11-06-whatif-raids-heavy.md) and [its baseline](balance/2026-11-06-whatif-raids-heavy-baseline.md).
+
+**Your decision (6 November 2026): adopt at 10%** (rules 0.24.0, D-057). V4 and step 4 of the M2 demonstration need a raid to happen in play. At 5% a plan may see one raid in a game or none, too few to learn from. At 10% most plans see two or three, for at most 1.4 points of wins. At 20% the raids double and teach nothing more, on evidence too thin to justify it. The full batch and the adaptive run on the adopted game match the 10% what-if reports line for line, apart from their headings: [batch](balance/2026-11-07-rules-0.24.0.md), [adaptive](balance/2026-11-07-adaptive-0.24.0.md). Known costs: raids cost supply, not endings; only the trap plans lose wins, so the gap to safe play widens a little; the plans raided most lose least; and the bots do not answer raids, so what covering the roads is worth is unmeasured.
