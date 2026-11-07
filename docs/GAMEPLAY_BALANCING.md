@@ -915,3 +915,32 @@ Reports: [queues](balance/2026-11-05-whatif-road-capacity.md) and [adaptive](bal
 **Your decision (5 November 2026): adopt the strike limit** (rules 0.21.0, D-054). The full batch and the adaptive run on the adopted game match the what-if reports line for line, apart from their headings: [batch](balance/2026-11-05-rules-0.21.0.md), [adaptive](balance/2026-11-05-adaptive-0.21.0.md). Until road capacity came, the trap ranked below a safe Limited Success on average, a cost accepted with this decision.
 
 **Your decision (6 November 2026): adopt road capacity** (rules 0.22.0, D-055), with the staff's forecasts now seeing queues. The full batch and the adaptive run on the adopted game match the what-if reports line for line, apart from their headings: [batch](balance/2026-11-06-rules-0.22.0.md), [adaptive](balance/2026-11-06-adaptive-0.22.0.md). Known costs: guard-at-base is the clear best fixed plan, and the Russian command does not plan around queues.
+
+## The pontoon train (rules 0.23.0, 6 November 2026)
+
+G2 asks that the Dnieper need a bridge or the pontoon train. Until now the pontoon road between Liubavichi and Rasasna was open to everyone from the first day, the Russians included. The rule (G-027, `pontoons.bridgeSlots: 2`) shuts that road until the French have bridged it, and to the Russians for good. The train moves at a wagon train's speed, goes by itself to a crossing a French column wants, and needs an afternoon and a morning there. **Adopted in rules 0.23.0 (D-056), with the train starting at Orsha.** In this section "now" is the game before it, rules 0.22.0.
+
+**Where the train starts is an assumption,** so two starts were measured. No source places it in August (HISTORICAL_RESEARCH, "The pontoon train"). At Orsha it has the bridge ready on 11 August if the army sets out at once, against the real crossing of 13–14 August. With the vanguard at Liozno it has the bridge ready sooner. The bots are locked to their road, so the plans were also measured going round by the Orsha road and its bridge, as a player might. That road is untouched by the rule: its results are the same with the rule on or off.
+
+1,000 seeds × 3 sets of dice, zero invariant violations in every run:
+
+| Bot (now → train at Orsha, by Rasasna → train at Orsha, by the Orsha road → train at Liozno, by Rasasna) | Won | Decisive Success | Repulse | Mean rank, held-out seeds |
+|---|---|---|---|---|
+| southern-envelopment-hold | 66.5% → 42.6% → 43.7% → 57.2% | 2.5% → 0.3% → 0% → 1.6% | 12.8% → 29.1% → 31.5% → 23.2% | 2.82 → 3.34 → 3.36 → 3.06 |
+| southern-envelopment-wait-for-trains | 30.6% → 28.7% → 47.8% → 30.0% | 0% → 0.6% → 0% → 0% | 19.7% → 26.0% → 13.3% → 20.2% | 3.47 → 3.55 → 3.01 → 3.48 |
+| southern-envelopment-guard-at-base | 66.8% → 41.0% → 48.6% → 58.7% | 7.6% → 0.1% → 2.8% → 5.1% | 22.5% → 43.9% → 41.8% → 30.9% | 2.76 → 3.60 → 3.38 → 3.03 |
+
+The safe plans, which take Smolensk and end in Limited Success, hold steady at a mean rank of about 3.06, and the push and bait plans do not change: they never use this road.
+
+**Reading:**
+- **The rule makes a choice, not only a cost.** The Rasasna swing is quicker but must wait for the bridge; the Orsha road is longer but open. Which is better depends on the plan: wait-for-trains gains 19 points by the Orsha road, because its slower march suits it, and is repulsed in only 13.3% of games.
+- **No plan dominates any more.** With the train at Orsha or Liozno the best fixed approach by mean rank is a safe one, the adaptive policy mixes several plans, and a perfect reader of the scenario gains 0.31–0.43 ranks, up from 0.24. Adaptive play can no longer settle on one plan, though at Orsha the plans it mixes are all safe ones, and it wins nothing.
+- **At Orsha the trap is hard.** Only wait-for-trains by the Orsha road beats safe play on average, narrowly, and Decisive Success is rare.
+- **At Liozno the trap stands level with safe play,** at 3.03–3.06, with wins of 57–59% and Decisive Success kept at 5.1%.
+- **The Russians lose little by being barred,** because the strike limit already keeps them off this road.
+
+**What this cannot say:** the bots stand at the river for days and do nothing else. A player can send the groups by different roads, or hold them back until the bridge is ready, and may do much better than these figures. The staff's logistics plan still measures its hauls across a shut road, though the wagon trains themselves go round, as the supply lines on the map now do.
+
+Reports: [Orsha, by Rasasna](balance/2026-11-06-whatif-pontoons-orsha.md) and [adaptive](balance/2026-11-06-whatif-pontoons-orsha-adaptive.md); [Orsha, by the Orsha road](balance/2026-11-06-whatif-pontoons-orsha-road.md) and [adaptive](balance/2026-11-06-whatif-pontoons-orsha-road-adaptive.md); [Liozno](balance/2026-11-06-whatif-pontoons-liozno.md) and [adaptive](balance/2026-11-06-whatif-pontoons-liozno-adaptive.md).
+
+**Your decision (6 November 2026): adopt, with the train starting at Orsha** (rules 0.23.0, D-056), where the little evidence points and which comes closest to the real date. The full batch and the adaptive run on the adopted game match the what-if reports line for line, apart from their headings: [batch](balance/2026-11-06-rules-0.23.0.md), [adaptive](balance/2026-11-06-adaptive-0.23.0.md). Known costs: by Rasasna the trap ranks below a safe Limited Success on average, at 3.34–3.60 against about 3.06, and only wait-for-trains by the Orsha road beats safe play, at 3.01; the best fixed approach and the adaptive policy win nothing; Decisive Success is rare.

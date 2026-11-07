@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
-import { when } from '../engine';
-import type { Context, Force, Frame, GameState, PlannedOrder, SupplyLine } from '../engine';
+import { closedRoads, when } from '../engine';
+import type { Context, Force, Frame, GameState, PlannedOrder, PontoonTrain, SupplyLine } from '../engine';
 import { bandOf, fit, heightOf, onKey, panBy, viewBoxOf, zoomAbout, zoomOf, type Camera } from '../map/camera';
 import { shortName, thousands } from './names';
 import { condition } from './OrdersPanel';
-import { battleText, burnedText, districtText, dustOf, strippingOf, type Consequences } from './consequences';
+import { battleText, burnedText, districtText, dustOf, pontoonText, strippingOf, type Consequences } from './consequences';
 import { PlaybackLayer, type PlaybackBar, type PlaybackView } from './Playback';
 import { TerrainLayer } from './TerrainLayer';
 import { isShort, supplyText, trailsOf } from './playbackModel';
@@ -53,6 +53,14 @@ function positionOf(ctx: Context, f: Force): Point {
   if (!f.transit) return here;
   const edge = ctx.graph.edges.get(f.transit.edge);
   return along(here, POSITION[f.transit.to] as Point, edge ? f.transit.metres / edge.metres : 0);
+}
+
+/** Where the pontoon train stands, on the road if it is on the march. */
+function trainAt(train: PontoonTrain, ctx: Context): Point {
+  const here = POSITION[train.at] as Point;
+  if (!train.transit) return here;
+  const edge = ctx.graph.edges.get(train.transit.edge);
+  return along(here, POSITION[train.transit.to] as Point, edge ? train.transit.metres / edge.metres : 0);
 }
 
 /**
@@ -124,6 +132,7 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick, playb
   const pixels = (drawnWidth / MAP_WIDTH) * zoom;
   /** Labels and markers are drawn at this scale, so that they keep their size on screen: about 10-pixel text. */
   const u = 0.85 / pixels;
+  const shutRoads = closedRoads(s, ctx, 'fr');
   /** Where the map is drawn small (a phone, the whole theatre), markers are compact and only the main places named. */
   const compact = pixels < 0.6;
   // The playback's loop reads the markers' scale and writes the clock without a render (Playback.tsx).
@@ -281,10 +290,17 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick, playb
               {wet && <line className="mud-wash" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />}
               {playback && <line className="mud-wash" data-mud={e.id} style={{ opacity: 0 }} x1={a.x} y1={a.y} x2={b.x} y2={b.y} />}
               <line className={`road road-${e.road}${wet ? ' road-mud' : ''}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
-              {(e.crossing === 'pontoon' || e.crossing === 'ford') && <circle className="crossing" cx={(a.x + b.x) / 2} cy={(a.y + b.y) / 2} r={6 * u} />}
+              {(e.crossing === 'pontoon' || e.crossing === 'ford') && <circle className={`crossing${shutRoads.has(e.id) ? ' crossing-shut' : ''}`} cx={(a.x + b.x) / 2} cy={(a.y + b.y) / 2} r={6 * u} />}
             </g>
           );
         })}
+
+        {s.pontoons && (
+          <g className="pontoon-train" transform={`translate(${trainAt(s.pontoons, ctx).x} ${trainAt(s.pontoons, ctx).y}) scale(${u})`}>
+            <title>{pontoonText(s.pontoons, ctx)}</title>
+            <path d="M-9 -2 H9 L6 4 H-6 Z" />
+          </g>
+        )}
 
         {supply.map((l) => {
           const points = l.path.map((n) => POSITION[n] as Point);

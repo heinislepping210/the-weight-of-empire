@@ -78,7 +78,7 @@ export function roadDistance(g: Graph, from: NodeId, to: NodeId): number {
  * Shortest road path by length, as the nodes after `from`, never entering a node in `avoid`.
  * Ties break on node ID, so the result is deterministic.
  */
-export function shortestPath(g: Graph, from: NodeId, to: NodeId, avoid: ReadonlySet<NodeId> = new Set()): NodeId[] | null {
+export function shortestPath(g: Graph, from: NodeId, to: NodeId, avoid: ReadonlySet<NodeId> = new Set(), closed: ReadonlySet<EdgeId> = new Set()): NodeId[] | null {
   if (from === to) return [];
   const dist = new Map<NodeId, number>([[from, 0]]);
   const prev = new Map<NodeId, NodeId>();
@@ -97,7 +97,7 @@ export function shortestPath(g: Graph, from: NodeId, to: NodeId, avoid: Readonly
     if (current === to) break;
     done.add(current);
     for (const { node, edge } of neighboursOf(g, current)) {
-      if (avoid.has(node)) continue;
+      if (avoid.has(node) || closed.has(edge.id)) continue;
       const d = best + edge.metres;
       const old = dist.get(node);
       const oldPrev = prev.get(node);

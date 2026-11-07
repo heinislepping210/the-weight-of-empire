@@ -76,6 +76,8 @@ export interface ScenarioDef {
    * the Russians off from the exits (§2.13).
    */
   cutOffPlaces?: NodeId[];
+  /** Where the French bridging train starts (G-027); with none, the scenario has no train. */
+  pontoonStart?: NodeId;
 }
 
 export type CommandFn = (s: GameState, ctx: Context, log: LogEntry[]) => void;
@@ -197,6 +199,7 @@ export function newGame(ctx: Context, seed: number, dice: number = seed): GameSt
     },
     halted: false,
     cutOff: { held: 0, achievedAt: null },
+    ...(scenario.pontoonStart !== undefined && rules.pontoons.bridgeSlots > 0 ? { pontoons: { at: scenario.pontoonStart, transit: null, route: [], work: 0, bridged: [] } } : {}),
     mainArmies,
     roadSeq: 0,
     ledger: {

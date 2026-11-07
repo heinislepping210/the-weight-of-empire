@@ -5,15 +5,15 @@
 import { roadDistance, shortestPath } from './graph';
 import type { Context } from './scenario';
 import type { Force, GameState, LogEntry, NodeId, RussianPlan, Sighting } from './types';
-import { note, setPosture, sortedValues } from './util';
+import { closedRoads, note, setPosture, sortedValues } from './util';
 
 interface Seen extends Sighting {
   id: string;
 }
 
-function routeTo(ctx: Context, f: Force, dest: NodeId): NodeId[] {
+function routeTo(s: GameState, ctx: Context, f: Force, dest: NodeId): NodeId[] {
   const from = f.transit ? f.transit.to : f.at;
-  const path = shortestPath(ctx.graph, from, dest) ?? [];
+  const path = shortestPath(ctx.graph, from, dest, new Set(), closedRoads(s, ctx, f.side)) ?? [];
   return f.transit ? [from, ...path] : path;
 }
 
@@ -22,9 +22,9 @@ function routeTo(ctx: Context, f: Force, dest: NodeId): NodeId[] {
  * if any such road leads there; at a target beyond it the march stops at the first place too far out. A column on
  * the road finishes the stretch it is on.
  */
-function strikeRoute(ctx: Context, f: Force, target: NodeId, base: NodeId): NodeId[] {
+function strikeRoute(s: GameState, ctx: Context, f: Force, target: NodeId, base: NodeId): NodeId[] {
   const limit = ctx.rules.russian.strikeMarchMetres;
-  const route = routeTo(ctx, f, target);
+  const route = routeTo(s, ctx, f, target);
   if (limit <= 0) return route;
   const tooFar = (node: NodeId) => roadDistance(ctx.graph, node, base) > limit;
   if (tooFar(target)) {
@@ -32,7 +32,7 @@ function strikeRoute(ctx: Context, f: Force, target: NodeId, base: NodeId): Node
     return beyond < 0 ? route : route.slice(0, beyond);
   }
   const from = f.transit ? f.transit.to : f.at;
-  const inside = shortestPath(ctx.graph, from, target, new Set([...ctx.graph.nodes.keys()].filter((node) => node !== from && tooFar(node))));
+  const inside = shortestPath(ctx.graph, from, target, new Set([...ctx.graph.nodes.keys()].filter((node) => node !== from && tooFar(node))), closedRoads(s, ctx, f.side));
   if (inside === null) return route;
   return f.transit ? [from, ...inside] : inside;
 }
@@ -109,14 +109,14 @@ export function planRussianTurn(s: GameState, ctx: Context, log: LogEntry[]): vo
 
   for (const f of main) {
     if (f.battle !== null) continue;
-    const home = base !== null && roadDistance(ctx.graph, f.at, base) > r.homeRadiusMetres ? routeTo(ctx, f, base) : [];
+    const home = base !== null && roadDistance(ctx.graph, f.at, base) > r.homeRadiusMetres ? routeTo(s, ctx, f, base) : [];
     if (plan === 'strike' && cmd.target && base !== null) {
-      f.route = strikeRoute(ctx, f, cmd.target, base);
+      f.route = strikeRoute(s, ctx, f, cmd.target, base);
       f.engagement = 'seek';
       f.pace = 'steady';
       setPosture(f, 'concentrated', ctx.rules);
     } else if (plan === 'withdraw' && fallback) {
-      f.route = routeTo(ctx, f, fallback);
+      f.route = routeTo(s, ctx, f, fallback);
       f.engagement = 'avoid';
       f.pace = 'steady';
       setPosture(f, 'concentrated', ctx.rules);
@@ -137,7 +137,7 @@ export function planRussianTurn(s: GameState, ctx: Context, log: LogEntry[]): vo
     f.engagement = 'avoid';
     const pressing = seen.filter((x) => roadDistance(ctx.graph, f.at, x.at) <= r.threatRadiusMetres / 2).reduce((n, x) => n + x.men, 0);
     if (pressing * 1000 > f.men * r.screenOddsPermille && base !== null && f.at !== base) {
-      f.route = routeTo(ctx, f, base).slice(0, 1);
+      f.route = routeTo(s, ctx, f, base).slice(0, 1);
       setPosture(f, 'concentrated', ctx.rules);
     } else {
       f.route = [];

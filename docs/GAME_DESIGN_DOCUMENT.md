@@ -175,7 +175,7 @@ The simulation underneath is identical; only the way you give orders changes.
 All quantities (wagon capacity, march rates, consumption) come from Phase 2 research as ranges. Where no source exists, the value is a labelled game assumption in the register.
 
 ## 2.7 Movement and geography
-- Routes form a network of locations and road segments. Each segment has: length (from real geodata), road class (post road / secondary / track), terrain (open / forest / marsh), crossing type (bridge / ford / none — pontoon needed), condition (dry / muddy, driven by weather), and **capacity**.
+- Routes form a network of locations and road segments. Each segment has: length (from real geodata), road class (post road / secondary / track), terrain (open / forest / marsh), crossing type (bridge / ford / none — pontoon needed), condition (dry / muddy, driven by weather), and **capacity**. *The pontoon crossing is built in rules 0.23.0 (D-056, G-027): the Dnieper road at Rasasna is shut until the train has bridged it, and to the Russians for good. The staff sends the train to the crossing a column wants, so there is no separate order for it.*
 - **Road capacity matters.** A big force on one road moves slowly because its column is very long. Splitting across parallel roads is faster — which is why Napoleonic armies marched divided. This creates a real reason to use multiple routes. *Built in rules 0.22.0 (D-055, G-024): columns of one side queue on a road, and the staff's plans, the route cards and the summary show it.*
 - **Route preview** (hover or drag): arrival day as a range, fatigue cost, supply forecast at arrival, known threats, and the crossings involved.
 

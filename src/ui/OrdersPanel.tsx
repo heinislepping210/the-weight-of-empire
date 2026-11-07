@@ -31,6 +31,7 @@ function previewLines(ctx: Context, p: RoutePreview): string[] {
   if (p.sameAs !== undefined) lines.push(`Same orders as ${p.sameAs ?? 'the shortest roads'}.`);
   if (p.arrival) lines.push(`Arrivals ${when(ctx, p.arrival.first)} (dry roads) to ${when(ctx, p.arrival.last)} (wet weather).`);
   if (p.late.length > 0) lines.push(`${p.late.length === 1 ? '1 group arrives' : `${p.late.length} groups arrive`} only after the campaign ends, or not without rest.`);
+  for (const b of p.bridges) lines.push(b.ready ? `Bridge between ${b.between}: ready ${when(ctx, b.ready)}.` : `Bridge between ${b.between}: the train cannot reach the bank.`);
   if (p.queues.length > 0) {
     const held = p.queues.map((q) => `${shortName(q.force, q.name)} behind ${shortName(q.behindForce, q.behind)} from ${q.at}, ${Number.isFinite(q.slots) ? `about ${halfDays(q.slots)}` : 'stopped'}`);
     lines.push(`Queues: ${held.join('; ')}.`);

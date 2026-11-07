@@ -7,7 +7,7 @@
 export type CutOffCredit = 'stands' | 'atEnd' | 'graded';
 
 // Bump on any change that alters results; golden replays enforce it (§3.3).
-export const RULES_VERSION = '0.22.0';
+export const RULES_VERSION = '0.23.0';
 
 /**
  * Values are game assumptions (HISTORICAL_ASSUMPTIONS.md). Those marked with an L- ID sit inside
@@ -29,6 +29,12 @@ export const RULES = {
      */
     columnMetresPerThousand: 230 as number,
   },
+  /**
+   * The pontoon train (G2, G-027, D-056): sub-steps of work to bridge a pontoon road, which is shut until then and always
+   * shut to the Russians. The bridges at Rasasna were built overnight (H-004): an afternoon and a morning. At 0, the rule
+   * before: no train, and the road open to all.
+   */
+  pontoons: { bridgeSlots: 2 as number },
   convoy: {
     // L-002: 18 km/day
     metresPerSlot: 9_000,

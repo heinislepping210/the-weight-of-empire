@@ -10,7 +10,7 @@ import { updatePressure } from './russian';
 import { SECTORS, allInReserve, applyPlacements, fallBack, keyFromAction, lineOfRetreat, newField, oncoming, resolveNightfall, resolveRound } from './battle';
 import { ISSUE_ORDER, capacityGrams, issueTarget, takenUp, usableWagons, weightGrams, withinCapacity } from './carriage';
 import { lineOfRetreatBlocked } from './outcome';
-import { edgeBetween, neighboursOf, roadDistance, shortestPath, type EdgeDef } from './graph';
+import { edgeBetween, neighboursOf, pathMetres, roadDistance, shortestPath, type EdgeDef } from './graph';
 import { chance, drawBetween } from './rng';
 import type { Context } from './scenario';
 import { ROUNDS_PER_SLOT, dayIndex, isAfternoon, nextDaylight, slotIndex } from './time';
@@ -34,8 +34,9 @@ import type {
   Stage,
   Status,
   Transit,
+  EdgeId,
 } from './types';
-import { addInto, emptySupplies, enemyPresent, fatiguePermille, loseMen, must, note, otherSide, setPosture, sortedValues } from './util';
+import { addInto, closedRoads, emptySupplies, enemyPresent, fatiguePermille, loseMen, must, note, otherSide, setPosture, sortedValues } from './util';
 
 export type AdvanceResult =
   | { ok: true; state: GameState; status: Status; log: LogEntry[] }
@@ -362,6 +363,7 @@ function stageMovement(s: GameState, ctx: Context, log: LogEntry[], watch?: Watc
   // A column that could not move at all (held up on the road, or too exhausted) rests instead.
   for (const f of movers) if (!f.movedThisSlot) f.activity = 'halt';
   for (const c of sortedValues(s.convoys)) moveConvoy(s, ctx, c, log);
+  movePontoons(s, ctx, log);
   s.resolution.stage = 'contacts';
 }
 
@@ -655,6 +657,7 @@ interface March {
 export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: number[], hour: number, log: LogEntry[], queued?: (f: Force, lead: Force) => void): void {
   const res = s.resolution;
   const queueing = ctx.rules.march.columnMetresPerThousand > 0;
+  const shut = { fr: closedRoads(s, ctx, 'fr'), ru: closedRoads(s, ctx, 'ru') };
   const lengthOf = (edgeId: string) => must(ctx.graph.edges.get(edgeId), edgeId).metres;
   const runs: March[] = movers.map((f, i) => {
     const share = shares[i] as number;
@@ -807,6 +810,8 @@ export function marchHour(s: GameState, ctx: Context, movers: Force[], shares: n
     const edge = to === undefined ? undefined : must(edgeBetween(ctx.graph, f.at, to), `road ${f.at}–${to}`);
     r.done = true;
     if (!edge || to === undefined) return;
+    // A river not yet bridged: it waits on the bank for the train (G-027).
+    if (shut[f.side].has(edge.id)) return;
     // Standing where the enemy stands: the contact must be resolved first.
     if (enemyPresent(s, f.side, f.at)) return;
     // An enemy column on this road coming the other way: hold this place and meet it here.
@@ -891,7 +896,8 @@ function moveConvoy(s: GameState, ctx: Context, c: Convoy, log: LogEntry[]): voi
   if (c.leg === 'outbound' && !delivery) c.leg = 'returning';
   const target = c.leg === 'outbound' && delivery ? delivery.node : c.home;
   // Re-planned every sub-step: the force it serves may have moved on.
-  c.route = c.transit ? [c.transit.to, ...(shortestPath(ctx.graph, c.transit.to, target) ?? [])] : (shortestPath(ctx.graph, c.at, target) ?? []);
+  const way = shortestPath(ctx.graph, c.transit ? c.transit.to : c.at, target, new Set(), closedRoads(s, ctx, c.side)) ?? [];
+  c.route = c.transit ? [c.transit.to, ...way] : way;
   travel(s, ctx, c, ctx.rules.convoy.metresPerSlot, (node) => node === target, () => {});
   if (c.transit || c.at !== target) return;
   if (c.leg === 'outbound' && delivery) {
@@ -910,6 +916,54 @@ function moveConvoy(s: GameState, ctx: Context, c: Convoy, log: LogEntry[]): voi
     c.leg = 'loading';
     note(s, log, 'returned', { convoy: c.id });
   }
+}
+
+/** The first road shut to the French that a column of theirs means to cross. */
+function bridgeWanted(s: GameState, ctx: Context, shut: ReadonlySet<EdgeId>): EdgeDef | null {
+  for (const f of sortedValues(s.forces)) {
+    if (f.side !== 'fr' || f.men <= 0) continue;
+    let from = f.transit ? f.transit.to : f.at;
+    for (const to of f.route) {
+      if (to === from) continue;
+      const edge = edgeBetween(ctx.graph, from, to);
+      if (edge && shut.has(edge.id)) return edge;
+      from = to;
+    }
+  }
+  return null;
+}
+
+/**
+ * The bridging train, once a sub-step (G-027). The staff sends it to the first shut road a French column means to
+ * cross, by roads open to it, at a wagon train's speed, and it bridges the road from the nearer bank. It keeps out of a
+ * place the enemy holds, and cannot work with the enemy at the bank. With nobody wanting a bridge it stays where it is.
+ */
+export function movePontoons(s: GameState, ctx: Context, log: LogEntry[]): void {
+  const train = s.pontoons;
+  if (!train) return;
+  const shut = closedRoads(s, ctx, 'fr');
+  const wanted = bridgeWanted(s, ctx, shut);
+  const from = train.transit ? train.transit.to : train.at;
+  const banks = wanted ? [wanted.a, wanted.b].flatMap((bank) => {
+    const way = shortestPath(ctx.graph, from, bank, new Set(), shut);
+    return way ? [{ bank, way, metres: pathMetres(ctx.graph, from, way) }] : [];
+  }) : [];
+  const nearest = [...banks].sort((a, b) => a.metres - b.metres || (a.bank < b.bank ? -1 : 1))[0];
+  if (wanted && nearest && !train.transit && train.at === nearest.bank) {
+    if (enemyPresent(s, 'fr', train.at)) return;
+    if (train.work === 0) note(s, log, 'bridging', { road: wanted.id, a: wanted.a, b: wanted.b });
+    train.work += 1;
+    if (train.work < ctx.rules.pontoons.bridgeSlots) return;
+    train.work = 0;
+    train.bridged.push(wanted.id);
+    note(s, log, 'bridged', { road: wanted.id, a: wanted.a, b: wanted.b });
+    return;
+  }
+  const way = nearest?.way ?? [];
+  train.route = train.transit ? [train.transit.to, ...way] : way;
+  const nextHeld = () => train.route[0] !== undefined && enemyPresent(s, 'fr', train.route[0]);
+  if (!train.transit && nextHeld()) return;
+  travel(s, ctx, train, ctx.rules.convoy.metresPerSlot, nextHeld, () => {});
 }
 
 /**

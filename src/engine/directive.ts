@@ -2,13 +2,13 @@
 // French group, each with a forecast and its reasons, using only what the French know. Planning never
 // changes the state: the player reviews the plan, may override any order, and only then commits.
 
-import { HOURS_PER_SLOT, hourlyShare, marchBudget, marchHour } from './advance';
+import { HOURS_PER_SLOT, hourlyShare, marchBudget, marchHour, movePontoons } from './advance';
 import { capacityGrams, weightGrams, withinCapacity } from './carriage';
 import { edgeBetween, pathMetres, roadDistance, shortestPath } from './graph';
 import type { Context } from './scenario';
 import { calendar, slotIndex, SLOTS_PER_TURN } from './time';
-import type { ConvoyOrder, Crossing, Engagement, Force, ForceId, GameState, GroupOrder, LogisticsOrders, NodeId, Pace, Posture, Slot, SlotRef } from './types';
-import { enemyPresent, sortedValues } from './util';
+import type { ConvoyOrder, Crossing, EdgeId, Engagement, Force, ForceId, GameState, GroupOrder, LogisticsOrders, NodeId, Pace, Posture, Slot, SlotRef } from './types';
+import { closedRoads, enemyPresent, sortedValues } from './util';
 
 export interface Axis {
   id: string;
@@ -79,6 +79,14 @@ export interface PlannedOrder {
   marching: boolean;
   /** What road capacity costs it, if it arrives later for sharing a road (G-024). */
   queue: PlannedQueue | null;
+  /** A river it must wait to cross until the pontoon train has bridged it (G-027). */
+  bridge: PlannedBridge | null;
+}
+
+/** A bridge still to be built on a group's way: between which places, and the sub-step it can be crossed; null if never. */
+export interface PlannedBridge {
+  between: string;
+  ready: SlotRef | null;
 }
 
 /** A group held up by a column of its own side on the same road. */
@@ -218,6 +226,12 @@ interface Forecast {
   queued: { behind: ForceId; at: NodeId } | null;
 }
 
+/** The army's forecast: each column, and the sub-step each bridge is finished, counted as a column's `slots` are. */
+interface ArmyForecast {
+  columns: Map<ForceId, Forecast>;
+  bridged: Map<EdgeId, number>;
+}
+
 /**
  * The army's columns marching together from now (D-040, G-024). They are projected through the engine's own hourly
  * movement, with the same fatigue, rest at night and gathering, so the forecast is what they will do if nothing
@@ -225,7 +239,7 @@ interface Forecast {
  * battles and the weather itself are not foreseen. With road capacity they queue as they will in the game; without
  * it each marches as if alone.
  */
-function marchForecast(s: GameState, ctx: Context, army: readonly Marching[], wet: boolean): Map<ForceId, Forecast> {
+function marchForecast(s: GameState, ctx: Context, army: readonly Marching[], wet: boolean): ArmyForecast {
   const { fatigue, posture } = ctx.rules;
   const columns = army.map(({ force: f, route, pace }) => ({
     g: { ...structuredClone(f), route: [...route], pace, battle: null } as Force,
@@ -235,8 +249,9 @@ function marchForecast(s: GameState, ctx: Context, army: readonly Marching[], we
     marchedToday: f.marchedToday,
     queued: null as Forecast['queued'],
   }));
-  const together = { ...s, forces: Object.fromEntries(columns.map((c) => [c.g.id, c.g])), roads: { ...s.roads } } as GameState;
+  const together = { ...s, forces: Object.fromEntries(columns.map((c) => [c.g.id, c.g])), roads: { ...s.roads }, pontoons: structuredClone(s.pontoons) } as GameState;
   const out = new Map<ForceId, Forecast>();
+  const bridged = new Map<EdgeId, number>();
   const settle = (c: (typeof columns)[number], slots: number) => out.set(c.g.id, { slots, fatigue: c.g.fatigue, queued: c.queued });
   const noteQueue = (f: Force, lead: Force) => {
     const c = columns.find((x) => x.g === f);
@@ -258,6 +273,8 @@ function marchForecast(s: GameState, ctx: Context, army: readonly Marching[], we
     for (let hour = 0; hour < HOURS_PER_SLOT; hour++) {
       marchHour(together, ctx, marching.map((c) => c.g), totals.map((total) => hourlyShare(total, hour)), hour, [], noteQueue);
     }
+    movePontoons(together, ctx, []);
+    for (const id of together.pontoons?.bridged ?? []) if (!bridged.has(id) && !s.pontoons?.bridged.includes(id)) bridged.set(id, n);
     marching.forEach((c, i) => {
       const moved = JSON.stringify([c.g.at, c.g.transit]) !== before[i];
       c.g.fatigue = Math.max(0, Math.min(1000, c.g.fatigue + (moved ? (c.pace === 'forced' ? fatigue.marchForced : fatigue.marchSteady) : fatigue.halt)));
@@ -275,7 +292,7 @@ function marchForecast(s: GameState, ctx: Context, army: readonly Marching[], we
     slot = ((slot + 1) % SLOTS_PER_TURN) as Slot;
   }
   for (const c of columns) if (!out.has(c.g.id)) settle(c, Infinity);
-  return out;
+  return { columns: out, bridged };
 }
 
 function engagementReason(e: Engagement): string {
@@ -347,10 +364,23 @@ function marchesOf(s: GameState, ctx: Context, d: Directive, axis: Axis | null):
   });
 }
 
+/** The bridge a group must wait for on its way, if any, and when the forecast has it ready. */
+function bridgeOf(s: GameState, ctx: Context, start: NodeId, path: readonly NodeId[], bridged: ReadonlyMap<EdgeId, number>, now: SlotRef): PlannedBridge | null {
+  const shut = closedRoads(s, ctx, 'fr');
+  for (const [i, n] of path.entries()) {
+    const from = i === 0 ? start : (path[i - 1] as NodeId);
+    const e = edgeBetween(ctx.graph, from, n);
+    if (!e || !shut.has(e.id)) continue;
+    const done = bridged.get(e.id);
+    return { between: `${placeName(ctx, from)} and ${placeName(ctx, n)}`, ready: done === undefined ? null : slotAfter(now, done + 1) };
+  }
+  return null;
+}
+
 /** What sharing a road costs a group: its forecast with the army against the same march with the road to itself. */
 function queueOf(s: GameState, ctx: Context, ownMarch: Marching, forecast: Forecast): PlannedQueue | null {
   if (!forecast.queued) return null;
-  const alone = marchForecast(s, ctx, [ownMarch], false).get(ownMarch.force.id) as Forecast;
+  const alone = marchForecast(s, ctx, [ownMarch], false).columns.get(ownMarch.force.id) as Forecast;
   if (forecast.slots <= alone.slots) return null;
   const { behind, at } = forecast.queued;
   return { behind: s.forces[behind]?.name ?? behind, behindForce: behind, at: placeName(ctx, at), slots: forecast.slots - alone.slots };
@@ -371,7 +401,7 @@ export function planDirective(s: GameState, ctx: Context, d: Directive): Planned
     if (f.side !== 'fr' || f.men <= 0) continue;
     const here = placeName(ctx, f.at);
     if (f.battle !== null) {
-      plans.push({ force: f.id, name: f.name, queue: null, order: { force: f.id }, arrival: null, foodDaysOnArrival: null, fatigueOnArrival: null, reasons: [`Engaged in battle at ${here}: no new movement until it ends.`], own: false, staffRoad: null, marching: false });
+      plans.push({ force: f.id, name: f.name, queue: null, bridge: null, order: { force: f.id }, arrival: null, foodDaysOnArrival: null, fatigueOnArrival: null, reasons: [`Engaged in battle at ${here}: no new movement until it ends.`], own: false, staffRoad: null, marching: false });
       continue;
     }
     const { ov, own, tempo, engagement, start, holding } = standing(d, f);
@@ -396,16 +426,18 @@ export function planDirective(s: GameState, ctx: Context, d: Directive): Planned
         staffRoad: null,
         marching: false,
         queue: null,
+        bridge: null,
       });
       continue;
     }
 
     const { directMetres, alongMetres, staffRoad, ownRoad, path, route } = roadTo(ctx, axis, d.objective as NodeId, f, start, ov.road);
     const metres = pathMetres(ctx.graph, start, path) + (f.transit ? (ctx.graph.edges.get(f.transit.edge)?.metres ?? 0) - f.transit.metres : 0);
-    const dryForecast = dryRoads.get(f.id) as Forecast;
+    const dryForecast = dryRoads.columns.get(f.id) as Forecast;
     const dry = dryForecast.slots;
-    const mud = (wetRoads.get(f.id) as Forecast).slots;
+    const mud = (wetRoads.columns.get(f.id) as Forecast).slots;
     const queue = queueOf(s, ctx, { force: f, route, pace: tempo }, dryForecast);
+    const bridge = bridgeOf(s, ctx, start, path, dryRoads.bridged, now);
     const days = Math.ceil(dry / 2);
     // Foraging on the march, but never more than the districts on the way still hold.
     const onTheWay = [...new Set([f.at, ...route])].reduce((n, p) => n + (s.districts[p]?.food ?? 0), 0);
@@ -442,13 +474,16 @@ export function planDirective(s: GameState, ctx: Context, d: Directive): Planned
       reasons.push(`Can carry only ${tonnes(capacityGrams(f, ctx.rules))} of its ${tonnes(weightGrams(f.stock, ctx.rules))} of stores: it leaves ${parts.join(', ')} behind${depot ? ', back in the depot' : ', lost'}.`);
     }
     if (tempo === 'forced') reasons.push('Forced march: faster, but tires men and horses and leaves stragglers.');
+    if (bridge?.ready) reasons.push(`Waits for the bridge between ${bridge.between}, which the pontoon train will have ready ${when(ctx, bridge.ready)}.`);
     if (queue && Number.isFinite(queue.slots)) reasons.push(`Shares the road from ${queue.at} with ${queue.behind}: arrives about ${halfDays(queue.slots)} later than with the road to itself.`);
     reasons.push(
       Number.isFinite(dry)
         ? `Arrives ${when(ctx, slotAfter(now, dry))}${mud !== dry && Number.isFinite(mud) ? ` (dry roads) to ${when(ctx, slotAfter(now, mud))} (wet weather)` : ''}${slotIndex(slotAfter(now, dry)) > lastSlot ? ', after the campaign ends' : ''}.`
-        : queue
-          ? `Held up by ${queue.behind}, stopped on the road from ${queue.at}: it cannot arrive while that column stands there.`
-          : 'Too exhausted to reach the objective without rest.',
+        : bridge && !bridge.ready
+          ? `Cannot cross between ${bridge.between}: the pontoon train cannot reach the bank.`
+          : queue
+            ? `Held up by ${queue.behind}, stopped on the road from ${queue.at}: it cannot arrive while that column stands there.`
+            : 'Too exhausted to reach the objective without rest.',
     );
     reasons.push(`Food on arrival: about ${foodDays} day${foodDays === 1 ? '' : 's'} from what it carries, before deliveries from its wagon train; foraging on the march gathers little.`);
     reasons.push(engagementReason(engagement));
@@ -467,6 +502,7 @@ export function planDirective(s: GameState, ctx: Context, d: Directive): Planned
       staffRoad,
       marching: true,
       queue,
+      bridge,
     });
   }
   return plans;
@@ -491,6 +527,8 @@ export interface RoutePreview {
   threats: string[];
   /** Groups that would queue on the way, and what it costs them (G-024). */
   queues: (PlannedQueue & { force: ForceId; name: string })[];
+  /** Bridges to be built on the way, each once (G-027). */
+  bridges: PlannedBridge[];
   /**
    * An earlier route in the list that comes to the very same orders, if any: its label, or null for the shortest
    * roads. Groups join a route where their total road is shortest, so a route can come to another's orders.
@@ -547,8 +585,14 @@ export function previewRoutes(s: GameState, ctx: Context, d: Directive, axes: re
       crossings: [...crossings.values()],
       threats: places.length > 0 ? knownThreats(s, ctx, places.slice(1), places[0] as NodeId) : [],
       queues: marching.flatMap((p) => (p.queue ? [{ ...p.queue, force: p.force, name: p.name }] : [])),
+      bridges: bridgesIn(marching),
     };
   });
+}
+
+/** The bridges a plan waits for, each once. */
+function bridgesIn(plan: readonly PlannedOrder[]): PlannedBridge[] {
+  return [...new Map(plan.flatMap((p) => (p.bridge ? [[p.bridge.between, p.bridge] as const] : []))).values()];
 }
 
 export interface PlanSummary {
@@ -585,6 +629,8 @@ export function summarizePlan(s: GameState, ctx: Context, plan: readonly Planned
     if (!q) return [];
     return [Number.isFinite(q.slots) ? `${name} follows ${q.behind} from ${q.at}: about ${halfDays(q.slots)} later than with the road to itself.` : `${name} cannot pass ${q.behind}, stopped on the road from ${q.at}.`];
   });
+
+  const bridges = bridgesIn(plan).map((b) => (b.ready ? `Bridge between ${b.between}: ready ${when(ctx, b.ready)}, once the pontoon train has reached the bank.` : `Bridge between ${b.between}: the pontoon train cannot reach the bank.`));
 
   const turn = s.resolution.turn;
   const exposed: string[] = [];
@@ -625,6 +671,7 @@ export function summarizePlan(s: GameState, ctx: Context, plan: readonly Planned
     supply,
     lines: [
       arrivalLine,
+      ...bridges,
       ...queues,
       ...(exposed.length > 0 ? exposed : ['No group is known to face a stronger enemy on its own.']),
       ...supply,

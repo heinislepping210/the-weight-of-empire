@@ -1,5 +1,6 @@
 import type { Rules } from './rules';
-import type { Allocation, Force, GameState, LogEntry, LossCause, NodeId, Posture, Side, Supplies, Troops } from './types';
+import type { Context } from './scenario';
+import type { Allocation, EdgeId, Force, GameState, LogEntry, LossCause, NodeId, Posture, Side, Supplies, Troops } from './types';
 
 /** Values in key order — every iteration over state goes through this, so results never depend on insertion order. */
 export function sortedValues<T>(record: Record<string, T>): T[] {
@@ -32,6 +33,15 @@ export function note(s: GameState, log: LogEntry[], kind: string, detail: LogEnt
 export function fatiguePermille(fatigue: number, rules: Rules): number {
   const from = rules.march.fatigueSlowdownFrom;
   return fatigue <= from ? 1000 : Math.max(500, 1000 - (fatigue - from));
+}
+
+const NO_ROADS: ReadonlySet<EdgeId> = new Set();
+
+/** Roads shut to a side: a pontoon road until the French have bridged it, and to the Russians always (G-027). */
+export function closedRoads(s: GameState, ctx: Context, side: Side): ReadonlySet<EdgeId> {
+  const train = s.pontoons;
+  if (!train) return NO_ROADS;
+  return new Set([...ctx.graph.edges.values()].filter((e) => e.crossing === 'pontoon' && (side !== 'fr' || !train.bridged.includes(e.id))).map((e) => e.id));
 }
 
 export function enemyPresent(s: GameState, side: Side, node: NodeId): boolean {

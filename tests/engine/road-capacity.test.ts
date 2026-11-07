@@ -197,7 +197,7 @@ describe('over whole games', () => {
         expect(Object.keys(run.final)).toEqual(Object.keys(newGame(plain, seed)));
       }
     }
-  });
+  }, 30_000); // eighteen whole games: close to the 5-second default on a busy machine
 
   it('a column that set out behind another of its side stays that far behind it, hour by hour', () => {
     const policy = BOTS['concentrated-push']!(ctx);

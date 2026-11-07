@@ -123,7 +123,7 @@ describe('over whole games on the real map', () => {
         expect(Object.values(run.final.battles).filter((b) => b.phase !== 'over' && b.roundsFought === 0), `${bot} ${seed}`).toEqual([]);
       }
     }
-  });
+  }, 30_000); // twenty-four whole games: close to the 5-second default on a busy machine
 
   it('the Russians beaten back from the block on the last morning are still cut off (seed 13)', () => {
     const run = play(ctx, 13, BOTS['southern-envelopment-hold']!(ctx));

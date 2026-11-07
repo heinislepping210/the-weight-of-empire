@@ -304,3 +304,14 @@ G2 asks that a single-road march be slow. Until now a whole army could march dow
 **A caution on converting it.** A column walks at about 4 km/h, while the game's steady pace averages 1.8 km/h over twelve marching hours, halts included. So a gap in metres costs more game hours than the same gap cost in walking time: behind a corps of 40,000, Clausewitz implies about five hours, and the game's gap about eleven. So the rule is measured at 230 m per 1,000 men, which keeps his hour per division at the game's speed, and at longer lengths too.
 
 Sources: Carl von Clausewitz, *On War*, Book 5, chapters 10 and 11, in [Graham's 1873 translation](https://clausewitzstudies.org/readings/OnWar1873/BK5ch10.html) and the [German text](https://projekt-gutenberg.org/authors/carl-von-clausewitz/books/vom-kriege-band-2/chapter/25); [Appendix D: Historical Movement Rates](https://lerugray.github.io/wargame-design-book/appendix_d_march_rates.html), a wargame-design source.
+
+## The pontoon train (6 November 2026)
+
+G2 asks that the Dnieper need a bridge or the pontoon train. What the sources give is thin:
+- The French crossed at Rasasna on bridges built overnight, on 13–14 August (H-004). The number of bridges and Eblé's part in it are unverified.
+- Eblé was sent to bridge the Dnieper at Prudichevo on 19 August (H-022).
+- Where the train stood in August is not established. In November the bridging train was at Orsha, where accounts disagree on whether it was burned or abandoned; Eblé's men kept some wagons of tools for the Berezina.
+
+So the game starts the train at Orsha as an assumption (G-027). From there, at a wagon train's speed, it reaches the Liubavichi bank in about five days, which puts a bridge on 11 August if the army sets out at once. The real crossing came on 13–14 August, after a later start.
+
+Sources: [Jean Baptiste Eblé](https://en.wikipedia.org/wiki/Jean_Baptiste_Ebl%C3%A9) and [Battle of Berezina](https://en.wikipedia.org/wiki/Battle_of_Berezina), Wikipedia; [Napoleon's Pontonniers](https://napoleonguide.com/bonponton.htm). These are tertiary sources, read in search results only.

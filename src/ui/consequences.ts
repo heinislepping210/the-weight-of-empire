@@ -2,7 +2,7 @@
 // hands, battlefields, and dust where columns marched on dry roads. All of it as the French would know it.
 
 import { observedPlaces, when } from '../engine';
-import type { Context, EdgeId, Frame, GameState, LogEntry, NodeId, Side, SlotRef } from '../engine';
+import type { Context, EdgeId, Frame, GameState, LogEntry, NodeId, PontoonTrain, Side, SlotRef } from '../engine';
 import { edgeBetween } from '../engine/graph';
 import { thousands } from './names';
 
@@ -109,4 +109,11 @@ export function burnedText(ctx: Context, b: Consequences['burned'][number]): str
 export function battleText(ctx: Context, b: Consequences['battles'][number]): string {
   const result = b.winner === 'fr' ? 'the field is ours' : b.winner === 'ru' ? 'our troops were driven from the field' : 'no victor';
   return `Battle at ${place(ctx, b.node)}, ${day(ctx, b.when)}: ${result}. Our losses: about ${thousands(b.ourLosses)} men.`;
+}
+
+/** The pontoon train in words, for the map and the list (G-027). */
+export function pontoonText(train: PontoonTrain, ctx: Context): string {
+  const name = (id: string) => ctx.graph.nodes.get(id)?.name ?? id;
+  const where = train.transit ? `on the road to ${name(train.transit.to)}` : `at ${name(train.at)}`;
+  return `The pontoon train, ${where}${train.work > 0 ? ', bridging the river' : ''}.`;
 }

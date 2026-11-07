@@ -32,6 +32,8 @@ const WITH_CANDIDATE_ROADS = env.BALANCE_SCENARIO === 'candidate-roads';
 const FRENCH: FrenchStrength = env.BALANCE_SCENARIO === 'french-5-august' ? 'returns-5-august' : env.BALANCE_SCENARIO === 'french-5-august-cavalry' ? 'returns-5-august-cavalry' : 'mid-august';
 /** What-if roads: BALANCE_SCENARIO=road-audit-lengths uses the lengths the road audit read from the maps (HISTORICAL_RESEARCH). */
 const ROAD_READINGS = env.BALANCE_SCENARIO === 'road-audit-lengths';
+/** What-if train: BALANCE_PONTOONS=liozno starts the bridging train there, for runs with `pontoons.bridgeSlots` on (G-027). */
+const PONTOON_START = env.BALANCE_PONTOONS;
 const enabled = env.BALANCE === '1';
 
 /** Share of the French wagon trains' draught horses lost over the game, in permille (G-019). */
@@ -133,7 +135,7 @@ function battleFigures(end: GameState, log: LogEntry[], decisive: boolean): Pick
 
 it.skipIf(!enabled)('balance batch', () => {
   const rules = OVERRIDES ? (overridden(RULES, OVERRIDES, 'rules') as Rules) : RULES;
-  const ctx = createContext(vitebskDecision({ candidateRoads: WITH_CANDIDATE_ROADS, frenchStrength: FRENCH, roadReadings: ROAD_READINGS }), rules);
+  const ctx = createContext(vitebskDecision({ candidateRoads: WITH_CANDIDATE_ROADS, frenchStrength: FRENCH, roadReadings: ROAD_READINGS, ...(PONTOON_START ? { pontoonStart: PONTOON_START } : {}) }), rules);
   const names = Object.keys(BOTS);
   const results: Record<string, Result[]> = {};
   const problems: string[] = [];

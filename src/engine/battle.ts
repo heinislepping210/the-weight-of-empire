@@ -29,7 +29,7 @@ import type {
   Side,
   Troops,
 } from './types';
-import { apportion, enemyPresent, fatiguePermille, loseMen, must, note, otherSide, sortedValues, syncAllocation } from './util';
+import { apportion, closedRoads, enemyPresent, fatiguePermille, loseMen, must, note, otherSide, sortedValues, syncAllocation } from './util';
 
 export const SIDES: readonly Side[] = ['fr', 'ru'];
 export const SECTORS: readonly SectorIndex[] = [0, 1, 2];
@@ -196,14 +196,15 @@ function basesOf(ctx: Context, side: Side): NodeId[] {
  * once (`departureRoads`).
  */
 export function lineOfRetreat(s: GameState, ctx: Context, node: NodeId, side: Side, attacker: Force | null, avoid: NodeId | null = null): { to: NodeId; basis: RetreatBasis } | null {
+  const closed = closedRoads(s, ctx, side);
   const options = neighboursOf(ctx.graph, node)
-    .filter((n) => n.node !== avoid && !enemyPresent(s, side, n.node) && !oncoming(s, side, n.edge.id, node))
+    .filter((n) => n.node !== avoid && !closed.has(n.edge.id) && !enemyPresent(s, side, n.node) && !oncoming(s, side, n.edge.id, node))
     .map((n) => n.node)
     .sort();
   if (options.length === 0) return null;
   if (attacker?.cameFrom && options.includes(attacker.cameFrom)) return { to: attacker.cameFrom, basis: 'line' };
   const around = (from: NodeId, to: NodeId) => {
-    const path = from === to ? [] : shortestPath(ctx.graph, from, to, new Set([node]));
+    const path = from === to ? [] : shortestPath(ctx.graph, from, to, new Set([node]), closed);
     return path === null ? Infinity : pathMetres(ctx.graph, from, path);
   };
   const nearest = (places: NodeId[]) => {

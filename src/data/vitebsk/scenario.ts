@@ -103,9 +103,9 @@ const DISTRICTS: Record<string, District> = Object.fromEntries(PLACES.map((p) =>
 /**
  * The scenario. For what-if runs only: `candidateRoads` adds the roads not yet adopted (MAP_AND_GEOGRAPHY.md),
  * `frenchStrength` starts the French at another strength, their wagon trains grown with them, and `roadReadings`
- * uses the lengths the road audit read from the maps of 1820–21.
+ * uses the lengths the road audit read from the maps of 1820–21, and `pontoonStart` starts the bridging train elsewhere.
  */
-export function vitebskDecision(options: { candidateRoads?: boolean; frenchStrength?: FrenchStrength; roadReadings?: boolean } = {}): ScenarioDef {
+export function vitebskDecision(options: { candidateRoads?: boolean; frenchStrength?: FrenchStrength; roadReadings?: boolean; pontoonStart?: string } = {}): ScenarioDef {
   const { nodes, edges } = vitebskNetwork({ candidates: options.candidateRoads ?? false, readings: options.roadReadings ?? false });
   const strength = options.frenchStrength ?? 'mid-august';
   const served = new Map(FORCES.map((f) => [f.id, growth(f, strength)]));
@@ -123,6 +123,7 @@ export function vitebskDecision(options: { candidateRoads?: boolean; frenchStren
     // Places of Smolensk province, the "old Russian" soil whose loss raised pressure on Barclay (G-014).
     pressurePlaces: ['rudnia', 'porechye', 'krasnyi', 'smolensk', 'smolensk-north', 'valutino', 'dorogobuzh'],
     keyPlaces: ['smolensk', 'smolensk-north'],
+    pontoonStart: options.pontoonStart ?? 'orsha',
     // The walled Old Town (H-006); the north-bank suburb is fought over as open ground for now (G-022).
     battlefields: { smolensk: 'smolensk' },
     // The Moscow road eastwards: the Russian line of retreat.

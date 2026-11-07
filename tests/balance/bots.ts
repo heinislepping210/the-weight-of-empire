@@ -7,6 +7,9 @@ import type { Axis, Context, Directive, Force, ForceId, GameState, GroupOrder, L
 import { neighboursOf, pathMetres, roadDistance, shortestPath } from '../../src/engine/graph';
 import { randomPolicy, type Policy, type Run } from '../fixtures/driver';
 
+/** What-if: BALANCE_CORRIDOR=Orsha sends the southern swing by that road instead of the pontoons at Rasasna (G-027). */
+const CORRIDOR = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.BALANCE_CORRIDOR ?? 'Rasasna';
+
 // By default every bot brings its supply base forward, as a competent staff would (§2.6); the paired
 // supply-stance probe plays the same bots keeping the depots instead.
 const base: Directive = { objective: null, axis: null, tempo: 'steady', posture: 'concentrated', engagement: 'seek', holdBack: [], logistics: 'forward' };
@@ -56,7 +59,7 @@ const BASE_BOTS: Record<string, (ctx: Context) => Policy> = {
     return {
       orders: (s) => {
         if (frenchHold(s, 'smolensk') || frenchHold(s, 'smolensk-north')) return orders(s, ctx, { objective: 'valutino' });
-        corridor ??= axisVia(s, ctx, 'smolensk', 'Rasasna');
+        corridor ??= axisVia(s, ctx, 'smolensk', CORRIDOR);
         return orders(s, ctx, { objective: 'smolensk', axis: corridor });
       },
       ...delegate,
@@ -189,7 +192,7 @@ function holdingEnvelopment(ctx: Context, heldBack: (s: GameState) => ForceId[])
       const holdBack = heldBack(s);
       // The block stands: its marshal does not give up the road while it can still fight (rules 0.17.2).
       if (committed) return orders(s, ctx, { objective: 'valutino', engagement: 'stand', holdBack });
-      corridor ??= axisVia(s, ctx, 'smolensk', 'Rasasna');
+      corridor ??= axisVia(s, ctx, 'smolensk', CORRIDOR);
       return orders(s, ctx, { objective: 'smolensk', axis: corridor, holdBack });
     },
     ...delegate,

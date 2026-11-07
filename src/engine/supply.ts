@@ -7,7 +7,7 @@ import { usableWagons } from './carriage';
 import { edgeBetween, shortestPath } from './graph';
 import type { Context } from './scenario';
 import type { Convoy, ConvoyId, ForceId, GameState, NodeId } from './types';
-import { must, sortedValues } from './util';
+import { closedRoads, must, sortedValues } from './util';
 
 export interface SupplyLine {
   convoy: ConvoyId;
@@ -48,7 +48,7 @@ export function supplyLines(s: GameState, ctx: Context): SupplyLine[] {
     if (c.side !== 'fr') continue;
     const to = targetOf(s, c);
     if (to === null) continue;
-    const way = to === c.home ? [] : shortestPath(ctx.graph, c.home, to);
+    const way = to === c.home ? [] : shortestPath(ctx.graph, c.home, to, new Set(), closedRoads(s, ctx, c.side));
     if (way === null) continue;
     const path = [c.home, ...way];
     // Each road converts the train's ideal distance at its own speed, and a leg ends at its place (`travel`).

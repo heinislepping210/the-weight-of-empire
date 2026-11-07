@@ -466,6 +466,17 @@ button:disabled {
   stroke-width: 1.2;
 }
 
+/* A river not yet bridged, and the train that will bridge it (G-027). */
+.crossing-shut {
+  fill: var(--paper, #f4ecd8);
+}
+
+.pontoon-train path {
+  fill: #9fb8c9;
+  stroke: var(--navy);
+  stroke-width: 1.4;
+}
+
 .planned {
   fill: none;
   stroke: var(--french);

@@ -280,6 +280,17 @@ export interface RussianCommand {
 /** Placeholder until the §2.13 outcome evaluator exists. */
 export type Ending = 'scenarioEnd';
 
+/** The French bridging train. It moves like a wagon train, and the staff sends it where a bridge is wanted (G-027). */
+export interface PontoonTrain {
+  at: NodeId;
+  transit: Transit | null;
+  route: NodeId[];
+  /** Sub-steps of work done on the bridge in hand. */
+  work: number;
+  /** Pontoon roads the French have bridged. */
+  bridged: EdgeId[];
+}
+
 export interface GameState {
   schema: 1;
   rulesVersion: string;
@@ -306,6 +317,8 @@ export interface GameState {
    * it first counted as cut off (§2.13): held long enough once, it stands.
    */
   cutOff: { held: number; achievedAt: SlotRef | null };
+  /** The French bridging train; only with the rule on, in a scenario that has one (G-027). */
+  pontoons?: PontoonTrain;
   /** The Russian main armies, fixed at the start: each then held a set share of the Russian strength (§2.13). */
   mainArmies: ForceId[];
   /** Counter for the order in which columns set out along roads (`Transit.seq`). */
