@@ -316,7 +316,7 @@ function leaveBehind(s: GameState, ctx: Context, f: Force, log: LogEntry[]): voi
   const depot = f.transit === null ? s.depots[f.at] : undefined;
   const toDepot = depot !== undefined && depot.side === f.side;
   addInto(toDepot ? depot.stock : s.ledger.abandoned, dropped);
-  note(s, log, 'leftBehind', { force: f.id, food: dropped.food, fodder: dropped.fodder, ammo: dropped.ammo, depot: toDepot ? f.at : null });
+  note(s, log, 'leftBehind', { force: f.id, node: f.at, food: dropped.food, fodder: dropped.fodder, ammo: dropped.ammo, depot: toDepot ? f.at : null });
 }
 
 function nextEdgeOf(ctx: Context, f: Force): EdgeDef | undefined {
@@ -402,7 +402,7 @@ function stageAccrual(s: GameState, ctx: Context, log: LogEntry[]): void {
   const { fatigue, convoy, gramsPerUnit } = ctx.rules;
   for (const f of sortedValues(s.forces)) {
     const moving = f.activity === 'march' || f.activity === 'cross';
-    forage(s, ctx, f);
+    forage(s, ctx, f, log);
     // Deliveries made during this sub-step join the stock only now (§3.4a step 6).
     addInto(f.stock, f.incoming);
     f.incoming = emptySupplies();
@@ -415,7 +415,7 @@ function stageAccrual(s: GameState, ctx: Context, log: LogEntry[]): void {
       if (f.gathering === 0) f.posture = 'concentrated';
     }
   }
-  issueFromDepots(s, ctx);
+  issueFromDepots(s, ctx, log);
   for (const d of sortedValues(s.depots)) {
     addInto(d.stock, d.incoming);
     d.incoming = emptySupplies();
@@ -505,7 +505,7 @@ function forageKind(a: Activity): 'halt' | 'gather' | 'march' | null {
  * neighbouring districts within its foragers' reach too, except where the enemy stands (G-019): a
  * neighbouring district begins about half-way along the road. Everyone else uses their own district.
  */
-function forage(s: GameState, ctx: Context, f: Force): void {
+function forage(s: GameState, ctx: Context, f: Force, log: LogEntry[]): void {
   const kind = forageKind(f.activity);
   if (!kind || f.men <= 0) return;
   const rules = ctx.rules.forage;
@@ -532,6 +532,7 @@ function forage(s: GameState, ctx: Context, f: Force): void {
         left -= take;
       }
     }
+    if (supply === 'food' && left < want.food) note(s, log, 'foraged', { force: f.id, node: f.at, food: want.food - left });
   }
 }
 
@@ -540,7 +541,7 @@ function forage(s: GameState, ctx: Context, f: Force): void {
  * still march with (`takenUp`, G-019). When a depot cannot meet every want it shares each kind in proportion
  * to need, never in the order of the groups' names (D-036).
  */
-function issueFromDepots(s: GameState, ctx: Context): void {
+function issueFromDepots(s: GameState, ctx: Context, log: LogEntry[]): void {
   for (const depot of sortedValues(s.depots)) {
     const here = sortedValues(s.forces).filter((f) => f.side === depot.side && f.at === depot.node && f.transit === null && f.men > 0);
     if (here.length === 0) continue;
@@ -564,6 +565,7 @@ function issueFromDepots(s: GameState, ctx: Context): void {
         const n = gives[i] as number;
         depot.stock[supply] -= n;
         f.stock[supply] += n;
+        if (supply === 'food' && n > 0) note(s, log, 'issued', { force: f.id, node: depot.node, food: n });
       });
     }
   }
@@ -909,7 +911,7 @@ function moveConvoy(s: GameState, ctx: Context, c: Convoy, log: LogEntry[]): voi
     // A group takes only what it can carry, as from a depot (G-019, D-040); the rest stays on the train.
     const handed = delivery.force ? takenUp(delivery.force, offered, ctx.rules) : offered;
     addInto(delivery.force ? delivery.force.incoming : must(delivery.depot, 'depot').incoming, handed);
-    note(s, log, 'delivered', { convoy: c.id, force: delivery.force?.id ?? null, depot: delivery.depot?.node ?? null, food: handed.food, fodder: handed.fodder, ammo: handed.ammo });
+    note(s, log, 'delivered', { convoy: c.id, node: c.at, force: delivery.force?.id ?? null, depot: delivery.depot?.node ?? null, food: handed.food, fodder: handed.fodder, ammo: handed.ammo });
     c.cargo = { food: c.cargo.food - handed.food, fodder: c.cargo.fodder - handed.fodder, ammo: c.cargo.ammo - handed.ammo };
     c.leg = 'returning';
   } else {
@@ -1153,7 +1155,8 @@ function tryWithdraw(s: GameState, ctx: Context, node: NodeId, side: Side, ids: 
   note(s, log, 'withdrawal', { node, side, success, to: success ? dest : null });
   if (!success || dest === null) return false;
   for (const f of forces) {
-    loseMen(s, f, Math.floor((f.men * e.withdrawalLossPermille) / 1000), 'withdrawal');
+    const lost = loseMen(s, f, Math.floor((f.men * e.withdrawalLossPermille) / 1000), 'withdrawal');
+    if (lost > 0) note(s, log, 'menLost', { force: f.id, node, cause: 'withdrawal', men: lost });
     fallBack(s, ctx, f, dest);
   }
   return true;
@@ -1169,7 +1172,8 @@ function minorAction(s: GameState, ctx: Context, node: NodeId, sides: Record<Sid
     const f = must(s.forces[id], id);
     const rate = dest ? ctx.rules.engagement.minorLossPermille : ctx.rules.battle.trappedLossPermille;
     const noise = drawBetween(s.dice, ['minor', res.turn, res.slot, node, id], 500, 1500);
-    loseMen(s, f, Math.floor((Math.floor((f.men * rate) / 1000) * noise) / 1000), 'battle');
+    const lost = loseMen(s, f, Math.floor((Math.floor((f.men * rate) / 1000) * noise) / 1000), 'battle');
+    if (lost > 0) note(s, log, 'menLost', { force: f.id, node, cause: 'skirmish', men: lost });
     if (dest) fallBack(s, ctx, f, dest);
   });
   note(s, log, 'minorAction', { node, retreated: weaker, to: dest });
@@ -1193,9 +1197,12 @@ function consume(s: GameState, ctx: Context, f: Force, log: LogEntry[]): void {
   const foodShort = foodNeed - food;
   const fodderShort = fodderNeed - fodder;
 
-  loseMen(s, f, Math.floor((f.men * attrition.sicknessPermillePerDay) / 1000), 'sickness');
+  if (food > 0) note(s, log, 'ate', { force: f.id, food });
+  const sick = loseMen(s, f, Math.floor((f.men * attrition.sicknessPermillePerDay) / 1000), 'sickness');
+  if (sick > 0) note(s, log, 'menLost', { force: f.id, node: null, cause: 'sickness', men: sick });
   if (foodShort > 0) {
-    loseMen(s, f, Math.floor((f.men * foodShort * attrition.stragglePermilleAtFullShortfall) / (foodNeed * 1000)), 'straggling');
+    const straggled = loseMen(s, f, Math.floor((f.men * foodShort * attrition.stragglePermilleAtFullShortfall) / (foodNeed * 1000)), 'straggling');
+    if (straggled > 0) note(s, log, 'menLost', { force: f.id, node: null, cause: 'straggling', men: straggled });
     f.cohesion = Math.max(0, f.cohesion - Math.floor((foodShort * attrition.cohesionLossAtFullShortfall) / foodNeed));
   } else {
     f.cohesion = Math.min(1000, f.cohesion + attrition.cohesionRecoveryWhenFed);

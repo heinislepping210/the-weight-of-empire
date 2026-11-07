@@ -9,6 +9,7 @@ import { battleText, burnedText, districtText, dustOf, pontoonText, strippingOf,
 import { PlaybackLayer, type PlaybackBar, type PlaybackView } from './Playback';
 import { TerrainLayer } from './TerrainLayer';
 import { isShort, supplyText, trailsOf } from './playbackModel';
+import { placeOf, type TraceMark } from './trace';
 import { MAP_HEIGHT, MAP_WIDTH, POSITION, along, type Point } from './projection';
 
 interface Props {
@@ -28,6 +29,8 @@ interface Props {
   supply?: readonly SupplyLine[];
   /** What the campaign has left on the map, as the French know it (V5). */
   consequences?: Consequences | null;
+  /** Where the change picked in the top bar came from (G4). */
+  traced?: readonly TraceMark[] | null;
 }
 
 const WORLD = { width: MAP_WIDTH, height: MAP_HEIGHT };
@@ -61,6 +64,22 @@ function trainAt(train: PontoonTrain, ctx: Context): Point {
   if (!train.transit) return here;
   const edge = ctx.graph.edges.get(train.transit.edge);
   return along(here, POSITION[train.transit.to] as Point, edge ? train.transit.metres / edge.metres : 0);
+}
+
+/** A traced change on the map: one ring to a place, or to a group on the road, with what it came to there in all. */
+function ringsOf(marks: readonly TraceMark[], s: GameState, ctx: Context): (Point & { key: string; amount: number })[] {
+  const rings = new Map<string, Point & { key: string; amount: number }>();
+  for (const m of marks) {
+    const node = placeOf(m, s);
+    const f = s.forces[m.force];
+    const point = node !== null ? (POSITION[node] as Point) : f ? positionOf(ctx, f) : null;
+    if (!point) continue;
+    const key = node ?? m.force;
+    const ring = rings.get(key) ?? { ...point, key, amount: 0 };
+    rings.set(key, ring);
+    ring.amount += m.amount;
+  }
+  return [...rings.values()];
 }
 
 /**
@@ -110,7 +129,7 @@ function Glyph({ activity, men }: { activity: Activity; men: number }) {
  * what each group is doing. Each turn plays back on it, then leaves a trail of where each group went, and the supply
  * lines show what each wagon train can bring a day. It shows only what the French know of the enemy.
  */
-export function MapView({ s, ctx, plan, preview = null, objective, onPick, playback = null, onPlaybackEnd = () => {}, trails = null, supply = [], consequences = null }: Props) {
+export function MapView({ s, ctx, plan, preview = null, objective, onPick, playback = null, onPlaybackEnd = () => {}, trails = null, supply = [], consequences = null, traced = null }: Props) {
   const [cam, setCam] = useState<Camera>(() => fit(WORLD));
   const svg = useRef<SVGSVGElement>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -150,6 +169,13 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick, playb
   const trailLines = useMemo(() => (trails ? trailsOf(ctx, trails) : []), [ctx, trails]);
   const dust = useMemo(() => new Set(trails ? dustOf(ctx, trails) : []), [ctx, trails]);
   const major = new Set([...ctx.graph.nodes.keys()].filter((id) => s.depots[id] || (ctx.scenario.keyPlaces ?? []).includes(id) || (ctx.scenario.cutOffPlaces ?? []).includes(id)));
+  const rings = useMemo(() => (traced ? ringsOf(traced, s, ctx) : []), [traced, s, ctx]);
+
+  // A traced change out of view brings the whole theatre back, so that picking it always shows it.
+  useEffect(() => {
+    if (rings.length === 0) return;
+    setCam((c) => (rings.every((r) => r.x >= c.x && r.x <= c.x + c.width && r.y >= c.y && r.y <= c.y + heightOf(WORLD, c)) ? c : fit(WORLD)));
+  }, [rings]);
 
   // The wheel zooms when asked to (Ctrl or a trackpad pinch), or once the map has focus; otherwise the page scrolls.
   useEffect(() => {
@@ -455,6 +481,17 @@ export function MapView({ s, ctx, plan, preview = null, objective, onPick, playb
               </g>
             );
           })}
+
+        {!playback &&
+          rings.map((r) => (
+            <g key={`trace-${r.key}`} className={`trace-ring ${r.amount < 0 ? 'trace-loss' : 'trace-gain'}`} transform={`translate(${r.x} ${r.y}) scale(${u})`} aria-hidden="true">
+              <circle r={12} />
+              <text y={-17} textAnchor="middle">
+                {r.amount < 0 ? '−' : '+'}
+                {thousands(Math.abs(r.amount))}
+              </text>
+            </g>
+          ))}
       </svg>
       {/* Rain over the map (V6): it falls while it rains; with reduced motion it is a still hatch. */}
       {playback ? <div key="rain-playback" className="rain-overlay" aria-hidden="true" ref={(el) => void (bar.current.rain = el)} /> : <div key="rain" className={`rain-overlay${s.rainToday ? ' raining' : ''}`} aria-hidden="true" />}

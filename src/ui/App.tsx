@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ENDING_NAMES, advanceWithPlayback, createContext, evaluate, newGame, ordersFrom, planDirective, planLogistics, statusOf, summarizePlan, supplyLines, when } from '../engine';
 import type { BattleDecision, Directive, Frame, GameState, GroupOverride, Input, LogEntry, NodeId, Side } from '../engine';
 import { vitebskDecision } from '../data/vitebsk/scenario';
@@ -7,10 +7,12 @@ import { Compare } from './Compare';
 import { MapList } from './MapList';
 import { MapView } from './MapView';
 import { OrdersPanel } from './OrdersPanel';
+import { TopFigure, TracePanel } from './TracePanel';
 import { dispatches } from './dispatches';
 import { shortName, thousands } from './names';
 import { lastSeenDistricts, scarsOf } from './consequences';
 import { eventful } from './playbackModel';
+import { figuresOf, signed, traceTurn, windowOf, type Figure } from './trace';
 import { loadRuns, storeRuns, summarize, type SavedRun } from './runs';
 
 const ctx = createContext(vitebskDecision());
@@ -51,6 +53,8 @@ export function App() {
   /** The last input's resolution, hour by hour, when something moved or happened in it (M2, G4); `key` replays it. */
   const [played, setPlayed] = useState<{ frames: Frame[]; key: number } | null>(null);
   const [playing, setPlaying] = useState(false);
+  /** The figure in the top bar being traced to the map, and the one cause picked from it, if any (M2, G4). */
+  const [traced, setTraced] = useState<{ figure: Figure; cause: string | null } | null>(null);
 
   const s = run.states[run.states.length - 1] as GameState;
   const status = statusOf(s);
@@ -65,6 +69,18 @@ export function App() {
   const supply = useMemo(() => supplyLines(s, ctx), [s]);
   // What the campaign has left on the map, as the French know it (V5).
   const consequences = useMemo(() => ({ districts: lastSeenDistricts(run.states, ctx), ...scarsOf(run.logs.flat(), s) }), [run.states, run.logs, s]);
+  // What changed the top bar's figures since the last orders (G4).
+  const sinceOrders = useMemo(() => windowOf(run.states, run.logs), [run.states, run.logs]);
+  const traces = useMemo(() => (sinceOrders ? traceTurn(sinceOrders.before, s, sinceOrders.log, ctx) : null), [sinceOrders, s]);
+  const shown = traced && traces ? traces[traced.figure] : null;
+  const tracedMarks = useMemo(() => shown?.causes.filter((c) => traced?.cause === null || c.id === traced?.cause).flatMap((c) => c.marks) ?? null, [shown, traced]);
+
+  useEffect(() => {
+    if (!traced) return;
+    const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && setTraced(null);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [traced !== null]);
 
   function submit(input: Input) {
     const { result, frames } = advanceWithPlayback(s, input, ctx);
@@ -73,6 +89,7 @@ export function App() {
       return;
     }
     setError(null);
+    setTraced(null);
     setRun({ ...run, states: [...run.states, result.state], inputs: [...run.inputs, input], logs: [...run.logs, result.log] });
     const show = eventful(frames);
     setPlayed(show ? { frames, key: (played?.key ?? 0) + 1 } : null);
@@ -110,6 +127,7 @@ export function App() {
     for (let i = run.states.length - 2; i >= 0; i--) {
       if (statusOf(run.states[i] as GameState).kind === 'awaitingOrders') {
         setRun({ ...run, states: run.states.slice(0, i + 1), inputs: run.inputs.slice(0, i), logs: run.logs.slice(0, i) });
+        setTraced(null);
         setPlayed(null);
         setPlaying(false);
         return;
@@ -124,6 +142,7 @@ export function App() {
       return;
     }
     setRun(startRun(seed));
+    setTraced(null);
     setPlayed(null);
     setPlaying(false);
     setDirective(HOLD);
@@ -146,9 +165,17 @@ export function App() {
     storeRuns(next);
   }
 
-  const frMen = total(s, 'fr', 'men');
+  /** Shows a figure's causes, ending any playback so that the map can show them; or puts them away. */
+  function toggleTrace(figure: Figure) {
+    setTraced(traced?.figure === figure ? null : { figure, cause: null });
+    setPlaying(false);
+  }
+
+  const now = figuresOf(s);
+  const was = sinceOrders ? figuresOf(sinceOrders.before) : now;
+  // The days as the top bar rounds them, so that what it shows and what it says changed agree.
+  const dayChange = Number(now.days.toFixed(1)) - Number(was.days.toFixed(1));
   const french = Object.values(s.forces).filter((f) => f.side === 'fr' && f.men > 0);
-  const food = french.reduce((n, f) => n + f.stock.food, 0);
   // The army's average can hide a starving group: name the worst-fed one too.
   const hungriest = french.reduce<(typeof french)[number] | null>((w, f) => (w === null || f.stock.food / f.men < w.stock.food / w.men ? f : w), null);
   const start = run.states[0] as GameState;
@@ -160,7 +187,19 @@ export function App() {
           The Weight of Empire <span>The Vitebsk Decision · prototype</span>
         </h1>
         <p className="status" aria-live="polite">
-          {when(ctx, s.resolution)} · {s.resolution.turn > ctx.scenario.turns ? 'the last battle' : `turn ${s.resolution.turn} of ${ctx.scenario.turns}`} · {s.rainToday ? 'rain' : 'dry'} · {thousands(frMen)} men · {thousands(total(s, 'fr', 'horses'))} horses · {(food / Math.max(1, frMen)).toFixed(1)} days' food in hand{hungriest ? ` (least: ${shortName(hungriest.id, hungriest.name)}, ${(hungriest.stock.food / hungriest.men).toFixed(1)})` : ''}
+          {when(ctx, s.resolution)} · {s.resolution.turn > ctx.scenario.turns ? 'the last battle' : `turn ${s.resolution.turn} of ${ctx.scenario.turns}`} · {s.rainToday ? 'rain' : 'dry'} ·{' '}
+          <TopFigure trace={traces?.men ?? null} change={traces?.men.change ? signed(traces.men.change) : ''} open={traced?.figure === 'men'} onToggle={() => toggleTrace('men')}>
+            {thousands(now.men)} men
+          </TopFigure>{' '}
+          ·{' '}
+          <TopFigure trace={traces?.horses ?? null} change={traces?.horses.change ? signed(traces.horses.change) : ''} open={traced?.figure === 'horses'} onToggle={() => toggleTrace('horses')}>
+            {thousands(now.horses)} horses
+          </TopFigure>{' '}
+          ·{' '}
+          <TopFigure trace={traces?.food ?? null} change={Math.abs(dayChange) >= 0.05 ? `${dayChange < 0 ? '−' : '+'}${Math.abs(dayChange).toFixed(1)}` : ''} open={traced?.figure === 'food'} onToggle={() => toggleTrace('food')}>
+            {now.days.toFixed(1)} days' food in hand
+          </TopFigure>
+          {hungriest ? ` (least: ${shortName(hungriest.id, hungriest.name)}, ${(hungriest.stock.food / hungriest.men).toFixed(1)})` : ''}
         </p>
         <div className="controls">
           <label>
@@ -190,6 +229,8 @@ export function App() {
         </p>
       )}
 
+      {view === 'play' && shown && traced && <TracePanel trace={shown} s={s} ctx={ctx} cause={traced.cause} onCause={(cause) => setTraced({ ...traced, cause })} onClose={() => setTraced(null)} />}
+
       {view === 'compare' ? (
         <Compare runs={runs} onDelete={remove} onClose={() => setView('play')} />
       ) : (
@@ -210,10 +251,11 @@ export function App() {
                 trails={played?.frames ?? null}
                 supply={supply}
                 consequences={consequences}
+                traced={tracedMarks}
               />
             )}
             <p className="legend">
-              Blue: our groups; the sign shows whether a group is marching, in battle, dispersed to feed or concentrated, and a dashed one is worn. Green: enemy reports, fading with age; after two turns a pale "last seen" marker. Dashed lines: the staff's planned routes; thin solid lines: where each group went last. Brown lines: supply lines from a depot to the group or depot its wagons serve, wider for more a day; red and dashed with "!" where a train brings less than its group eats. Hatched rings: districts foragers have taken from, darker as less is left, as last seen. A flame: stores burned when a depot changed hands; crossed sabres: a battlefield. A pale wash: dust where columns marched on dry roads; a brown wash: mud. Blue hatching over the map: rain. Squares: depots. Circles on roads: river crossings.{s.pontoons ? ' An open circle: a river still to be bridged. A small boat: the pontoon train.' : ''} Click a place to make it the objective. Drag to pan; pinch, Ctrl + scroll or the buttons to zoom. The terrain is real: rivers from Natural Earth, relief from SRTM data courtesy of the U.S. Geological Survey. Each turn is played back on the map, the camera moving in on contacts and battles unless you turn off "Follow events" (Skip or Escape to end it).{' '}
+              Blue: our groups; the sign shows whether a group is marching, in battle, dispersed to feed or concentrated, and a dashed one is worn. Green: enemy reports, fading with age; after two turns a pale "last seen" marker. Dashed lines: the staff's planned routes; thin solid lines: where each group went last. Brown lines: supply lines from a depot to the group or depot its wagons serve, wider for more a day; red and dashed with "!" where a train brings less than its group eats. Hatched rings: districts foragers have taken from, darker as less is left, as last seen. A flame: stores burned when a depot changed hands; crossed sabres: a battlefield. A pale wash: dust where columns marched on dry roads; a brown wash: mud. Blue hatching over the map: rain. Squares: depots. Circles on roads: river crossings.{s.pontoons ? ' An open circle: a river still to be bridged. A small boat: the pontoon train.' : ''} Rings with a figure: what you picked in the top bar, in red for a loss and green for a gain. Click a place to make it the objective. Drag to pan; pinch, Ctrl + scroll or the buttons to zoom. The terrain is real: rivers from Natural Earth, relief from SRTM data courtesy of the U.S. Geological Survey. Each turn is played back on the map, the camera moving in on contacts and battles unless you turn off "Follow events" (Skip or Escape to end it).{' '}
               {played && !playing && !asList && (
                 <>
                   <button type="button" className="link" onClick={replay}>
